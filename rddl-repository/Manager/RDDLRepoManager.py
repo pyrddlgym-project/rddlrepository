@@ -1,38 +1,40 @@
 import os
 import importlib
+import csv
 
-class RDDLEnvironmentNotExist(ValueError):
-    pass
-
-class RDDLInstanceNotExist(ValueError):
-    pass
-
-class RDDLDomainNotExist(ValueError):
-    pass
-
+from .ErrorHandling import RDDLRepoDomainNotExist, RDDLRepoProblemDuplication
+from .ProblemInfo import ProblemInfo
 
 HEADER = ['name', 'description', 'location', 'instances', 'viz']
+manifest = 'manifest.csv'
 
 
-class RDDLManager:
-    def __init__(self):
+class RDDLRepoManager:
+    def __init__(self, rebuild=False):
         self.Archiver_Dict = {}
-        pass
+        self.manager_path = os.path.dirname(os.path.abspath(__file__))
+        if os.path.isfile(self.manager_path+'/manifest.csv') and not rebuild:
+            self._LoadRepo()    # load repo to dict
+        else:
+            self._BuildRepo()   # build repo and load to dict
 
-    def get_domain(self):
-        pass
+    def ListProblems(self):
+        for key, values in self.Archiver_Dict.items():
+            print(key + ": " + values[1])
 
-    def get_instance(self):
-        pass
+    def GetProblem(self, name):
+        if name in self.Archiver_Dict.keys():
+            return ProblemInfo(self.Archiver_Dict[name])
 
-    def list_instances(self):
-        pass
-
-    @staticmethod
-    def BuildRepo():
-        Archiver_Dict = {}
-        archive_dir = os.path.dirname(os.path.abspath(__file__)) + '/Archive'
+    def _BuildRepo(self):
+        root_path = os.path.dirname(os.path.abspath(__file__))
+        path_to_manifest = os.path.join(root_path, 'manifest.csv')
+        root_path = root_path.split('/')
+        root_path = '/'.join(root_path[:-1])
+        archive_dir = root_path + '/Archive'
         start_char = len(archive_dir)
+
+        # build the repo dictionary as first step to verify correctness and uniqueness
         for root, dirs, files in os.walk(archive_dir, topdown=False):
             dir = root[start_char:]
             if '__pycache__' in dirs:
@@ -46,14 +48,45 @@ class RDDLManager:
                 d = dir.split('/')
                 module = 'Archive' + '.'.join(d)
                 mymodule = importlib.import_module(module)
+                if mymodule.info['name'] in self.Archiver_Dict.keys():
+                    raise RDDLRepoProblemDuplication()
                 if 'domain.rddl' not in files:
-                    raise RDDLDomainNotExist()
+                    raise RDDLRepoDomainNotExist()
                 instances = [fname[8:-5] for fname in files
                              if fname.startswith('instance') and fname.endswith('.rddl')]
-                Archiver_Dict[mymodule.info['name']] = [mymodule.info['name'],
+                context = mymodule.info['context']
+                if context:
+                    context = '_' + context
+                name = mymodule.info['name'] + context
+                self.Archiver_Dict[name] = [mymodule.info['name'],
                                                         mymodule.info['description'],
                                                         root,
                                                         instances,
                                                         mymodule.info['viz']]
-        print(Archiver_Dict)
-        #TODO generate manifest
+
+        # Generate manifest
+        with open(path_to_manifest, 'w', newline='') as file:
+
+            # write the csv header of the manifest
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(HEADER)
+
+            # iterate through the dictionary
+            for keys, values in self.Archiver_Dict.items():
+                values[3] = ','.join(values[3])
+                writer.writerow(values)
+
+    def _LoadRepo(self):
+        root_path = os.path.dirname(os.path.abspath(__file__))
+        path_to_manifest = os.path.join(root_path, 'manifest.csv')
+        if not os.path.isfile(path_to_manifest):
+            return {}
+
+        self.Archiver_Dict = {}
+        with open(path_to_manifest) as file:
+            reader = csv.reader(file, delimiter=',')
+            for i, row in enumerate(reader):
+                if i > 0:
+                    name, *entries = row
+                    self.Archiver_Dict[name] = dict(zip(HEADER[1:], entries))
+            return self.Archiver_Dict
