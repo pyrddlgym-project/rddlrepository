@@ -1,0 +1,4 @@
+[General]
+name='CooperativeRecon_MDP'
+description=There is a 2d grid with an agent, a base, some hazard squares, and objects in different locations.
+viz=TextViz.TextVisualizer

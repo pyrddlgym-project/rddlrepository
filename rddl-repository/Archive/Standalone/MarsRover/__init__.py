@@ -1,0 +1,7 @@
+
+
+info = {
+    'name': 'marsrover',
+    'description': 'Multi Rover Navigation, where a group of agent needs to harvest mineral.',
+    'viz': 'MarsRoverViz.MarsRoverVisualizer'
+}
