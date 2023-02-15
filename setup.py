@@ -1,27 +1,27 @@
-# This file is part of rddl-repository
+# This file is part of rddlrepository
 
-# rddl-repository is free software: you can redistribute it and/or modify
+# rddlrepository is free software: you can redistribute it and/or modify
 # it under the terms of the MIT License as published by
 # the Free Software Foundation.
 
-# rddl-repository is distributed in the hope that it will be useful,
+# rddlrepository is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # MIT License for more details.
 
 # You should have received a copy of the MIT License
-# along with rddl-repository. If not, see <https://opensource.org/licenses/MIT>.
+# along with rddlrepository. If not, see <https://opensource.org/licenses/MIT>.
 
 from setuptools import setup, find_packages
 
 setup(
-      name='rddl-repository',
+      name='rddlrepository',
       version='0.1',
       author="Ayal Taitler, Scott Sanner, Michael Gimelfarb",
       author_email="ataitler@gmail.com, ssanner@mie.utoronto.ca, mike.gimelfarb@mail.utoronto.ca",
       description="Home for all things RDDL",
       license="MIT License",
-      url="https://github.com/ataitler/rddl-repository",
+      url="https://github.com/ataitler/rddlrepository",
       packages=find_packages(),
       install_requires=['pillow>=9.2.0', 'matplotlib>=3.5.0', 'numpy>=1.22'],
       python_requires=">=3.8",
