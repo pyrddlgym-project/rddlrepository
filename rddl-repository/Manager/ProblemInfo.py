@@ -34,7 +34,6 @@ class ProblemInfo:
         if self.viz == 'None':
             return None
 
-        viz_backend_package_name = 'pyRDDLGym'
         spec = importlib.util.find_spec(viz_backend_package_name)
         if spec is None:
             raise RDDLRepoUnresolvedDependency(viz_backend_package_name + " is not installed")
