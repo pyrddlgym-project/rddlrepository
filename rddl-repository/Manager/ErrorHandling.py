@@ -9,3 +9,6 @@ class RDDLRepoDomainNotExist(ValueError):
 
 class RDDLRepoProblemDuplication(ValueError):
     pass
+
+class RDDLRepoUnresolvedDependency(ValueError):
+    pass
