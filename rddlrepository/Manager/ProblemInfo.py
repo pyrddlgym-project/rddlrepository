@@ -10,11 +10,16 @@ viz_backend_package_name = 'pyRDDLGym'
 
 class ProblemInfo:
     def __init__(self, problem_data):
-        self.name = problem_data[0]
-        self.desc = problem_data[1]
-        self.loc = problem_data[2]
-        self.instances = problem_data[3]
-        self.viz = problem_data[4]
+        self.name = problem_data['name']
+        self.desc = problem_data['description']
+        self.loc = problem_data['location']
+        self.instances = problem_data['instances']
+        self.viz = problem_data['viz']
+        # self.name = problem_data[0]
+        # self.desc = problem_data[1]
+        # self.loc = problem_data[2]
+        # self.instances = problem_data[3]
+        # self.viz = problem_data[4]
 
     def get_domain(self):
         path = os.path.join(self.loc, 'domain.rddl')
@@ -29,6 +34,7 @@ class ProblemInfo:
 
     def list_instances(self):
         print(self.instances)
+        # print(','.join(self.instances))
 
     def get_visualizer(self):
         if self.viz == 'None':
