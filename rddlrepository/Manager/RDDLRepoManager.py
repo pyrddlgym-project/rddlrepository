@@ -2,7 +2,7 @@ import os
 import importlib
 import csv
 
-from .ErrorHandling import RDDLRepoDomainNotExist, RDDLRepoProblemDuplication
+from .ErrorHandling import RDDLRepoDomainNotExist, RDDLRepoProblemDuplication, RDDLRepoManifestEmpty
 from .ProblemInfo import ProblemInfo
 
 HEADER = ['name', 'description', 'location', 'instances', 'viz']
@@ -19,12 +19,16 @@ class RDDLRepoManager:
             self._build_repo()   # build repo and load to dict
 
     def list_problems(self):
+        if len(self.archiver_dict) == 0:
+            raise RDDLRepoManifestEmpty()
         for key, values in self.archiver_dict.items():
             print(key + ": " + values[1])
 
     def get_problem(self, name):
         if name in self.archiver_dict.keys():
             return ProblemInfo(self.archiver_dict[name])
+        else:
+            raise RDDLRepoDomainNotExist('Domain: ' + name + ' does not exists in the repository')
 
     def _build_repo(self):
         root_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +50,7 @@ class RDDLRepoManager:
                 continue
             if "__init__.py" in files:
                 d = dir.split('/')
-                module = 'Archive' + '.'.join(d)
+                module = 'rddlrepository.Archive' + '.'.join(d)
                 mymodule = importlib.import_module(module)
                 if mymodule.info['name'] in self.archiver_dict.keys():
                     raise RDDLRepoProblemDuplication()

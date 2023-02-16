@@ -12,3 +12,6 @@ class RDDLRepoProblemDuplication(ValueError):
 
 class RDDLRepoUnresolvedDependency(ValueError):
     pass
+
+class RDDLRepoManifestEmpty(ValueError):
+    pass
