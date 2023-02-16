@@ -2,16 +2,17 @@ import os
 import importlib
 import csv
 
-from .ErrorHandling import RDDLRepoDomainNotExist, RDDLRepoProblemDuplication, RDDLRepoManifestEmpty
+from .ErrorHandling import RDDLRepoDomainNotExist, RDDLRepoProblemDuplication, RDDLRepoManifestEmpty,RDDLRepoContextNotExist
 from .ProblemInfo import ProblemInfo
 
-HEADER = ['name', 'description', 'location', 'instances', 'viz']
+HEADER = ['name', 'description', 'location', 'instances', 'viz', 'context', 'tags']
 manifest = 'manifest.csv'
 
 
 class RDDLRepoManager:
     def __init__(self, rebuild=False):
         self.archiver_dict= {}
+        self.archive_by_context = {}
         self.manager_path = os.path.dirname(os.path.abspath(__file__))
         if os.path.isfile(self.manager_path+'/manifest.csv') and not rebuild:
             self._load_repo()    # load repo to dict
@@ -20,9 +21,22 @@ class RDDLRepoManager:
 
     def list_problems(self):
         if len(self.archiver_dict) == 0:
-            raise RDDLRepoManifestEmpty()
+            raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
         for key, values in self.archiver_dict.items():
-            print(key + ": " + values[1])
+            print(key + ": " + values['description'])
+
+    def list_context(self):
+        if len(self.archive_by_context) == 0:
+            raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
+        for key, _ in self.archive_by_context.items():
+            print(key)
+
+    def list_problems_by_context(self, context):
+        if context not in self.archive_by_context:
+            raise RDDLRepoContextNotExist('context: ' + context + ' does not exist in the RDDL repo')
+        problems = '\n'.join(self.archive_by_context[context])
+        # problems = '\n'.join(problems)
+        print(problems)
 
     def get_problem(self, name):
         if name in self.archiver_dict.keys():
@@ -62,11 +76,23 @@ class RDDLRepoManager:
                 if context:
                     context = '_' + context
                 name = mymodule.info['name'] + context
-                self.archiver_dict[name] = [mymodule.info['name'],
-                                                        mymodule.info['description'],
-                                                        root,
-                                                        instances,
-                                                        mymodule.info['viz']]
+                self.archiver_dict[name] = {'name': mymodule.info['name'],
+                                                        'description': mymodule.info['description'],
+                                                        'location': root,
+                                                        'instances': instances,
+                                                        'viz': mymodule.info['viz'],
+                                                        'context': mymodule.info['context'],
+                                                        'tags': mymodule.info['tags']
+                                            }
+
+                context = mymodule.info['context']
+                if context == '':
+                    context = 'independent'
+                if context in self.archive_by_context:
+                    self.archive_by_context[context].append(name)
+                else:
+                    self.archive_by_context[context] = [name]
+
 
         # Generate manifest
         with open(path_to_manifest, 'w', newline='') as file:
@@ -77,8 +103,10 @@ class RDDLRepoManager:
 
             # iterate through the dictionary
             for keys, values in self.archiver_dict.items():
-                values[3] = ','.join(values[3])
-                writer.writerow(values)
+                values['instances'] = ','.join(values['instances'])
+                values['tags'] = ','.join(values['tags'])
+                row = [values[key] for key in HEADER]
+                writer.writerow(row)
 
     def _load_repo(self):
         root_path = os.path.dirname(os.path.abspath(__file__))
@@ -93,4 +121,14 @@ class RDDLRepoManager:
                 if i > 0:
                     name, *entries = row
                     self.archiver_dict[name] = dict(zip(HEADER[1:], entries))
+                    self.archiver_dict[name]['name'] = name
+                    if entries[4] == '':
+                        context = 'independent'
+                    else:
+                        context = entries[4]
+                    if context in self.archive_by_context:
+                        self.archive_by_context[context].append(name)
+                    else:
+                        self.archive_by_context[context] = [name]
             return self.archiver_dict
+
