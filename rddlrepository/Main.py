@@ -6,7 +6,7 @@ Archiver_Dict = {}
 
 def main():
     manager = RDDLRepoManager(rebuild=True)
-    manager.list_problems()
+    # manager.list_problems()
     # envInfo = manager.get_problem('CooperativeRecon_ippc2018')
     envInfo = manager.get_problem('RaceCar')
     envInfo.list_instances()
