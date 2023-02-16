@@ -13,10 +13,30 @@
 # along with rddlrepository. If not, see <https://opensource.org/licenses/MIT>.
 
 from setuptools import setup, find_packages
+import os
+import glob
+
+
+# def package_files(directory):
+#     paths = []
+#     for (path, directories, filenames) in os.walk(directory):
+#         for filename in filenames:
+#             paths.append(os.path.join('..', path, filename))
+#     return paths
+#
+# data_files = package_files('Archive')
+# print(data_files)
+# data_files = []
+# directories = glob.glob('Archive/')
+# for directory in directories:
+#     files = glob.glob(directory+'*')
+#     data_files.append((directory, files))
+#     print(files)
+
 
 setup(
       name='rddlrepository',
-      version='0.1',
+      version='0.20',
       author="Ayal Taitler, Scott Sanner, Michael Gimelfarb",
       author_email="ataitler@gmail.com, ssanner@mie.utoronto.ca, mike.gimelfarb@mail.utoronto.ca",
       description="Home for all things RDDL",
@@ -26,7 +46,6 @@ setup(
       install_requires=['pillow>=9.2.0', 'matplotlib>=3.5.0', 'numpy>=1.22'],
       python_requires=">=3.8",
       include_package_data=True,
-      package_data={'': [ ]},
       classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",
