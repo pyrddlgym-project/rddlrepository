@@ -15,3 +15,6 @@ class RDDLRepoUnresolvedDependency(ValueError):
 
 class RDDLRepoManifestEmpty(ValueError):
     pass
+
+class RDDLRepoContextNotExist(ValueError):
+    pass
