@@ -4,7 +4,8 @@ import importlib.util
 
 from .ErrorHandling import RDDLRepoInstanceNotExist, RDDLRepoUnresolvedDependency
 
-sys.path.append('../rddl-repository')
+
+sys.path.append(os.path.join('..', 'rddlrepository'))
 viz_backend_package_name = 'pyRDDLGym'
 
 
@@ -38,9 +39,14 @@ class ProblemInfo:
         if spec is None:
             raise RDDLRepoUnresolvedDependency(viz_backend_package_name + " is not installed")
 
-        path_to_viz = self.loc.split('/')
-        repo_root = path_to_viz.index('Archive')
-        path_to_viz = '.'.join(path_to_viz[repo_root-1:])
+        path_to_viz = []
+        p = os.path.split(self.loc)
+        while p[1] != 'rddlrepository':
+            path_to_viz.insert(0, p[1])
+            p = os.path.split(p[0])
+        path_to_viz.insert(0, p[1])
+        path_to_viz = '.'.join(path_to_viz)
+
         viz = None
         viz_info = self.viz
         if viz_info:

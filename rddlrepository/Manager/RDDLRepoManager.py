@@ -14,7 +14,8 @@ class RDDLRepoManager:
         self.archiver_dict= {}
         self.archive_by_context = {}
         self.manager_path = os.path.dirname(os.path.abspath(__file__))
-        if os.path.isfile(self.manager_path+'/manifest.csv') and not rebuild:
+        manifest_path = os.path.join(self.manager_path, manifest)
+        if os.path.isfile(manifest_path) and not rebuild:
             try:
                 self._load_repo()    # load repo to dict
             except:
@@ -38,7 +39,6 @@ class RDDLRepoManager:
         if context not in self.archive_by_context:
             raise RDDLRepoContextNotExist('context: ' + context + ' does not exist in the RDDL repo')
         problems = '\n'.join(self.archive_by_context[context])
-        # problems = '\n'.join(problems)
         print(problems)
 
     def get_problem(self, name):
@@ -49,10 +49,9 @@ class RDDLRepoManager:
 
     def _build_repo(self):
         root_path = os.path.dirname(os.path.abspath(__file__))
-        path_to_manifest = os.path.join(root_path, 'manifest.csv')
-        root_path = root_path.split('/')
-        root_path = '/'.join(root_path[:-1])
-        archive_dir = root_path + '/Archive'
+        path_to_manifest = os.path.join(root_path, manifest)
+        root_path = os.path.split(root_path)[0]
+        archive_dir = os.path.join(root_path,'Archive')
         start_char = len(archive_dir)
 
         # build the repo dictionary as first step to verify correctness and uniqueness
@@ -62,12 +61,12 @@ class RDDLRepoManager:
                 dirs.remove('__pycache__')
             if len(dirs) > 0:
                 continue
-            d = dir.split('/')
-            if d[-1] == '__pycache__':
+            d = os.path.split(root_path)
+            if d[1] == '__pycache__':
                 continue
             if "__init__.py" in files:
-                d = dir.split('/')
-                module = 'rddlrepository.Archive' + '.'.join(d)
+                d = self.__split_path_to_list(dir)
+                module = 'rddlrepository.Archive' + '.' + '.'.join(d)
                 mymodule = importlib.import_module(module)
                 context = mymodule.info['context']
                 if context:
@@ -113,7 +112,7 @@ class RDDLRepoManager:
 
     def _load_repo(self):
         root_path = os.path.dirname(os.path.abspath(__file__))
-        path_to_manifest = os.path.join(root_path, 'manifest.csv')
+        path_to_manifest = os.path.join(root_path, manifest)
         if not os.path.isfile(path_to_manifest):
             return {}
 
@@ -135,3 +134,10 @@ class RDDLRepoManager:
                         self.archive_by_context[context] = [name]
             return self.archiver_dict
 
+    def __split_path_to_list(self, path):
+        l = []
+        a = os.path.split(path)
+        while a[1] != '':
+            l.insert(0, a[1])
+            a = os.path.split(a[0])
+        return l
