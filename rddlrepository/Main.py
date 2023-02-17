@@ -8,8 +8,8 @@ def main():
 
     # initializer repo manager, repo manifest will be loaded or built automatically if not present.
     # rebuild argument force manifest rebuild.
-    manager = RDDLRepoManager(rebuild=True)
-    # manager = RDDLRepoManager()
+    manager = RDDLRepoManager()
+    # manager = RDDLRepoManager(rebuild=True)
 
     # list all problems in the repo, unique name is generated based on the name and context of the problem
     manager.list_problems()
