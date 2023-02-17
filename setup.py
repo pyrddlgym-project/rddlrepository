@@ -13,32 +13,13 @@
 # along with rddlrepository. If not, see <https://opensource.org/licenses/MIT>.
 
 from setuptools import setup, find_packages
-import os
-import glob
-
-
-# def package_files(directory):
-#     paths = []
-#     for (path, directories, filenames) in os.walk(directory):
-#         for filename in filenames:
-#             paths.append(os.path.join('..', path, filename))
-#     return paths
-#
-# data_files = package_files('Archive')
-# print(data_files)
-# data_files = []
-# directories = glob.glob('Archive/')
-# for directory in directories:
-#     files = glob.glob(directory+'*')
-#     data_files.append((directory, files))
-#     print(files)
 
 
 setup(
       name='rddlrepository',
-      version='0.20',
-      author="Ayal Taitler, Scott Sanner, Michael Gimelfarb",
-      author_email="ataitler@gmail.com, ssanner@mie.utoronto.ca, mike.gimelfarb@mail.utoronto.ca",
+      version='0.24',
+      author="Ayal Taitler, Michael Gimelfarb, Scott Sanner",
+      author_email="ataitler@gmail.com, mike.gimelfarb@mail.utoronto.ca, ssanner@mie.utoronto.ca",
       description="Home for all things RDDL",
       license="MIT License",
       url="https://github.com/ataitler/rddlrepository",

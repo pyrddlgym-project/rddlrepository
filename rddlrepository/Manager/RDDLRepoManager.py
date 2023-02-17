@@ -15,7 +15,10 @@ class RDDLRepoManager:
         self.archive_by_context = {}
         self.manager_path = os.path.dirname(os.path.abspath(__file__))
         if os.path.isfile(self.manager_path+'/manifest.csv') and not rebuild:
-            self._load_repo()    # load repo to dict
+            try:
+                self._load_repo()    # load repo to dict
+            except:
+                raise RDDLRepoManifestEmpty('An error ocurred while loading current repo manifest, please try to re-run with rebuild=True')
         else:
             self._build_repo()   # build repo and load to dict
 
@@ -66,16 +69,16 @@ class RDDLRepoManager:
                 d = dir.split('/')
                 module = 'rddlrepository.Archive' + '.'.join(d)
                 mymodule = importlib.import_module(module)
-                if mymodule.info['name'] in self.archiver_dict.keys():
-                    raise RDDLRepoProblemDuplication()
-                if 'domain.rddl' not in files:
-                    raise RDDLRepoDomainNotExist()
-                instances = [fname[8:-5] for fname in files
-                             if fname.startswith('instance') and fname.endswith('.rddl')]
                 context = mymodule.info['context']
                 if context:
                     context = '_' + context
                 name = mymodule.info['name'] + context
+                if name in self.archiver_dict.keys():
+                    raise RDDLRepoProblemDuplication('domain: ' + name + ' already exists, problem names must be unique')
+                if 'domain.rddl' not in files:
+                    raise RDDLRepoDomainNotExist('domain: ' + name + ' does not have a domain.rddl file')
+                instances = [fname[8:-5] for fname in files
+                             if fname.startswith('instance') and fname.endswith('.rddl')]
                 self.archiver_dict[name] = {'name': mymodule.info['name'],
                                                         'description': mymodule.info['description'],
                                                         'location': root,
