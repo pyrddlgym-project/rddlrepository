@@ -5,6 +5,64 @@ Specifically it is an archive for the problem used in probabilistic and learning
 
 This repository contains also visualizers for the pyRDDLGym framework only, for appropriate domains.
 
+## Getting started
+### Python version
+We require Python 3.8+.
+### Dependencies
+* numpy
+
+If one desires to make use of the included visualizers (note they are pyRDDLGym compatible only), 
+[pyRDDLGym](https://github.com/ataitler/pyRDDLGym) must be installed as well.
+* pyRDDLGym (`pip install pyRDDLGym`)
+
+### Installation
+There are two options:
+* Using pip: `pip install rddlrepository`
+* Cloning directly: `git clone https://github.com/ataitler/rddlrepository.git`
+
+### Usage example
+The following example list all the functions and objects needed to access the problems in the repository:
+
+```python
+from rddlrepository.Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoManager
+
+def main():
+
+    # initializer for the repo manager, repo manifest will be loaded or built automatically if not present.
+    manager = RDDLRepoManager()
+    
+    # rebuild argument force manifest rebuild.
+    # manager = RDDLRepoManager(rebuild=True)
+
+    # list all problems (with description) in the repo, unique name is generated based on the name and context of the problem.
+    manager.list_problems()
+    
+    # list all contexts in the database, e.g., independent, ippc2011.
+    manager.list_context()
+
+    # list all the problems under a specific context.
+    manager.list_problems_by_context('ippc2018')
+
+    # getting a specific problem from the repo.
+    envInfo = manager.get_problem('EarthObservation_ippc2018')
+
+    # list available instances available for the problem.
+    envInfo.list_instances()
+
+    # return path to the domain file to be used/open by external tools.
+    envInfo.get_domain()
+
+    # return path to the desired instance file to be used/open by external tools.
+    envInfo.get_instance(1)
+
+    # return the pyRDDLGym visualizer object (pyRDDLGym dependency required) if exists, otherwise return None.
+    envInfo.get_visualizer()
+
+
+if __name__ == '__main__':
+    main()
+```
+
 ## Adding new RDDL problem
 In order to add new problem to the repository please follow these instructions:
 1. Nest a folder under the Archive folder, in the appropriate place in the hierarchy.
@@ -43,3 +101,10 @@ from rddlrepository.Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoMa
 
 RDDLRepoManager(rebuild=True)
 ```
+
+## Additional information
+More information on the competitions as well as the competition domains in alternative input languages or compilations to (more) restricted RDDL subsets can be found here:
+
+* IPC 2011: [http://users.cecs.anu.edu.au/~ssanner/IPPC_2011/](http://users.cecs.anu.edu.au/~ssanner/IPPC_2011/)
+* IPC 2014: [https://ssanner.github.io/IPPC_2014/](https://ssanner.github.io/IPPC_2014/)
+* IPC 2018: [https://ipc2018-probabilistic.bitbucket.io/](https://ipc2018-probabilistic.bitbucket.io/)
