@@ -23,7 +23,7 @@ class ProblemInfo:
 
     def get_instance(self, num):
         if str(num) not in self.instances:
-            raise RDDLRepoInstanceNotExist()
+            raise RDDLRepoInstanceNotExist('problem ' + self.name + ' does not have instance ' + str(num))
         instance = 'instance' + str(num) + '.rddl'
         path = os.path.join(self.loc, instance)
         return path
