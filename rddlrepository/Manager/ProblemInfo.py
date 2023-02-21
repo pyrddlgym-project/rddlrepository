@@ -28,8 +28,10 @@ class ProblemInfo:
         path = os.path.join(self.loc, instance)
         return path
 
-    def list_instances(self):
-        print(self.instances)
+    def list_instances(self, verbose=False):
+        if verbose:
+            print(self.instances)
+        return self.instances
 
     def get_visualizer(self):
         if self.viz == 'None':
