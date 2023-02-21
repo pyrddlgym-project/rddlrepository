@@ -1,6 +1,7 @@
 import os.path
 import sys
 import importlib.util
+from typing import List
 
 from .ErrorHandling import RDDLRepoInstanceNotExist, RDDLRepoUnresolvedDependency
 
@@ -28,7 +29,7 @@ class ProblemInfo:
         path = os.path.join(self.loc, instance)
         return path
 
-    def list_instances(self, verbose=False)  -> list[str]:
+    def list_instances(self, verbose=False) -> List[str]:
         if verbose:
             print(self.instances)
         return self.instances
