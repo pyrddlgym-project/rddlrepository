@@ -2,6 +2,7 @@ import copy
 import os
 import importlib
 import csv
+from typing import List
 
 from .ErrorHandling import RDDLRepoDomainNotExist, RDDLRepoProblemDuplication, RDDLRepoManifestEmpty,RDDLRepoContextNotExist
 from .ProblemInfo import ProblemInfo
@@ -24,7 +25,7 @@ class RDDLRepoManager:
         else:
             self._build_repo()   # build repo and load to dict
 
-    def list_problems(self, verbose=False) -> list[str]:
+    def list_problems(self, verbose=False) -> List[str]:
         problem_list = []
         if len(self.archiver_dict) == 0:
             raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
@@ -34,7 +35,7 @@ class RDDLRepoManager:
             problem_list.append(key)
         return problem_list
 
-    def list_context(self, verbose=False) -> list[str]:
+    def list_context(self, verbose=False) -> List[str]:
         context_list = []
         if len(self.archive_by_context) == 0:
             raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
@@ -44,7 +45,7 @@ class RDDLRepoManager:
             context_list.append(key)
         return context_list
 
-    def list_problems_by_context(self, context: str, verbose=False) -> list[str]:
+    def list_problems_by_context(self, context: str, verbose=False) -> List[str]:
         if context not in self.archive_by_context:
             raise RDDLRepoContextNotExist('context: ' + context + ' does not exist in the RDDL repo')
         problems = '\n'.join(self.archive_by_context[context])

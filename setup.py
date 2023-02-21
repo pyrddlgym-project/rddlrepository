@@ -17,14 +17,14 @@ from setuptools import setup, find_packages
 
 setup(
       name='rddlrepository',
-      version='0.27',
+      version='0.30',
       author="Ayal Taitler, Michael Gimelfarb, Scott Sanner",
       author_email="ataitler@gmail.com, mike.gimelfarb@mail.utoronto.ca, ssanner@mie.utoronto.ca",
       description="Home for all things RDDL",
       license="MIT License",
       url="https://github.com/ataitler/rddlrepository",
       packages=find_packages(),
-      install_requires=['numpy>=1.22'],
+      install_requires=['numpy'],
       python_requires=">=3.8",
       include_package_data=True,
       classifiers=[
