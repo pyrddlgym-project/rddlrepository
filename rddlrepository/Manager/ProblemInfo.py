@@ -10,26 +10,28 @@ viz_backend_package_name = 'pyRDDLGym'
 
 
 class ProblemInfo:
-    def __init__(self, problem_data):
+    def __init__(self, problem_data: dict) -> None:
         self.name = problem_data['name']
         self.desc = problem_data['description']
         self.loc = problem_data['location']
         self.instances = problem_data['instances']
         self.viz = problem_data['viz']
 
-    def get_domain(self):
+    def get_domain(self) -> str:
         path = os.path.join(self.loc, 'domain.rddl')
         return path
 
-    def get_instance(self, num):
+    def get_instance(self, num: int) -> str:
         if str(num) not in self.instances:
             raise RDDLRepoInstanceNotExist('problem ' + self.name + ' does not have instance ' + str(num))
         instance = 'instance' + str(num) + '.rddl'
         path = os.path.join(self.loc, instance)
         return path
 
-    def list_instances(self):
-        print(self.instances)
+    def list_instances(self, verbose=False)  -> list[str]:
+        if verbose:
+            print(self.instances)
+        return self.instances
 
     def get_visualizer(self):
         if self.viz == 'None':
