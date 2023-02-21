@@ -14,13 +14,16 @@
 
 from setuptools import setup, find_packages
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
 
 setup(
       name='rddlrepository',
-      version='0.30',
+      version='0.10',
       author="Ayal Taitler, Michael Gimelfarb, Scott Sanner",
       author_email="ataitler@gmail.com, mike.gimelfarb@mail.utoronto.ca, ssanner@mie.utoronto.ca",
       description="Home for all things RDDL",
+      long_description=long_description,
       license="MIT License",
       url="https://github.com/ataitler/rddlrepository",
       packages=find_packages(),
