@@ -1,3 +1,4 @@
+import copy
 import os
 import importlib
 import csv
@@ -78,7 +79,8 @@ class RDDLRepoManager:
                     raise RDDLRepoDomainNotExist('domain: ' + name + ' does not have a domain.rddl file')
                 instances = [fname[8:-5] for fname in files
                              if fname.startswith('instance') and fname.endswith('.rddl')]
-                self.archiver_dict[name] = {'name': mymodule.info['name'],
+                instances.sort(key=lambda x: int(x))
+                self.archiver_dict[name] = {'name': name,
                                                         'description': mymodule.info['description'],
                                                         'location': root,
                                                         'instances': instances,
@@ -105,9 +107,10 @@ class RDDLRepoManager:
 
             # iterate through the dictionary
             for keys, values in self.archiver_dict.items():
-                values['instances'] = ','.join(values['instances'])
-                values['tags'] = ','.join(values['tags'])
-                row = [values[key] for key in HEADER]
+                values_copy = copy.deepcopy(values)
+                values_copy['instances'] = ','.join(values['instances'])
+                values_copy['tags'] = ','.join(values['tags'])
+                row = [values_copy[key] for key in HEADER]
                 writer.writerow(row)
 
     def _load_repo(self):
@@ -124,6 +127,7 @@ class RDDLRepoManager:
                     name, *entries = row
                     self.archiver_dict[name] = dict(zip(HEADER[1:], entries))
                     self.archiver_dict[name]['name'] = name
+                    self.archiver_dict[name]['instances'] = (self.archiver_dict[name]['instances']).split(',')
                     if entries[4] == '':
                         context = 'independent'
                     else:
