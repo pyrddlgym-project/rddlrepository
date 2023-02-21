@@ -11,7 +11,7 @@ manifest = 'manifest.csv'
 
 
 class RDDLRepoManager:
-    def __init__(self, rebuild=False):
+    def __init__(self, rebuild=False) -> None:
         self.archiver_dict= {}
         self.archive_by_context = {}
         self.manager_path = os.path.dirname(os.path.abspath(__file__))
@@ -24,31 +24,42 @@ class RDDLRepoManager:
         else:
             self._build_repo()   # build repo and load to dict
 
-    def list_problems(self):
+    def list_problems(self, verbose=False) -> list[str]:
+        problem_list = []
         if len(self.archiver_dict) == 0:
             raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
         for key, values in self.archiver_dict.items():
-            print(key + ": " + values['description'])
+            if verbose:
+                print(key + ": " + values['description'])
+            problem_list.append(key)
+        return problem_list
 
-    def list_context(self):
+    def list_context(self, verbose=False) -> list[str]:
+        context_list = []
         if len(self.archive_by_context) == 0:
             raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
         for key, _ in self.archive_by_context.items():
-            print(key)
+            if verbose:
+                print(key)
+            context_list.append(key)
+        return context_list
 
-    def list_problems_by_context(self, context):
+    def list_problems_by_context(self, context: str, verbose=False) -> list[str]:
         if context not in self.archive_by_context:
             raise RDDLRepoContextNotExist('context: ' + context + ' does not exist in the RDDL repo')
         problems = '\n'.join(self.archive_by_context[context])
-        print(problems)
+        if verbose:
+            print(problems)
+        problems_list = copy.deepcopy(self.archive_by_context[context])
+        return problems_list
 
-    def get_problem(self, name):
+    def get_problem(self, name: str) -> ProblemInfo:
         if name in self.archiver_dict.keys():
             return ProblemInfo(self.archiver_dict[name])
         else:
             raise RDDLRepoDomainNotExist('Domain: ' + name + ' does not exists in the repository')
 
-    def _build_repo(self):
+    def _build_repo(self) -> None:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
         root_path = os.path.split(root_path)[0]
@@ -113,7 +124,7 @@ class RDDLRepoManager:
                 row = [values_copy[key] for key in HEADER]
                 writer.writerow(row)
 
-    def _load_repo(self):
+    def _load_repo(self) -> dict:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
         if not os.path.isfile(path_to_manifest):
@@ -145,3 +156,4 @@ class RDDLRepoManager:
             l.insert(0, a[1])
             a = os.path.split(a[0])
         return l
+
