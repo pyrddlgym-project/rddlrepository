@@ -125,11 +125,11 @@ domain tamarisk_mdp {
 			then Bernoulli ( COMPETITION-WIN-RATE-TAMARISK ) 
 
 		// If eradicated and no tamerisk at ?s, assume it won't spread to ?s on this iteration
-		else if (~tamarisk-at(?s) ^ [exists_{?r : reach} [SLOT-AT-REACH(?s,?r) ^ eradicate(?r) ^ ~forall_{?s2 : slot} [SLOT-AT-REACH(?s2,?r) ^ tamarisk-at(?s2)]]])
+		else if (~tamarisk-at(?s) ^ [exists_{?r : reach} [SLOT-AT-REACH(?s,?r) ^ eradicate(?r) ^ ~(forall_{?s2 : slot} [SLOT-AT-REACH(?s2,?r) ^ tamarisk-at(?s2)])]])
 			then false
 		
 		// Was it eradicated?
-		else if (tamarisk-at(?s) ^ [exists_{?r : reach} [SLOT-AT-REACH(?s,?r) ^ eradicate(?r) ^ ~forall_{?s2 : slot} [SLOT-AT-REACH(?s2,?r) ^ tamarisk-at(?s2)]]])
+		else if (tamarisk-at(?s) ^ [exists_{?r : reach} [SLOT-AT-REACH(?s,?r) ^ eradicate(?r) ^ ~(forall_{?s2 : slot} [SLOT-AT-REACH(?s2,?r) ^ tamarisk-at(?s2)])]])
 			then Bernoulli( 1.0 - ERADICATION-RATE ) // eradication success leads to false
 
 		// Did it die?

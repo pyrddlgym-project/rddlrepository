@@ -110,7 +110,7 @@ domain traffic_mdp {
 						else if ( exists_{?i : intersection, ?c2 : cell} (FLOWS-INTO-INTERSECTION-NS(?c2, ?i) | FLOWS-INTO-INTERSECTION-EW(?c2, ?i)) ^ FLOWS-INTO-CELL(?c2, ?c) )
 						then [if (occupied(?c))
 							// Can car go forward?
-							then KronDelta( ~exists_{?c2 : cell} FLOWS-INTO-CELL(?c, ?c2) ^ ~occupied(?c2) ) 
+							then KronDelta( ~(exists_{?c2 : cell} FLOWS-INTO-CELL(?c, ?c2) ^ ~occupied(?c2)) ) 
 							// Did a car enter from intersection?
 							else KronDelta( 
 								[exists_{?i : intersection} [light-signal2(?i) ^ ~light-signal1(?i) ^ exists_{?c2 : cell} [FLOWS-INTO-INTERSECTION-NS(?c2,?i) ^ FLOWS-INTO-CELL(?c2, ?c) ^ occupied(?c2)]]]
@@ -119,7 +119,7 @@ domain traffic_mdp {
 								
 						// Must be a normal cell - normal transition rules apply
 						else if (occupied(?c)) // Does it empty?
-						then KronDelta ( ~PERIMETER-EXIT-CELL(?c) ^ ~exists_{?c2 : cell} [FLOWS-INTO-CELL(?c, ?c2) ^ ~occupied(?c2)])
+						then KronDelta ( ~PERIMETER-EXIT-CELL(?c) ^ ~(exists_{?c2 : cell} [FLOWS-INTO-CELL(?c, ?c2) ^ ~occupied(?c2)]))
 						else // Does it fill?
   							KronDelta ( exists_{?c2 : cell} [FLOWS-INTO-CELL(?c2, ?c) ^ occupied(?c2)] );
   
@@ -127,7 +127,7 @@ domain traffic_mdp {
 
 	// Minimize congestion: this reward penalizes congested traffic defined as pairs 
 	// of *consecutive* occupied cells
-	reward = sum_{?c : cell} -[occupied(?c) ^ exists_{?c2 : cell} (FLOWS-INTO-CELL(?c2, ?c) ^ occupied(?c2))];
+	reward = [sum_{?c : cell} -[occupied(?c) ^ exists_{?c2 : cell} (FLOWS-INTO-CELL(?c2, ?c) ^ occupied(?c2))]];
 	
 //	state-action-constraints {
 //		// Make sure probabilities are in correct range

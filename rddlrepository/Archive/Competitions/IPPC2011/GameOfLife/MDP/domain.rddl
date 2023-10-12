@@ -41,7 +41,7 @@ domain game_of_life_mdp {
 			else Bernoulli(NOISE-PROB(?x,?y));
 	};
     	
-	reward = sum_{?x : x_pos, ?y : y_pos} [alive(?x,?y) - set(?x,?y)];
+	reward = (sum_{?x : x_pos, ?y : y_pos} [alive(?x,?y) - set(?x,?y)]);
     	
     state-action-constraints {
     	forall_{?x : x_pos, ?y : y_pos}

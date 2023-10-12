@@ -45,7 +45,7 @@ domain game_of_life_pomdp {
 			KronDelta ([sum_{?x2 : x_pos, ?y2 : y_pos} (NEIGHBOR(?x,?y,?x2,?y2) ^ alive'(?x2,?y2))] >= 2); 
 	};
     	
-	reward = sum_{?x : x_pos, ?y : y_pos} [alive(?x,?y) - set(?x,?y)];
+	reward = (sum_{?x : x_pos, ?y : y_pos} [alive(?x,?y) - set(?x,?y)]);
 	    	
     state-action-constraints {
     	forall_{?x : x_pos, ?y : y_pos}

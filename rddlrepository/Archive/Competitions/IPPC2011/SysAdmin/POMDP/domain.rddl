@@ -46,5 +46,5 @@ domain sysadmin_pomdp {
 							else Bernoulli(1 - OBSERV-PROB);
 	};
   
-	reward = sum_{?c : computer} [running(?c) - (REBOOT-PENALTY * reboot(?c))];
+	reward = [sum_{?c : computer} [running(?c) - (REBOOT-PENALTY * reboot(?c))]];
 }

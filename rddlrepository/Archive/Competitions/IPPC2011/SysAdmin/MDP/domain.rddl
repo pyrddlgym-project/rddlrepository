@@ -38,5 +38,5 @@ domain sysadmin_mdp {
 							else Bernoulli(REBOOT-PROB); 
 	};
   
-	reward = sum_{?c : computer} [running(?c) - (REBOOT-PENALTY * reboot(?c))];
+	reward = [sum_{?c : computer} [running(?c) - (REBOOT-PENALTY * reboot(?c))]];
 }
