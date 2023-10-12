@@ -92,13 +92,13 @@ domain elevators_pomdp {
 		// direction.
 		person-waiting-up'(?f) = 
 			if (person-waiting-up(?f) ^ 
-				~exists_{?e: elevator} [elevator-at-floor(?e, ?f) ^ elevator-dir-up(?e) ^ ~elevator-closed(?e)])
+				~(exists_{?e: elevator} [elevator-at-floor(?e, ?f) ^ elevator-dir-up(?e) ^ ~elevator-closed(?e)]))
 			then KronDelta(true) 
 			else Bernoulli(ARRIVE-PARAM(?f));
 			
 		person-waiting-down'(?f) = 
 			if (person-waiting-down(?f) ^ 
-				~exists_{?e: elevator} [elevator-at-floor(?e, ?f) ^ ~elevator-dir-up(?e) ^ ~elevator-closed(?e)])
+				~(exists_{?e: elevator} [elevator-at-floor(?e, ?f) ^ ~elevator-dir-up(?e) ^ ~elevator-closed(?e)]))
 			then KronDelta(true) 
 			else Bernoulli(ARRIVE-PARAM(?f));
   		
@@ -118,7 +118,7 @@ domain elevators_pomdp {
   		person-in-elevator-going-up'(?e) = 
   			if (person-in-elevator-going-up(?e))
   				// If elevator not at top floor then stays true, otherwise set to false
-  				then KronDelta( ~exists_{?f : floor} [elevator-at-floor(?e, ?f) ^ TOP-FLOOR(?f)] )
+  				then KronDelta( ~(exists_{?f : floor} [elevator-at-floor(?e, ?f) ^ TOP-FLOOR(?f)]) )
   			else
   				// No one in elevator going up... can only be true if someone going up gets in
   				KronDelta( exists_{?f : floor} 
@@ -128,7 +128,7 @@ domain elevators_pomdp {
   		person-in-elevator-going-down'(?e) = 
   			if (person-in-elevator-going-down(?e))
   				// If elevator not at bottom floor then stays true, otherwise set to false
-  				then KronDelta( ~exists_{?f : floor} [elevator-at-floor(?e, ?f) ^ BOTTOM-FLOOR(?f)] )
+  				then KronDelta( ~(exists_{?f : floor} [elevator-at-floor(?e, ?f) ^ BOTTOM-FLOOR(?f)]) )
   			else
   				// No one in elevator going up... can only be true if someone going up gets in
   				KronDelta( exists_{?f : floor} 
@@ -176,11 +176,11 @@ domain elevators_pomdp {
 			//////////////////////////////////////////////////////////////////
 			// These handle failed actions -- stay at current floor
 			//////////////////////////////////////////////////////////////////
-			else if (move-current-dir(?e) ^ elevator-dir-up(?e) ^ ~exists_{?next : floor} 
-					 [elevator-at-floor(?e, ?f) ^ ADJACENT-UP(?f,?next)])
+			else if (move-current-dir(?e) ^ elevator-dir-up(?e) ^ ~(exists_{?next : floor} 
+					 [elevator-at-floor(?e, ?f) ^ ADJACENT-UP(?f,?next)]))
 				then KronDelta( elevator-at-floor(?e, ?f) )
-			else if (move-current-dir(?e) ^ ~elevator-dir-up(?e) ^ ~exists_{?next : floor} 
-						[elevator-at-floor(?e, ?f) ^ ADJACENT-UP(?next,?f)])
+			else if (move-current-dir(?e) ^ ~elevator-dir-up(?e) ^ ~(exists_{?next : floor} 
+						[elevator-at-floor(?e, ?f) ^ ADJACENT-UP(?next,?f)]))
 				then KronDelta( elevator-at-floor(?e, ?f) )
 
 			//////////////////////////////////////////////////////////////////
