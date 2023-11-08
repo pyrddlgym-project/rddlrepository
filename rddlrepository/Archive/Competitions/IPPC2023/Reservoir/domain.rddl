@@ -74,7 +74,7 @@ domain reservoir_control_cont {
 
 
     action-preconditions {
-		forall_{?r : reservoir} release(?r) <= TOP_RES(?r);
+		//forall_{?r : reservoir} release(?r) <= TOP_RES(?r);
 		forall_{?r : reservoir} release(?r) >= 0;
 	};
 
