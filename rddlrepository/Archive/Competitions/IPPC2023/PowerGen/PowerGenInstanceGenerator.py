@@ -8,7 +8,7 @@ from pyRDDLGym.Examples.InstanceGenerator import InstanceGenerator
 class PowerGenInstanceGenerator(InstanceGenerator):
     
     def get_env_path(self) -> str:
-        return os.path.join('PowerGen', 'Continuous')
+        return 'PowerGen'
     
     def get_domain_name(self) -> str:
         return 'power_gen'
