@@ -8,7 +8,7 @@ from pyRDDLGym.Examples.InstanceGenerator import InstanceGenerator
 class ReservoirInstanceGenerator(InstanceGenerator):
     
     def get_env_path(self) -> str:
-        return os.path.join('Reservoir', 'Continuous')
+        return 'Reservoir'
     
     def get_domain_name(self) -> str:
         return 'reservoir_control_cont'

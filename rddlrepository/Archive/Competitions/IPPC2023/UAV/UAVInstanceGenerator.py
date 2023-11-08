@@ -8,7 +8,7 @@ from pyRDDLGym.Examples.InstanceGenerator import InstanceGenerator
 class UAVInstanceGenerator(InstanceGenerator):
     
     def get_env_path(self) -> str:
-        return os.path.join('UAV', 'Continuous')
+        return 'UAV'
     
     def get_domain_name(self) -> str:
         return 'kinematic_UAVs_con'
