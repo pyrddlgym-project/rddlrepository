@@ -99,6 +99,6 @@ domain power_gen {
 
 		// Production amounts within bounds
 		forall_{?p : plant} [ curProd(?p) >= 0.0 ];
-		forall_{?p : plant} [ curProd(?p) <= PROD-UNITS-MAX(?p) ];
+		//forall_{?p : plant} [ curProd(?p) <= PROD-UNITS-MAX(?p) ];
 	};
 }
