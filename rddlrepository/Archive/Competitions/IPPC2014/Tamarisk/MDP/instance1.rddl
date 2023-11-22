@@ -17,6 +17,14 @@ non-fluents nf_tamarisk_inst_mdp__1 {
 		DOWNSTREAM-REACH(r4,r3);
 		SLOT-AT-REACH(s4s1,r4);
 		SLOT-AT-REACH(s4s2,r4);
+		EQUALS(s1s1,s1s1);
+		EQUALS(s1s2,s1s2);
+		EQUALS(s2s1,s2s1);
+		EQUALS(s2s2,s2s2);
+		EQUALS(s3s1,s3s1);
+		EQUALS(s3s2,s3s2);
+		EQUALS(s4s1,s4s1);
+		EQUALS(s4s2,s4s2);
 	};
 }
 
