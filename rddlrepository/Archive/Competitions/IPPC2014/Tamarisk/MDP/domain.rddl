@@ -54,6 +54,7 @@ domain tamarisk_mdp {
 	UPSTREAM-SPREAD-RATE   : { non-fluent, real, default = 0.15 }; // 0.1 in original
 	DEATH-RATE-TAMARISK    : { non-fluent, real, default = 0.05 }; // 0.2 in original
 	DEATH-RATE-NATIVE      : { non-fluent, real, default = 0.05 }; // 0.2 in original
+	EQUALS(slot, slot)     : { non-fluent, bool, default = false };
 	
 	// These are parameters I have added to address native spreading and
 	// competition if a tamarisk and native both appear at a slot.
@@ -143,7 +144,7 @@ domain tamarisk_mdp {
 		else if (~tamarisk-at(?s) ^ ~native-at(?s))
 			then Bernoulli( EXOGENOUS-PROD-RATE-TAMARISK + (1 - EXOGENOUS-PROD-RATE-TAMARISK) 
 			                *(1.0 - // noisy-or product that all propagules fail to spread to this slot, take 1.0 - to get probability of at least one propagule spreading!
-			                    [prod_{?r : reach, ?s2 : slot} [if (SLOT-AT-REACH(?s,?r) ^ SLOT-AT-REACH(?s2,?r) ^ (?s ~= ?s2) ^ tamarisk-at(?s2)) then (1.0 - DOWNSTREAM-SPREAD-RATE) else (1.0)]]
+			                    [prod_{?r : reach, ?s2 : slot} [if (SLOT-AT-REACH(?s,?r) ^ SLOT-AT-REACH(?s2,?r) ^ (~EQUALS(?s,?s2)) ^ tamarisk-at(?s2)) then (1.0 - DOWNSTREAM-SPREAD-RATE) else (1.0)]]
 			                   *[prod_{?r : reach, ?r2 : reach, ?s2 : slot} [if (SLOT-AT-REACH(?s,?r) ^ DOWNSTREAM-REACH(?r,?r2) ^ SLOT-AT-REACH(?s2,?r2) ^ tamarisk-at(?s2)) then (1.0 - DOWNSTREAM-SPREAD-RATE) else (1.0)]] 
 							   *[prod_{?r : reach, ?r2 : reach, ?s2 : slot} [if (SLOT-AT-REACH(?s,?r) ^ DOWNSTREAM-REACH(?r2,?r) ^ SLOT-AT-REACH(?s2,?r2) ^ tamarisk-at(?s2)) then (1.0 - UPSTREAM-SPREAD-RATE) else (1.0)]]) )
 

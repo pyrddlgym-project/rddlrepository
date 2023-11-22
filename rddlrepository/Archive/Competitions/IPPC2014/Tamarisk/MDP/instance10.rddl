@@ -6,6 +6,30 @@ non-fluents nf_tamarisk_inst_mdp__10 {
 	};
 
 	non-fluents {
+		EQUALS(s1s1,s1s1);
+		EQUALS(s1s2,s1s2);
+		EQUALS(s1s3,s1s3);
+		EQUALS(s2s1,s2s1);
+		EQUALS(s2s2,s2s2);
+		EQUALS(s2s3,s2s3);
+		EQUALS(s3s1,s3s1);
+		EQUALS(s3s2,s3s2);
+		EQUALS(s3s3,s3s3);
+		EQUALS(s4s1,s4s1);
+		EQUALS(s4s2,s4s2);
+		EQUALS(s4s3,s4s3);
+		EQUALS(s5s1,s5s1);
+		EQUALS(s5s2,s5s2);
+		EQUALS(s5s3,s5s3);
+		EQUALS(s6s1,s6s1);
+		EQUALS(s6s2,s6s2);
+		EQUALS(s6s3,s6s3);
+		EQUALS(s7s1,s7s1);
+		EQUALS(s7s2,s7s2);
+		EQUALS(s7s3,s7s3);
+		EQUALS(s8s1,s8s1);
+		EQUALS(s8s2,s8s2);
+		EQUALS(s8s3,s8s3);
 		SLOT-AT-REACH(s1s1,r1);
 		SLOT-AT-REACH(s1s2,r1);
 		SLOT-AT-REACH(s1s3,r1);
