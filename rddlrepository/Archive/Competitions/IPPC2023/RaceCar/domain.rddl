@@ -58,8 +58,8 @@ domain racecar {
 		vy		: { state-fluent, real, default = 0 };		// y velocity of car
 		
        	// actions
-       	fx 		: { action-fluent, real, default = 0 };     // x force component applied to the car
-		fy 		: { action-fluent, real, default = 0 };     // y force component applied to the car
+       	fx 		: { action-fluent, real, default = 0.0 };     // x force component applied to the car
+		fy 		: { action-fluent, real, default = 0.0 };     // y force component applied to the car
     };
 
     cpfs {
