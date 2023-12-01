@@ -88,8 +88,8 @@ domain hvac{
 
 
 	action-preconditions {
-		forall_{?z : zone} [ OUT-AIR-FLOW <= fan-in(?z) <= 100.00  ];
-		forall_{?h : heater} [-100.0 <= heat-input(?h) <= 100.00 ];
+		forall_{?z : zone} [ fan-in(?z) >= OUT-AIR-FLOW  ];
+		forall_{?h : heater} [0.0 <= heat-input(?h) <= 100.00 ];
 	};
 
 }
