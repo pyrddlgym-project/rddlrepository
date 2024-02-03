@@ -178,7 +178,7 @@ class RDDLRepoManager:
     # REGISTRATION
     # ==========================================================================
     
-    def register_context(self, context: str) -> None:
+    def register_context(self, context: str, refresh: bool=True) -> None:
         root_path = os.path.dirname(os.path.abspath(__file__))
         root_path = os.path.split(root_path)[0]
         context_dir = os.path.join(root_path, ARCHIVE_NAME, context)
@@ -187,7 +187,10 @@ class RDDLRepoManager:
             raise RDDLRepoContextDuplicationError(f'Context <{context}> already exists.')
         
         os.mkdir(context_dir)
-        self.archive_by_context[context] = []
+        open(os.path.join(context_dir, '__init__.py'), 'a').close()
+        
+        if refresh:
+            self.archive_by_context[context] = []
         
         print(f'Context <{context}> was successfully registered in rddlrepository.')
     
