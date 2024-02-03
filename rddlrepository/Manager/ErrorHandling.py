@@ -1,20 +1,26 @@
-class RDDLRepoEnvironmentNotExist(ValueError):
+class RDDLRepoEnvironmentNotExistError(ValueError):
     pass
 
-class RDDLRepoInstanceNotExist(ValueError):
+
+class RDDLRepoInstanceNotExistError(ValueError):
     pass
 
-class RDDLRepoDomainNotExist(ValueError):
+
+class RDDLRepoDomainNotExistError(ValueError):
     pass
 
-class RDDLRepoProblemDuplication(ValueError):
+
+class RDDLRepoProblemDuplicationError(ValueError):
     pass
 
-class RDDLRepoUnresolvedDependency(ValueError):
+
+class RDDLRepoUnresolvedDependencyError(ValueError):
     pass
 
-class RDDLRepoManifestEmpty(ValueError):
+
+class RDDLRepoManifestEmptyError(ValueError):
     pass
 
-class RDDLRepoContextNotExist(ValueError):
+
+class RDDLRepoContextNotExistError(ValueError):
     pass

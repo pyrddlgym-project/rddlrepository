@@ -3,14 +3,19 @@ import sys
 import importlib.util
 from typing import List
 
-from .ErrorHandling import RDDLRepoInstanceNotExist, RDDLRepoUnresolvedDependency
-
+from .ErrorHandling import (
+    RDDLRepoInstanceNotExistError,
+    RDDLRepoUnresolvedDependencyError
+)
 
 sys.path.append(os.path.join('..', 'rddlrepository'))
 viz_backend_package_name = 'pyRDDLGym'
 
+DOMAIN_NAME = 'domain.rddl'
+
 
 class ProblemInfo:
+
     def __init__(self, problem_data: dict) -> None:
         self.name = problem_data['name']
         self.desc = problem_data['description']
@@ -19,19 +24,18 @@ class ProblemInfo:
         self.viz = problem_data['viz']
 
     def get_domain(self) -> str:
-        path = os.path.join(self.loc, 'domain.rddl')
+        path = os.path.join(self.loc, DOMAIN_NAME)
         return path
 
     def get_instance(self, num: int) -> str:
         if str(num) not in self.instances:
-            raise RDDLRepoInstanceNotExist('problem ' + self.name + ' does not have instance ' + str(num))
+            raise RDDLRepoInstanceNotExist(
+                f'Problem {self.name} does not have instance {num}.')
         instance = 'instance' + str(num) + '.rddl'
         path = os.path.join(self.loc, instance)
         return path
 
-    def list_instances(self, verbose=False) -> List[str]:
-        if verbose:
-            print(self.instances)
+    def list_instances(self) -> List[str]:
         return self.instances
 
     def get_visualizer(self):
@@ -40,7 +44,8 @@ class ProblemInfo:
 
         spec = importlib.util.find_spec(viz_backend_package_name)
         if spec is None:
-            raise RDDLRepoUnresolvedDependency(viz_backend_package_name + " is not installed")
+            raise RDDLRepoUnresolvedDependency(
+                f'{viz_backend_package_name} is not installed')
 
         path_to_viz = []
         p = os.path.split(self.loc)

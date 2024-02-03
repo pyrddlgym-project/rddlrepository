@@ -4,67 +4,71 @@ import importlib
 import csv
 from typing import List
 
-from .ErrorHandling import RDDLRepoDomainNotExist, RDDLRepoProblemDuplication, RDDLRepoManifestEmpty,RDDLRepoContextNotExist
+from .ErrorHandling import (
+    RDDLRepoDomainNotExistError,
+    RDDLRepoProblemDuplicationError,
+    RDDLRepoManifestEmptyError,
+    RDDLRepoContextNotExistError
+)
 from .ProblemInfo import ProblemInfo
 
 HEADER = ['name', 'description', 'location', 'instances', 'viz', 'context', 'tags']
 manifest = 'manifest.csv'
 
+ARCHIVE_FOLDER = 'rddlrepository.Archive'
+DOMAIN_NAME = 'domain.rddl'
+
 
 class RDDLRepoManager:
+
     def __init__(self, rebuild=False) -> None:
-        self.archiver_dict= {}
+        self.archiver_dict = {}
         self.archive_by_context = {}
+        
         self.manager_path = os.path.dirname(os.path.abspath(__file__))
         manifest_path = os.path.join(self.manager_path, manifest)
         if os.path.isfile(manifest_path) and not rebuild:
             try:
-                self._load_repo()    # load repo to dict
+                self._load_repo()
             except:
-                raise RDDLRepoManifestEmpty('An error ocurred while loading current repo manifest, please try to re-run with rebuild=True')
+                raise RDDLRepoManifestEmpty(
+                    'An error ocurred while loading current repo manifest, '
+                    'please try to re-run with rebuild=True')
         else:
-            self._build_repo()   # build repo and load to dict
+            self._build_repo()
 
-    def list_problems(self, verbose=False) -> List[str]:
+    def list_problems(self) -> List[str]:
         problem_list = []
         if len(self.archiver_dict) == 0:
-            raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
-        for key, values in self.archiver_dict.items():
-            if verbose:
-                print(key + ": " + values['description'])
-            problem_list.append(key)
-        return problem_list
+            raise RDDLRepoManifestEmpty(
+                'Repository manifest is empty please re-run with rebuild=True')        
+        return list(self.archiver_dict.keys())
 
-    def list_context(self, verbose=False) -> List[str]:
-        context_list = []
-        if len(self.archive_by_context) == 0:
-            raise RDDLRepoManifestEmpty('Repo manifest is empty please re-run with rebuild=True')
-        for key, _ in self.archive_by_context.items():
-            if verbose:
-                print(key)
-            context_list.append(key)
-        return context_list
+    def list_context(self) -> List[str]:
+        if not self.archive_by_context:
+            raise RDDLRepoManifestEmpty(
+                'Repository manifest is empty please re-run with rebuild=True')        
+        return list(self.archive_by_context.keys())
 
-    def list_problems_by_context(self, context: str, verbose=False) -> List[str]:
-        if context not in self.archive_by_context:
-            raise RDDLRepoContextNotExist('context: ' + context + ' does not exist in the RDDL repo')
-        problems = '\n'.join(self.archive_by_context[context])
-        if verbose:
-            print(problems)
-        problems_list = copy.deepcopy(self.archive_by_context[context])
-        return problems_list
-
+    def list_problems_by_context(self, context: str) -> List[str]:
+        info = self.archive_by_context.get(context, None)
+        if info is None:
+            raise RDDLRepoContextNotExist(
+                f'Context: {context} does not exist in the RDDL repo')
+        return copy.deepcopy(info)
+        
     def get_problem(self, name: str) -> ProblemInfo:
-        if name in self.archiver_dict.keys():
-            return ProblemInfo(self.archiver_dict[name])
-        else:
-            raise RDDLRepoDomainNotExist('Domain: ' + name + ' does not exists in the repository')
+        info = self.archiver_dict.get(name, None)
+        if info is None:
+            raise RDDLRepoDomainNotExist(
+                f'Domain: {name} does not exists in the repository')        
+        return ProblemInfo(info)            
 
     def _build_repo(self) -> None:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
         root_path = os.path.split(root_path)[0]
-        archive_dir = os.path.join(root_path,'Archive')
+        archive_dir = os.path.join(root_path, 'Archive')
         start_char = len(archive_dir)
 
         # build the repo dictionary as first step to verify correctness and uniqueness
@@ -77,38 +81,40 @@ class RDDLRepoManager:
             d = os.path.split(root_path)
             if d[1] == '__pycache__':
                 continue
+            
             if "__init__.py" in files:
-                d = self.__split_path_to_list(dir)
-                module = 'rddlrepository.Archive' + '.' + '.'.join(d)
+                d = self._split_path_to_list(dir)
+                module = ARCHIVE_FOLDER + '.' + '.'.join(d)
                 mymodule = importlib.import_module(module)
                 context = mymodule.info['context']
                 if context:
                     context = '_' + context
                 name = mymodule.info['name'] + context
+                
                 if name in self.archiver_dict.keys():
-                    raise RDDLRepoProblemDuplication('domain: ' + name + ' already exists, problem names must be unique')
-                if 'domain.rddl' not in files:
-                    raise RDDLRepoDomainNotExist('domain: ' + name + ' does not have a domain.rddl file')
+                    raise RDDLRepoProblemDuplication(
+                        f'Domain {name} already exists, problem names must be unique.')
+                if DOMAIN_NAME not in files:
+                    raise RDDLRepoDomainNotExist(
+                        f'domain {name} does not have a domain.rddl file')
+                    
                 instances = [fname[8:-5] for fname in files
                              if fname.startswith('instance') and fname.endswith('.rddl')]
                 instances.sort(key=lambda x: int(x))
-                self.archiver_dict[name] = {'name': name,
-                                                        'description': mymodule.info['description'],
-                                                        'location': root,
-                                                        'instances': instances,
-                                                        'viz': mymodule.info['viz'],
-                                                        'context': mymodule.info['context'],
-                                                        'tags': mymodule.info['tags']
-                                            }
+                self.archiver_dict[name] = {
+                    'name': name,
+                    'description': mymodule.info['description'],
+                    'location': root,
+                    'instances': instances,
+                    'viz': mymodule.info['viz'],
+                    'context': mymodule.info['context'],
+                    'tags': mymodule.info['tags']
+                }
 
                 context = mymodule.info['context']
                 if context == '':
                     context = 'independent'
-                if context in self.archive_by_context:
-                    self.archive_by_context[context].append(name)
-                else:
-                    self.archive_by_context[context] = [name]
-
+                self.archive_by_context.setdefault(context, []).append(name)
 
         # Generate manifest
         with open(path_to_manifest, 'w', newline='') as file:
@@ -131,26 +137,24 @@ class RDDLRepoManager:
         if not os.path.isfile(path_to_manifest):
             return {}
 
-        self.archiver_dict= {}
+        self.archiver_dict = {}
         with open(path_to_manifest) as file:
             reader = csv.reader(file, delimiter=',')
             for i, row in enumerate(reader):
                 if i > 0:
                     name, *entries = row
-                    self.archiver_dict[name] = dict(zip(HEADER[1:], entries))
-                    self.archiver_dict[name]['name'] = name
-                    self.archiver_dict[name]['instances'] = (self.archiver_dict[name]['instances']).split(',')
+                    domain_info = dict(zip(HEADER[1:], entries))
+                    domain_info['name'] = name
+                    domain_info['instances'] = domain_info['instances'].split(',')                    
+                    self.archiver_dict[name] = domain_ifo
                     if entries[4] == '':
                         context = 'independent'
                     else:
                         context = entries[4]
-                    if context in self.archive_by_context:
-                        self.archive_by_context[context].append(name)
-                    else:
-                        self.archive_by_context[context] = [name]
+                    self.archive_by_context.setdefault(context, []).append(name)
             return self.archiver_dict
 
-    def __split_path_to_list(self, path):
+    def _split_path_to_list(self, path):
         l = []
         a = os.path.split(path)
         while a[1] != '':
