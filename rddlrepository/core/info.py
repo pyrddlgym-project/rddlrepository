@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from .error import (
     RDDLRepoInstanceNotExistError,
+    RDDLRepoInstanceDuplicationError,
     RDDLRepoUnresolvedDependencyError
 )
 
@@ -31,7 +32,7 @@ class ProblemInfo:
         if str(num) not in self.instances:
             raise RDDLRepoInstanceNotExistError(
                 f'Domain <{self.name}> does not have instance {num}.')
-        instance = f'instance{str(num)}.rddl'
+        instance = f'instance{num}.rddl'
         path = os.path.join(self.loc, instance)
         return path
 
@@ -64,6 +65,16 @@ class ProblemInfo:
             viz_package = __import__(viz_package_name, {}, {}, viz_class_name)
             viz = getattr(viz_package, viz_class_name)
         return viz
+    
+    def register_instance(self, num: str, rddl: str) -> None:
+        path = os.path.join(self.loc, f'instance{num}.rddl')
+        if os.path.exists(path):
+            raise RDDLRepoInstanceDuplicationError(
+                f'Instance {num} already exists for domain {self.name}.')
+        
+        with open(path, 'w') as instance_file:
+            instance_file.write(rddl)    
+        print(f'Instance {num} was successfully registered for domain {self.name}.')
     
     def __str__(self) -> str:
         attr = self.__dict__
