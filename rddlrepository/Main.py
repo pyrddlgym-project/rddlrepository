@@ -1,4 +1,4 @@
-from Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoManager
+from rddlrepository.Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoManager
 
 
 def main():
@@ -7,9 +7,9 @@ def main():
     # rebuild argument force manifest rebuild.
     # manager = RDDLRepoManager()
     manager = RDDLRepoManager(rebuild=True)
-
+    
     # list all problems in the repo, unique name is generated based on the name and context of the problem
-    manager.list_problems()
+    print(manager.list_problems())
 
     manager.list_context()
 
