@@ -66,6 +66,11 @@ class ProblemInfo:
             viz = getattr(viz_package, viz_class_name)
         return viz
     
+    def __str__(self) -> str:
+        attr = self.__dict__
+        values = [f'{name}: {value}' for name, value in self.__dict__.items()]
+        return '\n'.join(values)
+    
     def register_instance(self, num: str, rddl: str) -> None:
         path = os.path.join(self.loc, f'instance{num}.rddl')
         if os.path.exists(path):
@@ -77,9 +82,4 @@ class ProblemInfo:
         self.instances.append(num)
         
         print(f'Instance <{num}> was successfully registered in domain <{self.name}>.')
-    
-    def __str__(self) -> str:
-        attr = self.__dict__
-        values = [f'{name}: {value}' for name, value in self.__dict__.items()]
-        return '\n'.join(values)
     

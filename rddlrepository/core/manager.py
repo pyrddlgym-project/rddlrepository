@@ -40,7 +40,11 @@ class RDDLRepoManager:
                     'please try to re-run with rebuild=True.')
         else:
             self._build_repo()
-
+    
+    # ==========================================================================
+    # GETTERS
+    # ==========================================================================
+    
     def list_problems(self) -> List[str]:
         problem_list = []
         if len(self.archiver_dict) == 0:
@@ -68,54 +72,10 @@ class RDDLRepoManager:
                 f'Domain <{name}> does not exists in the repository.')        
         return ProblemInfo(info)            
     
-    def register_context(self, context: str) -> None:
-        root_path = os.path.dirname(os.path.abspath(__file__))
-        root_path = os.path.split(root_path)[0]
-        context_dir = os.path.join(root_path, ARCHIVE_NAME, context)
-        
-        if context in self.archive_by_context or os.path.isdir(context_dir):
-            raise RDDLRepoContextDuplicationError(f'Context <{context}> already exists.')
-        
-        os.mkdir(context_dir)
-        self.archive_by_context[context] = []
-        
-        print(f'Context <{context}> was successfully registered in rddlrepository.')
+    # ==========================================================================
+    # MANIFEST HANDLING
+    # ==========================================================================
     
-    def register_domain(self, name: str, context: str, rddl: str, 
-                        desc: str=None, viz: str='', refresh: bool=True) -> None:
-        domains = self.list_problems_by_context(context)
-        if name in domains:
-            raise RDDLRepoProblemDuplicationError(
-                f'Domain <{name}> already exists in context <{context}>.')
-        
-        root_path = os.path.dirname(os.path.abspath(__file__))
-        root_path = os.path.split(root_path)[0]
-        domain_dir = os.path.join(root_path, ARCHIVE_NAME, context, name)
-        if os.path.isdir(domain_dir):
-            raise RDDLRepoProblemDuplicationError(
-                f'Domain <{name}> already exists in context <{context}>.')
-        
-        os.mkdir(domain_dir)
-        
-        if desc is None:
-            desc = (f'User-defined domain with name {name} in context {context}, '
-                    f'created on {datetime.today()}.')
-        info = {'name': name, 'description': desc, 
-                'context': context, 'tags': '', 'viz': viz}
-        
-        with open(os.path.join(domain_dir, INFO_NAME), 'a') as info_file:
-            info_file.write(f'info = {info}')
-        with open(os.path.join(domain_dir, DOMAIN_NAME), 'a') as domain_file:
-            domain_file.write(rddl)
-        
-        if refresh:
-            self.archiver_dict = {}
-            self.archive_by_context = {}
-            self._build_repo()
-            self._load_repo()
-        
-        print(f'Domain <{name}> was successfully registered with context <{context}>.')
-        
     def _build_repo(self) -> None:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
@@ -213,4 +173,56 @@ class RDDLRepoManager:
             l.insert(0, a[1])
             a = os.path.split(a[0])
         return l
-
+    
+    # ==========================================================================
+    # REGISTRATION
+    # ==========================================================================
+    
+    def register_context(self, context: str) -> None:
+        root_path = os.path.dirname(os.path.abspath(__file__))
+        root_path = os.path.split(root_path)[0]
+        context_dir = os.path.join(root_path, ARCHIVE_NAME, context)
+        
+        if context in self.archive_by_context or os.path.isdir(context_dir):
+            raise RDDLRepoContextDuplicationError(f'Context <{context}> already exists.')
+        
+        os.mkdir(context_dir)
+        self.archive_by_context[context] = []
+        
+        print(f'Context <{context}> was successfully registered in rddlrepository.')
+    
+    def register_domain(self, name: str, context: str, rddl: str,
+                        desc: str=None, viz: str='', refresh: bool=True) -> None:
+        domains = self.list_problems_by_context(context)
+        if name in domains:
+            raise RDDLRepoProblemDuplicationError(
+                f'Domain <{name}> already exists in context <{context}>.')
+        
+        root_path = os.path.dirname(os.path.abspath(__file__))
+        root_path = os.path.split(root_path)[0]
+        domain_dir = os.path.join(root_path, ARCHIVE_NAME, context, name)
+        if os.path.isdir(domain_dir):
+            raise RDDLRepoProblemDuplicationError(
+                f'Domain <{name}> already exists in context <{context}>.')
+        
+        os.mkdir(domain_dir)
+        
+        if desc is None:
+            desc = (f'User-defined domain with name {name} in context {context}, '
+                    f'created on {datetime.today()}.')
+        info = {'name': name, 'description': desc,
+                'context': context, 'tags': '', 'viz': viz}
+        
+        with open(os.path.join(domain_dir, INFO_NAME), 'a') as info_file:
+            info_file.write(f'info = {info}')
+        with open(os.path.join(domain_dir, DOMAIN_NAME), 'a') as domain_file:
+            domain_file.write(rddl)
+        
+        if refresh:
+            self.archiver_dict = {}
+            self.archive_by_context = {}
+            self._build_repo()
+            self._load_repo()
+        
+        print(f'Domain <{name}> was successfully registered with context <{context}>.')
+        
