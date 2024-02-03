@@ -1,1 +1,1 @@
-recursive-include rddlrepository/Archive *.rddl
+recursive-include rddlrepository/archive *.rddl
