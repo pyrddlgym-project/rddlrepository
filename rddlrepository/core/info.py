@@ -31,7 +31,7 @@ class ProblemInfo:
     def get_instance(self, num: str) -> str:
         if str(num) not in self.instances:
             raise RDDLRepoInstanceNotExistError(
-                f'Domain <{self.name}> does not have instance {num}.')
+                f'Domain <{self.name}> does not have instance <{num}>.')
         instance = f'instance{num}.rddl'
         path = os.path.join(self.loc, instance)
         return path
@@ -70,11 +70,13 @@ class ProblemInfo:
         path = os.path.join(self.loc, f'instance{num}.rddl')
         if os.path.exists(path):
             raise RDDLRepoInstanceDuplicationError(
-                f'Instance {num} already exists for domain {self.name}.')
+                f'Instance <{num}> already exists in domain <{self.name}>.')
         
         with open(path, 'w') as instance_file:
-            instance_file.write(rddl)    
-        print(f'Instance {num} was successfully registered for domain {self.name}.')
+            instance_file.write(rddl)               
+        self.instances.append(num)
+        
+        print(f'Instance <{num}> was successfully registered in domain <{self.name}>.')
     
     def __str__(self) -> str:
         attr = self.__dict__

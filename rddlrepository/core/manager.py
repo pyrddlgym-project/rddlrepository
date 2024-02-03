@@ -8,7 +8,8 @@ from .error import (
     RDDLRepoDomainNotExistError,
     RDDLRepoProblemDuplicationError,
     RDDLRepoManifestEmptyError,
-    RDDLRepoContextNotExistError
+    RDDLRepoContextNotExistError,
+    RDDLRepoContextDuplicationError
 )
 from .info import ProblemInfo
 
@@ -64,7 +65,20 @@ class RDDLRepoManager:
             raise RDDLRepoDomainNotExistError(
                 f'Domain <{name}> does not exists in the repository.')        
         return ProblemInfo(info)            
-
+    
+    def register_context(self, context: str) -> None:
+        root_path = os.path.dirname(os.path.abspath(__file__))
+        root_path = os.path.split(root_path)[0]
+        context_dir = os.path.join(root_path, ARCHIVE_NAME, context)
+        
+        if context in self.archive_by_context or os.path.isdir(context_dir):
+            raise RDDLRepoContextDuplicationError(f'Context <{context}> already exists.')
+        
+        os.mkdir(context_dir)
+        self.archive_by_context[context] = []
+        
+        print(f'Context <{context}> was successfully registered in rddlrepository.')
+    
     def _build_repo(self) -> None:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
