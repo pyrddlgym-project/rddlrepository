@@ -32,7 +32,7 @@ class RDDLRepoManager:
                 self._load_repo()
             except:
                 raise RDDLRepoManifestEmpty(
-                    'An error ocurred while loading current repository manifest, '
+                    'An error occurred while loading current repository manifest, '
                     'please try to re-run with rebuild=True.')
         else:
             self._build_repo()
