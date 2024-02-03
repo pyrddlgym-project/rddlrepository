@@ -9,8 +9,8 @@ from .error import (
 )
 
 sys.path.append(os.path.join('..', 'rddlrepository'))
-viz_backend_package_name = 'pyRDDLGym'
 
+VIZ_BACKEND_PACKAGE_NAME = 'pyRDDLGym'
 DOMAIN_NAME = 'domain.rddl'
 
 
@@ -31,7 +31,7 @@ class ProblemInfo:
         if str(num) not in self.instances:
             raise RDDLRepoInstanceNotExistError(
                 f'Domain <{self.name}> does not have instance {num}.')
-        instance = 'instance' + str(num) + '.rddl'
+        instance = f'instance{str(num)}.rddl'
         path = os.path.join(self.loc, instance)
         return path
 
@@ -42,11 +42,11 @@ class ProblemInfo:
         if self.viz == 'None':
             return None
 
-        spec = importlib.util.find_spec(viz_backend_package_name)
+        spec = importlib.util.find_spec(VIZ_BACKEND_PACKAGE_NAME)
         if spec is None:
             raise RDDLRepoUnresolvedDependencyError(
-                f'{viz_backend_package_name} is not installed: '
-                f'can be installed with \'pip install {viz_backend_package_name}\'.')
+                f'{VIZ_BACKEND_PACKAGE_NAME} is not installed: '
+                f'can be installed with \'pip install {VIZ_BACKEND_PACKAGE_NAME}\'.')
 
         path_to_viz = []
         p = os.path.split(self.loc)
