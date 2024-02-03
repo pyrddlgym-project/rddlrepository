@@ -15,7 +15,7 @@ from .info import ProblemInfo
 HEADER = ['name', 'description', 'location', 'instances', 'viz', 'context', 'tags']
 manifest = 'manifest.csv'
 
-ARCHIVE_FOLDER = 'rddlrepository.Archive'
+ARCHIVE_FOLDER = 'rddlrepository.archive'
 DOMAIN_NAME = 'domain.rddl'
 
 
