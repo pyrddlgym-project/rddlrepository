@@ -18,6 +18,10 @@ class RDDLRepoInstanceDuplicationError(ValueError):
     pass
 
 
+class RDDLRepoContextDuplicationError(ValueError):
+    pass
+
+
 class RDDLRepoUnresolvedDependencyError(ValueError):
     pass
 
