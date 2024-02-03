@@ -15,7 +15,8 @@ from .info import ProblemInfo
 HEADER = ['name', 'description', 'location', 'instances', 'viz', 'context', 'tags']
 manifest = 'manifest.csv'
 
-ARCHIVE_FOLDER = 'rddlrepository.archive'
+PACKAGE_NAME = 'rddlrepository'
+ARCHIVE_NAME = 'archive'
 DOMAIN_NAME = 'domain.rddl'
 
 
@@ -68,7 +69,7 @@ class RDDLRepoManager:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
         root_path = os.path.split(root_path)[0]
-        archive_dir = os.path.join(root_path, 'Archive')
+        archive_dir = os.path.join(root_path, ARCHIVE_NAME)
         start_char = len(archive_dir)
 
         # build the repo dictionary as first step to verify correctness and uniqueness
@@ -84,7 +85,7 @@ class RDDLRepoManager:
             
             if "__init__.py" in files:
                 d = self._split_path_to_list(dir)
-                module = ARCHIVE_FOLDER + '.' + '.'.join(d)
+                module = PACKAGE_NAME + '.' + ARCHIVE_NAME + '.' + '.'.join(d)
                 mymodule = importlib.import_module(module)
                 context = mymodule.info['context']
                 if context:
