@@ -3,7 +3,7 @@ import sys
 import importlib.util
 from typing import List
 
-from .ErrorHandling import (
+from .error import (
     RDDLRepoInstanceNotExistError,
     RDDLRepoUnresolvedDependencyError
 )

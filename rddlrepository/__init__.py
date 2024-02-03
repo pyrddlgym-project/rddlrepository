@@ -1,1 +1,1 @@
-from rddlrepository.Manager.RDDLRepoManager import RDDLRepoManager
+from rddlrepository.core.manager import RDDLRepoManager

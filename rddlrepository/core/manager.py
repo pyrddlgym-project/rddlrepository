@@ -4,13 +4,13 @@ import importlib
 import csv
 from typing import List
 
-from .ErrorHandling import (
+from .error import (
     RDDLRepoDomainNotExistError,
     RDDLRepoProblemDuplicationError,
     RDDLRepoManifestEmptyError,
     RDDLRepoContextNotExistError
 )
-from .ProblemInfo import ProblemInfo
+from .info import ProblemInfo
 
 HEADER = ['name', 'description', 'location', 'instances', 'viz', 'context', 'tags']
 manifest = 'manifest.csv'
