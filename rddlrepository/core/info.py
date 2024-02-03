@@ -45,7 +45,7 @@ class ProblemInfo:
         spec = importlib.util.find_spec(viz_backend_package_name)
         if spec is None:
             raise RDDLRepoUnresolvedDependency(
-                f'{viz_backend_package_name} is not installed')
+                f'{viz_backend_package_name} is not installed.')
 
         path_to_viz = []
         p = os.path.split(self.loc)
