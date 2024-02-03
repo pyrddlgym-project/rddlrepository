@@ -29,8 +29,8 @@ class ProblemInfo:
 
     def get_instance(self, num: int) -> str:
         if str(num) not in self.instances:
-            raise RDDLRepoInstanceNotExist(
-                f'Problem {self.name} does not have instance {num}.')
+            raise RDDLRepoInstanceNotExistError(
+                f'Domain <{self.name}> does not have instance {num}.')
         instance = 'instance' + str(num) + '.rddl'
         path = os.path.join(self.loc, instance)
         return path
@@ -44,8 +44,9 @@ class ProblemInfo:
 
         spec = importlib.util.find_spec(viz_backend_package_name)
         if spec is None:
-            raise RDDLRepoUnresolvedDependency(
-                f'{viz_backend_package_name} is not installed.')
+            raise RDDLRepoUnresolvedDependencyError(
+                f'{viz_backend_package_name} is not installed: '
+                f'can be installed with \'pip install {viz_backend_package_name}\'.')
 
         path_to_viz = []
         p = os.path.split(self.loc)
