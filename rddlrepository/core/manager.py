@@ -1,4 +1,5 @@
 import copy
+from datetime import datetime
 import os
 import importlib
 import csv
@@ -97,7 +98,8 @@ class RDDLRepoManager:
         os.mkdir(domain_dir)
         
         if desc is None:
-            desc = f'User-defined domain with name {name} in context {context}.'
+            desc = (f'User-defined domain with name {name} in context {context}, '
+                    f'created on {datetime.today()}.')
         info = {'name': name, 'description': desc, 
                 'context': context, 'tags': '', 'viz': viz}
         
