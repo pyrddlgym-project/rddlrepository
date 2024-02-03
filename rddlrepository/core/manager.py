@@ -2,7 +2,7 @@ import copy
 import os
 import importlib
 import csv
-from typing import List
+from typing import Dict, List
 
 from .error import (
     RDDLRepoDomainNotExistError,
@@ -133,7 +133,7 @@ class RDDLRepoManager:
                 row = [values_copy[key] for key in HEADER]
                 writer.writerow(row)
 
-    def _load_repo(self) -> dict:
+    def _load_repo(self) -> Dict:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
         if not os.path.isfile(path_to_manifest):
