@@ -43,11 +43,11 @@ class ProblemInfo:
         if self.viz == 'None':
             return None
 
-        # spec = importlib.util.find_spec(VIZ_BACKEND_PACKAGE_NAME)
-        # if spec is None:
-        #     raise RDDLRepoUnresolvedDependencyError(
-        #         f'{VIZ_BACKEND_PACKAGE_NAME} is not installed: '
-        #         f'can be installed with \'pip install {VIZ_BACKEND_PACKAGE_NAME}\'.')
+        spec = importlib.util.find_spec(VIZ_BACKEND_PACKAGE_NAME)
+        if spec is None:
+            raise RDDLRepoUnresolvedDependencyError(
+                f'{VIZ_BACKEND_PACKAGE_NAME} is not installed: '
+                f'can be installed with \'pip install {VIZ_BACKEND_PACKAGE_NAME}\'.')
 
         path_to_viz = []
         p = os.path.split(self.loc)
@@ -56,16 +56,15 @@ class ProblemInfo:
             p = os.path.split(p[0])
         path_to_viz.insert(0, p[1])
         path_to_viz = '.'.join(path_to_viz)
-        return path_to_viz
     
-        # viz = None
-        # viz_info = self.viz
-        # if viz_info:
-        #     module, viz_class_name = viz_info.strip().split('.')
-        #     viz_package_name = path_to_viz + '.' + module
-        #     viz_package = __import__(viz_package_name, {}, {}, viz_class_name)
-        #     viz = getattr(viz_package, viz_class_name)
-        # return viz
+        viz = None
+        viz_info = self.viz
+        if viz_info:
+            module, viz_class_name = viz_info.strip().split('.')
+            viz_package_name = path_to_viz + '.' + module
+            viz_package = __import__(viz_package_name, {}, {}, viz_class_name)
+            viz = getattr(viz_package, viz_class_name)
+        return viz
     
     def __str__(self) -> str:
         attr = self.__dict__
