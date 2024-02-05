@@ -2,27 +2,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-from pyRDDLGym.Core.Compiler.RDDLModel import PlanningModel
-from pyRDDLGym import Visualizer
-from pyRDDLGym.Visualizer.StateViz import StateViz
+from pyRDDLGym.core.compiler.model import RDDLPlanningModel
+from pyRDDLGym.core.visualizer.viz import BaseViz
 
 
-class MarsRoverVisualizer(StateViz):
+class MarsRoverVisualizer(BaseViz):
 
-    def __init__(self, model: PlanningModel,
-                 figure_size=[50, 50],
+    def __init__(self, model: RDDLPlanningModel,
+                 figure_size=(50, 50),
                  dpi=20,
-                 fontsize=8,
-                 display=False) -> None:
+                 fontsize=8) -> None:
         self._model = model
-        self._states = model.groundstates()
-        self._nonfluents = model.groundnonfluents()
-        self._objects = model.objects
+        self._nonfluents = model.ground_vars_with_values(model.non_fluents)
+        self._objects = model.type_to_objects
         self._figure_size = figure_size
         self._dpi = dpi
         self._fontsize = fontsize
-        self._interval = 10
-        self._asset_path = "/".join(Visualizer.__file__.split("/")[:-1])      
+        self._interval = 10   
         self._nonfluent_layout = None
         self._state_layout = None
         self._fig, self._ax = None, None
@@ -35,7 +31,7 @@ class MarsRoverVisualizer(StateViz):
 
         # style of fluent_p1
         for k, v in self._nonfluents.items():
-            var, objects = self._model.parse(k)
+            var, objects = RDDLPlanningModel.parse_grounded(k)
             if var == 'MINERAL-POS-X':
                 mineral_locaiton[objects[0]][0] = v
             elif var == 'MINERAL-POS-Y':
@@ -52,14 +48,14 @@ class MarsRoverVisualizer(StateViz):
         mineral_harvested = {o: None for o in self._objects['mineral']}
         
         for k, v in state.items():
-            var, objects = self._model.parse(k)
+            var, objects = RDDLPlanningModel.parse_grounded(k)
             if var == 'pos-x':
                 rover_location[objects[0]][0] = v
             elif var == 'pos-y':
                 rover_location[objects[0]][1] = v
 
         for k, v in state.items():
-            var, objects = self._model.parse(k)
+            var, objects = RDDLPlanningModel.parse_grounded(k)
             if var == 'mineral-harvested':
                 mineral_harvested[objects[0]] = v
 
@@ -78,15 +74,11 @@ class MarsRoverVisualizer(StateViz):
     def convert2img(self, fig, ax): 
         ax.set_position((0, 0, 1, 1))
         fig.canvas.draw()
-
         data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
         data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-
         img = Image.fromarray(data)
-
         self._data = data
         self._img = img
-
         return img
 
     def render(self, state):
@@ -153,26 +145,4 @@ class MarsRoverVisualizer(StateViz):
             state_buffer.append(end_state)
 
         return state_buffer
-    
-    # def animate_buffer(self, states_buffer):
-
-    #     threading.Thread(target=self.animate_buffer).start()
-
-    #     # img_list = [self.render(states_buffer[i]) for i in range(len(states_buffer))]
-
-    #     # img_list[0].save('temp_result.gif', save_all=True,optimize=False, append_images=img_list[1:], loop=0)
-
-    #     def anime(i):
-    #         self.render(states_buffer[i])
-            
-    #     anim = animation.FuncAnimation(self._fig, anime, interval=200)
-
-    #     plt.show()
-
-    #     # plt.show()
-
-    #     # img = self.render(states_buffer[0])
-    #     # img.save('./img_folder/0.png')
-
-    #     return
     
