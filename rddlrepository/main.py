@@ -11,7 +11,7 @@ def main():
     # list all problems in the repo, unique name is generated based on the name and context of the problem
     print(manager.list_problems())
 
-    manager.list_context()
+    manager.list_contexts()
 
     manager.list_problems_by_context('ippc2018')
 
@@ -30,9 +30,6 @@ def main():
 
     # return the pyRDDLGym visualizer object (pyRDDLGym dependency required) if exists, otherwise return None.
     envInfo.get_visualizer()
-
-
-
 
 
 if __name__ == '__main__':
