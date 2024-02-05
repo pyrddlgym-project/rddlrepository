@@ -50,8 +50,8 @@ class WildfireVisualizer(BaseViz):
 
     def init_canvas_info(self):
         interval = self._interval
-        x_list = self._objects['x-pos']
-        y_list = self._objects['y-pos']
+        x_list = self._objects['x_pos']
+        y_list = self._objects['y_pos']
         grid_size = (int(len(x_list)), int(len(y_list)))
 
         grid_init_points = {}
