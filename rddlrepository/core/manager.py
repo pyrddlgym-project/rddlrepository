@@ -61,15 +61,19 @@ class RDDLRepoManager:
     def list_problems_by_context(self, context: str) -> List[str]:
         info = self.archive_by_context.get(context, None)
         if info is None:
+            valid_keys = list(self.archive_by_context.keys())
             raise RDDLRepoContextNotExistError(
-                f'Context <{context}> does not exist in the RDDL repository.')
+                f'Context <{context}> does not exist in the RDDL repository, '
+                f'should be one of {valid_keys}.')
         return copy.deepcopy(info)
         
     def get_problem(self, name: str) -> ProblemInfo:
         info = self.archiver_dict.get(name, None)
         if info is None:
+            valid_keys = list(self.archiver_dict.keys())
             raise RDDLRepoDomainNotExistError(
-                f'Domain <{name}> does not exists in the repository.')        
+                f'Domain <{name}> does not exists in the repository, '
+                f'should be one of {valid_keys}.')        
         return ProblemInfo(info)            
     
     # ==========================================================================
@@ -184,7 +188,8 @@ class RDDLRepoManager:
         context_dir = os.path.join(root_path, ARCHIVE_NAME, context)
         
         if context in self.archive_by_context or os.path.isdir(context_dir):
-            raise RDDLRepoContextDuplicationError(f'Context <{context}> already exists.')
+            raise RDDLRepoContextDuplicationError(
+                f'Context <{context}> already exists.')
         
         os.mkdir(context_dir)
         open(os.path.join(context_dir, '__init__.py'), 'a').close()
