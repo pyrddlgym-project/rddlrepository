@@ -4,19 +4,20 @@ from PIL import Image
 import pygame
 from pygame import gfxdraw
 
-from pyRDDLGym.Core.Compiler.RDDLModel import PlanningModel
-from pyRDDLGym.Visualizer.StateViz import StateViz
+from pyRDDLGym.core.compiler.model import RDDLPlanningModel
+from pyRDDLGym.core.visualizer.viz import BaseViz
 
 
 # code comes from openai gym
-class MountainCarVisualizer(StateViz):
+class MountainCarVisualizer(BaseViz):
 
-    def __init__(self, model: PlanningModel, figure_size=[600, 400], wait_time=100) -> None:
+    def __init__(self, model: RDDLPlanningModel, 
+                 figure_size=(600, 400), wait_time=100) -> None:
         self._model = model
         self._figure_size = figure_size
         self._wait_time = wait_time
         
-        self._nonfluents = model.nonfluents
+        self._nonfluents = model.non_fluents
     
     def init_canvas(self, figure_size):
         screen = pygame.Surface(figure_size)
@@ -97,11 +98,8 @@ class MountainCarVisualizer(StateViz):
         
         surf = pygame.transform.flip(surf, False, True)
         screen.blit(surf, (0, 0))
-
-        pygame.time.wait(self._wait_time)
-        
-        img = self.convert2img(screen)
-        
+        pygame.time.wait(self._wait_time)        
+        img = self.convert2img(screen)        
         del screen, surf
         
         return img
