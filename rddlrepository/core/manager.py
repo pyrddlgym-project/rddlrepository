@@ -71,7 +71,13 @@ class RDDLRepoManager:
     def list_problems_by_context(self, context: str) -> List[str]:
         info = self.archive_by_context.get(context, None)
         if info is None:
-            valid_keys = list(self.archive_by_context.keys())
+            standalone, ippc = [], []
+            for key in self.archive_by_context.keys():
+                if 'ippc' in key or 'IPPC' in key:
+                    ippc.append(key)
+                else:
+                    standalone.append(key)
+            valid_keys = standalone + ippc
             raise RDDLRepoContextNotExistError(
                 f'Context <{context}> does not exist in the RDDL repository, '
                 f'valid contexts:\n' + self._print_columns(valid_keys) + '\n')
