@@ -31,7 +31,8 @@ class ProblemInfo:
     def get_instance(self, num: str) -> str:
         if str(num) not in self.instances:
             raise RDDLRepoInstanceNotExistError(
-                f'Domain <{self.name}> does not have instance <{num}>.')
+                f'Domain <{self.name}> does not have instance <{num}>, '
+                f'should be one of {self.instances}.')
         instance = f'instance{num}.rddl'
         path = os.path.join(self.loc, instance)
         return path
