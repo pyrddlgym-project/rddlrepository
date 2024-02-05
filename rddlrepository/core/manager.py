@@ -45,6 +45,16 @@ class RDDLRepoManager:
     # GETTERS
     # ==========================================================================
     
+    @staticmethod
+    def _print_columns(values, cols=3):
+        width = 1 + max(len(v) for v in values)
+        result = ''
+        for (count, item) in enumerate(values, 1):
+            result += item.ljust(width)
+            if count % cols == 0:
+                result += '\n'
+        return result
+        
     def list_problems(self) -> List[str]:
         problem_list = []
         if len(self.archiver_dict) == 0:
@@ -64,7 +74,7 @@ class RDDLRepoManager:
             valid_keys = list(self.archive_by_context.keys())
             raise RDDLRepoContextNotExistError(
                 f'Context <{context}> does not exist in the RDDL repository, '
-                f'should be one of {valid_keys}.')
+                f'valid contexts:\n' + self._print_columns(valid_keys) + '\n')
         return copy.deepcopy(info)
         
     def get_problem(self, name: str) -> ProblemInfo:
@@ -73,7 +83,7 @@ class RDDLRepoManager:
             valid_keys = list(self.archiver_dict.keys())
             raise RDDLRepoDomainNotExistError(
                 f'Domain <{name}> does not exists in the repository, '
-                f'should be one of {valid_keys}.')        
+                f'valid domains:\n' + self._print_columns(valid_keys) + '\n')        
         return ProblemInfo(info)            
     
     # ==========================================================================
