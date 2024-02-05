@@ -22,7 +22,7 @@ class RDDLRepoContextDuplicationError(ValueError):
     pass
 
 
-class RDDLRepoUnresolvedDependencyError(ValueError):
+class RDDLRepoUnresolvedDependencyError(ImportError):
     pass
 
 
