@@ -36,8 +36,8 @@ class RDDLRepoManager:
                 self._load_repo()
             except:
                 raise RDDLRepoManifestEmptyError(
-                    'An error occurred while loading current repository manifest, '
-                    'please try to re-run with rebuild=True.')
+                    'An error occurred while loading the repository manifest, '
+                    'please re-run with rebuild=True.')
         else:
             self._build_repo()
     
@@ -73,8 +73,8 @@ class RDDLRepoManager:
         if info is None:
             valid_keys = list(self.archive_by_context.keys())
             raise RDDLRepoContextNotExistError(
-                f'Context <{context}> does not exist in the RDDL repository, '
-                f'valid contexts:\n' + self._print_columns(valid_keys) + '\n')
+                f'Context <{context}> does not exist in the repository, '
+                f'must be one of:\n' + self._print_columns(valid_keys) + '\n')
         return copy.deepcopy(info)
         
     def get_problem(self, name: str) -> ProblemInfo:
@@ -88,8 +88,8 @@ class RDDLRepoManager:
                     standalone.append(key)
             valid_keys = standalone + ippc
             raise RDDLRepoDomainNotExistError(
-                f'Domain <{name}> does not exists in the repository, '
-                f'valid domains:\n' + self._print_columns(valid_keys) + '\n')        
+                f'Domain <{name}> does not exist in the repository, '
+                f'must be one of:\n' + self._print_columns(valid_keys) + '\n')        
         return ProblemInfo(info)            
     
     # ==========================================================================
@@ -128,7 +128,7 @@ class RDDLRepoManager:
                         f'Domain <{name}> already exists: problem names must be unique.')
                 if DOMAIN_NAME not in files:
                     raise RDDLRepoDomainNotExistError(
-                        f'domain <{name}> does not have a {DOMAIN_NAME} file.')
+                        f'Domain <{name}> does not have a {DOMAIN_NAME} file.')
                     
                 instances = [fname[8:-5] for fname in files
                              if fname.startswith('instance') and fname.endswith('.rddl')]
@@ -248,5 +248,6 @@ class RDDLRepoManager:
             self._build_repo()
             self._load_repo()
         
-        print(f'Domain <{name}> was successfully registered with context <{context}>.')
+        print(f'Domain <{name}> was successfully registered in rddlrepository '
+              f'with context <{context}>.')
         

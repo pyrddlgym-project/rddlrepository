@@ -32,8 +32,8 @@ class ProblemInfo:
         if str(num) not in self.instances:
             instances = ' '.join(self.instances)
             raise RDDLRepoInstanceNotExistError(
-                f'Domain <{self.name}> does not have instance <{num}>, '
-                f'should be one of {instances}.')
+                f'Domain <{self.name}> does not contain instance <{num}>, '
+                f'must be one of: {instances}.')
         instance = f'instance{num}.rddl'
         path = os.path.join(self.loc, instance)
         return path
@@ -49,7 +49,7 @@ class ProblemInfo:
         if spec is None:
             raise RDDLRepoUnresolvedDependencyError(
                 f'{VIZ_BACKEND_PACKAGE_NAME} is not installed: '
-                f'can be installed with \'pip install {VIZ_BACKEND_PACKAGE_NAME}\'.')
+                f'it can be installed with \'pip install {VIZ_BACKEND_PACKAGE_NAME}\'.')
 
         path_to_viz = []
         p = os.path.split(self.loc)
@@ -83,5 +83,6 @@ class ProblemInfo:
             instance_file.write(rddl)               
         self.instances.append(num)
         
-        print(f'Instance <{num}> was successfully registered in domain <{self.name}>.')
+        print(f'Instance <{num}> was successfully registered in rddlrepository '
+              f'for domain <{self.name}>.')
     
