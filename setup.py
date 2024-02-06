@@ -25,7 +25,7 @@ setup(
       description="Home for all things RDDL",
       #long_description=long_description,
       license="MIT License",
-      url="https://github.com/ataitler/rddlrepository",
+      url="https://github.com/pyrddlgym-project/rddlrepository",
       packages=find_packages(),
       install_requires=['numpy'],
       python_requires=">=3.8",
