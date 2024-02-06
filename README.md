@@ -12,13 +12,13 @@ We require Python 3.8+.
 * numpy
 
 If one desires to make use of the included visualizers (note they are pyRDDLGym compatible only), 
-[pyRDDLGym](https://github.com/ataitler/pyRDDLGym) must be installed as well.
+[pyRDDLGym](https://github.com/pyrddlgym-project/pyRDDLGym) must be installed as well.
 * pyRDDLGym (`pip install pyRDDLGym`)
 
 ### Installation
 There are two options:
 * Using pip: `pip install rddlrepository`
-* Cloning directly: `git clone https://github.com/ataitler/rddlrepository.git`
+* Cloning directly: `git clone https://github.com/pyrddlgym-project/rddlrepository.git`
 
 ### Usage example
 The following example list all the functions and objects needed to access the problems in the repository:
