@@ -12,19 +12,19 @@ We require Python 3.8+.
 * numpy
 
 If one desires to make use of the included visualizers (note they are pyRDDLGym compatible only), 
-[pyRDDLGym](https://github.com/ataitler/pyRDDLGym) must be installed as well.
+[pyRDDLGym](https://github.com/pyrddlgym-project/pyRDDLGym) must be installed as well.
 * pyRDDLGym (`pip install pyRDDLGym`)
 
 ### Installation
 There are two options:
 * Using pip: `pip install rddlrepository`
-* Cloning directly: `git clone https://github.com/ataitler/rddlrepository.git`
+* Cloning directly: `git clone https://github.com/pyrddlgym-project/rddlrepository.git`
 
 ### Usage example
 The following example list all the functions and objects needed to access the problems in the repository:
 
 ```python
-from rddlrepository.Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoManager
+from rddlrepository.core.manager import RDDLRepoManager
 
 def main():
 
@@ -97,7 +97,7 @@ info = {
 please name each of them with a unique identifier. Also, make sure to put a \_\_init\_\_.py file at each level (only the one with the *.rddl should include the info dictionary).
 6. Once satisfied run the Repo Manager to rebuild your local manifest file of the repo:
 ```python
-from rddlrepository.Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoManager
+from rddlrepository.core.manager import RDDLRepoManager
 
 RDDLRepoManager(rebuild=True)
 ```
