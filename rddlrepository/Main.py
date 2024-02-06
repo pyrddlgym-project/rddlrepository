@@ -1,4 +1,4 @@
-from Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoManager
+from rddlrepository.Manager.RDDLRepoManager import RDDLRepoManager as RDDLRepoManager
 
 
 def main():
