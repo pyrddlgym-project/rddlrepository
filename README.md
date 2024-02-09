@@ -6,6 +6,15 @@ Purpose:
 - contains custom visualizers for a subset of domains, to be used with the pyRDDLGym package
 - out-of-the-box compatibility with pyRDDLGym
 
+## Contents
+- [Installation](#installation)
+- [Usage](#usage)
+    - [Domains](#domains)
+    - [Instances](#instances)
+    - [Loading the Environment in pyRDDLGym](#loading-the-environment-in-pyrddlgym)
+    - [Registering your Own Problems](#registering-your-own-problems)
+- [Domains Included](#domains-included)
+  
 ## Installation
 
 We require Python 3.8+ and ``numpy``. To install via pip:
