@@ -57,7 +57,7 @@ Problems are organized by context (e.g. year of the competition, standalone):
 ```python
 print(manager.list_context())
 print(manager.list_problems_by_context("standalone"))   # list all standalone problems
-print(manager.list_problems_by_context("ippc2018"))     # list all problems from the IPPC 2018 competition
+print(manager.list_problems_by_context("ippc2018"))     # list all problems from IPPC 2018
 ```
 
 ### Instances
@@ -122,7 +122,8 @@ domain_content = """
     ...
     }
 """
-manager.register_domain("MyDomain", "MyContext", domain_content, desc="a description of this domain", viz="ModuleName.ClassName") 
+manager.register_domain("MyDomain", "MyContext", domain_content,
+                        desc="a description of this domain", viz="ModuleName.ClassName") 
 ```
 
 Here, ```"ModuleName.ClassName"``` refers to the Module name and the Class name of the visualizer (optional).
