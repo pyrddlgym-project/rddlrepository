@@ -137,6 +137,10 @@ Domains are broken down into contexts, which includes the following past competi
 * IPC 2018: [https://ipc2018-probabilistic.bitbucket.io/](https://ipc2018-probabilistic.bitbucket.io/)
 as well as some standalone domains.
 
+The standalone (context ``standalone``) domains are not part of any competition, but designed to showcase the diverse applications of RDDL across disciplines:
+
+TODO 
+
 The IPC 2011 (context ``ippc2011``) domains are stochastic, discrete-state and discrete-action problems:
 
 |        **Identifier **        	|      **Name**     	| **MDP/POMDP** 	| **Instances** 	|
