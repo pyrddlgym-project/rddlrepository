@@ -4,7 +4,7 @@ Purpose:
 - hosts a diverse collection of domain and instance RDDL files, covering problems from a wide range of disciplines
 - contains a growing collection of standalone problems, as well as an archive of problems used in the probabilistic and learning track of the International Planning Competitions in previous years.
 - contains custom visualizers for a subset of domains, to be used with the pyRDDLGym package
-- out-of-the-box compatibility with pyRDDLGym
+- out-of-the-box compatibility with [pyRDDLGym](https://github.com/pyRDDLGym-project/pyRDDLGym)
 
 ## Contents
 - [Installation](#installation)
