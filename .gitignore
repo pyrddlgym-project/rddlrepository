@@ -1,0 +1,14 @@
+
+.idea/
+
+*.pyc
+
+.project
+.pydevproject
+*.pyc
+*.out
+.gitignore.bak
+
+# macOS
+.DS_Store
+
