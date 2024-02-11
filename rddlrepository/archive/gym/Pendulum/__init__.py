@@ -1,7 +1,7 @@
 info = {
     'name': 'Pendulum',
     'description': 'The classical pendulum control problem.',
-    'context': '',
+    'context': 'gym',
     'tags': '',
     'viz': 'PendulumViz.PendulumVisualizer'
 }
