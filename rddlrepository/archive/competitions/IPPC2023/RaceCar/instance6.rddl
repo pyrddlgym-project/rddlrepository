@@ -52,11 +52,11 @@ non-fluents racecar_straight {
 	};
 }
 
-instance inst_racecar_circle_1 {
+instance inst_racecar_straight {
 
 	domain = racecar;
 
-	non-fluents = racecar_circle;
+	non-fluents = racecar_straight;
 
 	init-state {
 	    x 	= 0.1;
