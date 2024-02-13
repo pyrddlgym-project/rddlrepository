@@ -133,19 +133,23 @@ class RDDLRepoManager:
                 instances = [fname[8:-5] for fname in files
                              if fname.startswith('instance') and fname.endswith('.rddl')]
                 instances.sort(key=lambda x: int(x))
+                context = mymodule.info['context']
+                if context == '':
+                    context = 'standalone'
                 self.archiver_dict[name] = {
                     'name': name,
                     'description': mymodule.info['description'],
                     'location': root,
                     'instances': instances,
                     'viz': mymodule.info['viz'],
-                    'context': mymodule.info['context'],
+                    # 'context': mymodule.info['context'],
+                    'context': context,
                     'tags': mymodule.info['tags']
                 }
 
-                context = mymodule.info['context']
-                if context == '':
-                    context = 'standalone'
+                # context = mymodule.info['context']
+                # if context == '':
+                #     context = 'standalone'
                 self.archive_by_context.setdefault(context, []).append(name)
 
         # Generate manifest
