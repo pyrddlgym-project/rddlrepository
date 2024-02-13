@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-non-fluents rover2 {
+non-fluents rover0 {
     domain = mars_rover_science_mission;
 
     objects {
@@ -36,7 +36,7 @@ instance inst_mars_rover_0 {
 
 	domain = mars_rover_science_mission;
 
-	non-fluents = rover2;
+	non-fluents = rover0;
 
 	init-state {
 		vel-x(d1) = 1;
