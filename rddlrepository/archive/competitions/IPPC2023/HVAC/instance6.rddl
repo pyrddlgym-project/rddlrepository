@@ -1,8 +1,8 @@
-non-fluents HVAC_3nf {
+non-fluents HVAC_6nf {
 	domain = hvac;
 
 	objects{
-		zone: {z1, z2, z3};
+		zone: {z1, z2};
 		heater: {h1, h2};
 	};
 
@@ -10,14 +10,12 @@ non-fluents HVAC_3nf {
 	    SIGMA(z1) = 0.1;
 	    ADJ-HEATER(h1, z1) = true;
 	    ADJ-HEATER(h2, z2) = true;
-	    ADJ-HEATER(h2, z3) = true;
-	    ADJ-ZONES(z1, z3) = true;
 	};
 }
 
-instance HVAC_2 {
+instance HVAC_6 {
 	domain = hvac;
-	non-fluents = HVAC_3nf;
+	non-fluents = HVAC_6nf;
 
 	init-state{
 		temp-zone(z1) = 5;
