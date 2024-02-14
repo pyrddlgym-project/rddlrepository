@@ -1,7 +1,7 @@
 info = {
     'name': 'Workforce',
     'description': 'Running a call center.',
-    'context': '',
+    'context': 'rddlsim',
     'tags': '',
     'viz': ''
 }

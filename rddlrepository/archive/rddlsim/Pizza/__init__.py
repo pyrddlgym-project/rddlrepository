@@ -1,7 +1,7 @@
 info = {
     'name': 'Pizza',
     'description': 'A pizza delivery task.',
-    'context': '',
+    'context': 'rddlsim',
     'tags': '',
     'viz': ''
 }
