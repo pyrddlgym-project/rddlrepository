@@ -1,0 +1,45 @@
+non-fluents path4 {
+
+	domain = sidewalk;
+	
+	// two people
+	objects { 
+		person : {p1, p2, p3, p4};
+	};
+  
+	// Sidewalk size and x-goals
+	non-fluents { 
+		SIDEWALK-SIZE = 3; 
+		GOAL(p1) = 0;
+		GOAL(p2) = 2;
+		GOAL(p3) = 1;
+		GOAL(p4) = 1;
+	};
+}
+
+instance is4 {
+
+	domain = sidewalk;
+	
+	non-fluents = path4;
+  
+	// initialize at different ends of the sidewalk
+	init-state { 
+		xPos(p1) = 2; 
+		xPos(p2) = 0;
+		yPos(p1) = 0;
+		yPos(p2) = 0; 
+		xPos(p3) = 2; 
+		xPos(p4) = 1;
+		yPos(p3) = 1;
+		yPos(p4) = 1; 
+		
+	};
+  
+	// really would like a min as well
+	max-nondef-actions = 4;
+  
+	// for now
+	horizon  = 20;
+	discount = 0.9;
+}
