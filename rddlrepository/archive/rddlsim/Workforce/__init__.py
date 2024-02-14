@@ -3,5 +3,5 @@ info = {
     'description': 'Running a call center.',
     'context': 'rddlsim',
     'tags': '',
-    'viz': ''
+    'viz': 'None'
 }
