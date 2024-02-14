@@ -1,0 +1,114 @@
+// ////////////////////////////////////////////////////////////////////
+// Manage a portfolio of stocks or other assets to maximize cumulative return.
+// 
+// References:
+//		None
+//
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain portfolio {
+
+	types {
+		asset : object;
+	};
+
+	pvariables {
+		
+		/////////////////
+		// NON-FLUENTS
+		/////////////////
+		
+		// mean return of each asset per annum
+		MEAN(asset)        : { non-fluent, real, default = 0.05 };
+		
+		// variance of return of each asset per annum
+		VAR(asset)         : { non-fluent, real, default = 0.01 };
+		
+		// correlation of return of two assets
+		RHO(asset, asset)  : { non-fluent, real, default = 1.0 };
+		
+		// trading horizon in days
+		HORIZON            : { non-fluent, real, default = 252.0 };
+		
+		// transaction cost
+		TRANSACTION_COST   : { non-fluent, real, default = 0.1 };
+		
+		/////////////////
+		// INTERM-FLUENTS
+		/////////////////
+		
+		// time step for discretization (1 / HORIZON)
+		DT : { interm-fluent, real };
+		
+		// covariance of return of each asset per annum
+		cov(asset, asset)        : { interm-fluent, real };
+		cov-factor(asset, asset) : { interm-fluent, real };
+		
+		// standard GBM
+		wiener(asset)            : { interm-fluent, real };
+
+		/////////////////
+		// STATE-FLUENTS
+		/////////////////
+		
+		// state is the current price of the stocks
+		price(asset) : { state-fluent, real, default = 1.0 };
+		
+		// state includes the weight allocation
+		state-weight(asset)  : { state-fluent, real, default = 0.0 };
+	
+		/////////////////
+		// ACTION-FLUENTS
+		/////////////////
+		
+		// action is the weight allocation (sums to 1)
+		weight(asset) : { action-fluent, real, default = 0.0 };
+	};
+ 
+	cpfs {
+	
+		// time step
+		DT = 1.0 / HORIZON;
+
+		// covariance matrix
+		cov(?a1, ?a2) = RHO(?a1, ?a2) * sqrt[VAR(?a1) * VAR(?a2)];
+		cov-factor(?a1, ?a2) = cholesky[row=?a2, col=?a1][cov(?a1, ?a2)];
+
+		// compute the new prices
+		wiener(?a) = Normal(0.0, 1.0);
+		price'(?a) = price(?a) * exp[(MEAN(?a) - 0.5 * VAR(?a)) * DT
+			+ (sum_{?a1 : asset}[cov-factor(?a, ?a1) * wiener(?a1)]) * sqrt[DT]];
+	
+		// compute the weight 
+		state-weight'(?a) = weight(?a);
+	};
+	
+	// reward includes:
+	// 1. the profit total across all assets
+	// 2. the transaction cost incurred, proportional to the change in asset allocation
+	
+	reward = (sum_{?a : asset}[(price'(?a) - price(?a)) * weight(?a)]) // profit from assets
+			- TRANSACTION_COST * (sum_{?a : asset} [abs[state-weight'(?a) - state-weight(?a)]]); // transaction cost
+ 
+	state-invariants {
+	
+		// valid variance and covariance
+		forall_{?a : asset} [VAR(?a) >= 0];
+		forall_{?a : asset, ?a2 : asset} [RHO(?a, ?a2) >= -1 ^ RHO(?a, ?a2) <= 1];
+		
+		// prices are non-negative
+		forall_{?a : asset} [price(?a) >= 0];
+	};
+
+	action-preconditions {
+	
+		// short-selling is currently prohibited
+		forall_{?a : asset} [weight(?a) >= 0];
+		
+		// allocation <= 1, note if it is < 1, then it is equivalent to holding cash
+		(sum_{?a : asset} [weight(?a)]) <= 1;
+	};
+}
