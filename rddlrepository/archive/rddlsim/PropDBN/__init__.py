@@ -1,7 +1,7 @@
 info = {
     'name': 'PropDBN',
     'description': 'Simple propositional DBN.',
-    'context': '',
+    'context': 'rddlsim',
     'tags': '',
     'viz': 'None'
 }
