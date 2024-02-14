@@ -3,5 +3,5 @@ info = {
     'description': 'A logistics problem extended from the standard Box-Truck World.',
     'context': 'rddlsim',
     'tags': '',
-    'viz': ''
+    'viz': 'None'
 }
