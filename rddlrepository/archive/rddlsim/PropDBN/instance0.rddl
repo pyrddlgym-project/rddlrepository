@@ -1,0 +1,20 @@
+non-fluents propdbn_nf {
+	domain = propdbn;
+}
+
+instance inst_propdbn {
+
+	domain = propdbn;	
+	
+	non-fluents = propdbn_nf;
+	
+	init-state { 
+		p = true;  // could also just say 'p' by itself 
+		q = false; // default so unnecessary, could also say '~q' by itself
+		r;         // same as r = true
+	};
+  
+	max-nondef-actions = 1;
+	horizon  = 20;
+	discount = 0.9;
+}
