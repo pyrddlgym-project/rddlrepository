@@ -118,11 +118,11 @@ domain sysadmin {
 		// Following is an observation variable that shows off the switch statement.
 		// This simply conflates excellent/good -> good in the observation space.
 		      	
-		net-status-enum-obs = KronDelta(switch (net-status-enum) {
+		net-status-enum-obs = switch (net-status-enum) {
 										case @poor : @poor,   
 										case @good : @good,
 										case @excellent : @good 
-										});
+										};
 		      	
 		// A noisy observation on the underlying state.  Simple, just showing
 		// that observations can be parameterized by objects in the domain.
@@ -130,7 +130,7 @@ domain sysadmin {
 		// no identity uncertainty over objects in the observation space... c1
 		// in the observation space is the true c1 in the state space).
       	
-		running-obs(?x) = if (running(?x) ^ (net-status-real > 0.2)) 
+		running-obs(?x) = if (running'(?x) ^ (net-status-real > 0.2)) 
 							then Bernoulli(0.9) 
 							else Bernoulli(0.1);
 	};
