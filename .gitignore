@@ -8,6 +8,7 @@
 *.pyc
 *.out
 .gitignore.bak
+.bak
 
 # macOS
 .DS_Store

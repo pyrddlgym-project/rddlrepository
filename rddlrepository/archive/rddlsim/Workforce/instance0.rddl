@@ -1,0 +1,43 @@
+non-fluents simpleWorkforce {
+
+	domain = workforce;
+	
+	objects { 
+		lvl : {simple, hard};
+	};
+	
+	non-fluents {
+		ATTRITION(simple) = 0.1;
+		ATTRITION(hard) = 0.02;
+		SERVICEREWARD(simple) = 100;
+		SERVICEREWARD(hard) = 200;
+		SEASONFREQ = 3; 
+		SEASONALPEAK(simple) = 10;
+		SEASONALPEAK(hard) = 5;
+		ATTRITIONAMOUNT(simple) = 2;
+		ATTRITIONAMOUNT(hard) = 1;
+	};
+}
+
+instance inst_workforce {
+
+	domain = workforce;
+	
+	non-fluents = simpleWorkforce;
+  
+	init-state { 
+		month(simple) = 1;
+		month(hard) = 0;
+		labor(simple) = 10;
+		labor(hard) = 5;
+		demand(simple) = 12.0;
+		demand(hard) = 5.0;
+		training(simple) = 0;
+		training(hard) = 0;
+	};
+  
+	max-nondef-actions = 2;
+  
+	horizon = 20;
+	discount = 0.9;
+}

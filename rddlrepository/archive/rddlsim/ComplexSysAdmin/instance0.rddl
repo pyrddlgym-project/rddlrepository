@@ -1,0 +1,47 @@
+non-fluents ring8 {
+
+	domain = sysadmin;
+	
+	objects { 
+		computer : {c1, c2, c3, c4, c5, c6, c7, c8};
+	};
+  
+	// Only need to specify non-default values
+	non-fluents { 
+		REBOOT-PROB = 0.05; 
+		CONNECTED(c1,c2);
+		CONNECTED(c2,c3);
+		CONNECTED(c3,c4);
+		CONNECTED(c4,c5);
+		CONNECTED(c5,c6);
+		CONNECTED(c6,c7);
+		CONNECTED(c7,c8);
+		CONNECTED(c8,c1);
+	};
+}
+
+instance inst_sysadmin_complex {
+
+	domain = sysadmin;
+	
+	non-fluents = ring8;
+  
+	// Only need to specify non-default values for initial state, but here we'll
+	// show that even default values can be specified, i.e., ~running(c2).
+	init-state { 
+		running(c1); 
+		~running(c2); 
+	};
+  
+	// For easy and compact translation to PPDDL, max-nondef-actions should be 1.
+	// max-nondef-actions > 1 implies that multiple actions can be executed
+	// concurrently, but care must be taken in the cpf definitions to ensure
+	// that action conflicts are resolved in a reasonable way.
+	max-nondef-actions = 1;
+  
+	// We assume the objective is expected discounted reward over a fixed horizon
+	// length.  Indefinite horizon and average reward objectives are not being 
+	// considered in this first draft.
+	horizon  = 20;
+	discount = 0.9;
+}

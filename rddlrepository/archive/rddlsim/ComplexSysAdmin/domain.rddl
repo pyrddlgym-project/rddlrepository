@@ -1,0 +1,143 @@
+////////////////////////////////////////////////////////////////////
+// An example RDDL description for the well-known SysAdmin problem
+// (Guestrin, Koller, Parr, IJCAI-01) with a number of enhancements
+// to demonstrate the expressivity of RDDL.
+//
+// Author: Scott Sanner (ssanner [at] gmail.com)
+////////////////////////////////////////////////////////////////////
+
+domain sysadmin {
+  
+	////////////////////////////////////////////////////////////////////////////
+	// Define requirements up front (we use real value and enum types and the
+	// reward is deterministic).
+	////////////////////////////////////////////////////////////////////////////
+	
+	requirements = { 
+		continuous,  // this domain uses real-valued parameterized variables (pvariables)
+		multivalued, // this domain uses enumerated pvariables 
+		reward-deterministic, // this domain does not use a stochastic reward
+		intermediate-nodes,   // this domain uses intermediate pvariable nodes
+		constrained-state,    // this domain uses state constraints
+		partially-observed    // this domain uses observation pvariables
+	};
+
+	////////////////////////////////////////////////////////////////////////////
+	// User-defined object and enumeration (multivalued) types.
+	////////////////////////////////////////////////////////////////////////////
+	
+	types {
+  		computer : object;
+ 		status : {@poor, @good, @excellent}; // An enumeration type
+	};
+      
+	////////////////////////////////////////////////////////////////////////////
+	// Provide name[(parameter types)] followed by type, range, etc...
+	// note that variable parameters *must* be object types.
+	////////////////////////////////////////////////////////////////////////////
+	
+	pvariables {
+	
+		REBOOT-PROB : { non-fluent, real, default = 0.1 };
+    	   		  		
+		// A constant (non-fluent) definition.
+		CONNECTED(computer, computer) : { non-fluent, bool, default = false };
+      
+		// State fluent: is a given computer running or not?
+		running(computer) : { state-fluent, bool, default = false };
+      
+		// Intermediate fluent: are all computers in the current state crashed?
+		all-computers-crashed : { interm-fluent, bool, level = 1 };
+      
+		// Intermediate fluent: will encode the percent of computers running.
+		net-status-real : { interm-fluent, real, level = 1 };
+      
+		// Intermediate fluent: determines enumerated status from net-status.
+		net-status-enum : { interm-fluent, status, level = 2 };
+      
+		// Observational fluent: a noisy observation on net-status-enum of
+		// user-defined enumerated type status (see type section above).
+		net-status-enum-obs : { observ-fluent, status };
+      	
+		// A noisy observation of whether a computer is running.
+		running-obs(computer) : { observ-fluent, bool };
+      
+		// An action variable -- a fluent controlled by the system... actions vars
+		// need a default value to maintain a compact specification of actions.
+		reboot(computer) : { action-fluent, bool, default = false };
+	};
+  
+	cpfs {
+  
+		// A computer has a higher chance of running if it is already running and
+		// all of its network connections are also running.  (Note use of ' for next
+		// state variable.)  Also note the use of "sum" to count the number of connected
+		// computers running and the division to normalize by the number of connected
+		// computers.  This shows that random variable parameters can be expressions,
+		// and even random expressions if you want, e.g., Normal(Normal(mu,sigma1),sigma2).
+		// To help readability, both brackets [] and parens () can be used for expression 
+		// grouping.
+		
+		running'(?x) = if (reboot(?x))
+						then KronDelta(true)  // if computer is rebooted then must be running 
+						else if (running(?x)) // otherwise outcome depends on network properties
+							then Bernoulli(0.5 + 0.5 * [sum_{?y : computer} [CONNECTED(?y, ?x) ^ running(?y)]] 
+													/ [sum_{?y : computer} CONNECTED(?y, ?x)])
+							else Bernoulli(REBOOT-PROB); 
+      
+		// CPFs need to be probability distributions (unless the requirements state that
+		// this is a deterministic domain).  For this cpf we don't require randomness, so
+		// to obtain a proper probability distribution we exploit the fact that all 
+		// logical expressions in RDDL can be treated as integers (false=0, true=1) and
+		// we can just use a Kronecker Delta function to concentrate all probability 
+		// mass (1.0) on the argument.  (In the continuous case we would use a Dirac Delta
+		// function instead as below.)
+		
+		all-computers-crashed = KronDelta( forall_{?y : computer} [~running(?y)] );
+      
+		// Ratio of computers running vs. total number of computers.
+      	
+		net-status-real = DiracDelta([sum_{?x : computer} running(?x)] / [sum_{?x : computer} 1]);
+      	
+		// Here we use 1 sample from a Discrete distribution to select an
+		// enumerated value.  The first parameter is the variable type.  The
+		// remaining parameters are the probability assignments to each
+		// outcome.  Note that net-status-real above must be in [0,1] so the
+		// Discrete parameters here really do sum to 1 as required.
+		// This requirement would be checked at runtime during simulation.
+		// Note that this intermediate variable of level=2 references the
+		// net-status-real intermediate variable of level=1.
+      	
+		net-status-enum = Discrete(status,
+										@poor : 0.1,
+										@good : (1.0 - net-status-real) - 0.05,
+										@excellent : net-status-real - 0.05
+										);
+      	
+		// Observation variables would only be used in a partially observed problem.
+		// Following is an observation variable that shows off the switch statement.
+		// This simply conflates excellent/good -> good in the observation space.
+		      	
+		net-status-enum-obs = switch (net-status-enum) {
+										case @poor : @poor,   
+										case @good : @good,
+										case @excellent : @good 
+										};
+		      	
+		// A noisy observation on the underlying state.  Simple, just showing
+		// that observations can be parameterized by objects in the domain.
+		// Objects in the domain are assumed to be fully observed (so there is
+		// no identity uncertainty over objects in the observation space... c1
+		// in the observation space is the true c1 in the state space).
+      	
+		running-obs(?x) = if (running'(?x) ^ (net-status-real > 0.2)) 
+							then Bernoulli(0.9) 
+							else Bernoulli(0.1);
+	};
+  
+	// This following is a deterministic reward as defined in the requirements.
+	// It conditions on both state and action variables: +1 is given for every
+	// computer running and a cost of -1 is given for every computer rebooted.
+  	
+	reward = [sum_{?c : computer} running(?c)] - [sum_{?c : computer} reboot(?c)];
+}
