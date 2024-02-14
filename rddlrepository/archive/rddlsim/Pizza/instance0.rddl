@@ -1,0 +1,44 @@
+non-fluents pizza1 {
+
+	domain = pizza;
+	
+	objects { 
+		pizza : {p1, p2, p3, p4};
+		location : {s1, c1, c2, c3, c4, c5};
+		truck : {t1, t2};
+	};
+  
+	// Only need to specify non-default values
+	non-fluents { 
+		CAPACITY(t1) = 2;
+		CAPACITY(t2) = 3;
+		SHOP(s1) = true;
+		CONNECTED(s1, c1) = true;
+		CONNECTED(c1, c2) = true;
+		CONNECTED(c2, c3) = true;
+		CONNECTED(s1, c4) = true;
+		CONNECTED(c4, c5) = true;
+		CONNECTED(c5, c2) = true;
+		CONNECTED(c3, s1) = true;
+
+		ORDERS(c4) =2;
+		ORDERS(c2) =1;		
+	};
+}
+
+instance inst_pizza {
+
+	domain = pizza;
+	
+	non-fluents = pizza1;
+  
+	init-state { 
+		truckAt(t1, s1); 
+		truckAt(t2, s1);		 
+	};
+  
+	max-nondef-actions = 4;
+  
+	horizon  = 40;
+	discount = 0.9;
+}
