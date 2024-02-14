@@ -1,0 +1,71 @@
+// Define non-fluents here.
+non-fluents trucks1 {
+
+	domain = logistics;
+	
+	objects { 
+		box : {b1, b2, b3, b4};
+		city : {c1, c2, c3, c4};
+		truck : {t1, t2, t3, t4};
+	};
+  
+	// Only need to specify non-default values
+	non-fluents { 
+		MAX-DOCKED(c1) = 2;
+		MAX-DOCKED(c2) = 2;
+		MAX-DOCKED(c3) = 2;
+		MAX-DOCKED(c4) = 2;
+		DESTINATION(b1, c2) = true;
+		DESTINATION(b2, c3) = true;
+		DESTINATION(b3, c4) = true;
+		DESTINATION(b4, c1) = true;
+		PROB_LOAD  = 0.9; 
+		PROB_UNLOAD = 0.9;
+	};
+}
+
+// Specify an actual problem instance (full object specification, initial state, 
+// and objective).
+instance il1 {
+
+	domain = logistics;
+	
+	non-fluents = trucks1;
+  
+	// If there were any object classes that were not needed in the
+	// non-fluents definition and were not specified there then they should
+	// be specified here.  For example, if in SysAdmin there were another
+	// object class for people, since knowing these objects was not needed above
+	// to specify REBOOT-PROB and CONNECTED, the objects could be defined here.
+	// This would make more sense in a domain like Elevator control where you
+	// might want to specify the number of elevators and floors as non-fluents,
+	// but the number of people might change from instance to instance.
+	
+
+	// Only need to specify non-default values for initial state, but here we'll
+	// show that even default values can be specified, i.e., ~running(c2).
+	init-state { 
+		truckAt(t1, c1); 
+		truckAt(t2, c2);
+		truckAt(t3, c3);
+		truckAt(t4, c4);
+		
+		boxInCity(b1, c1);
+		boxInCity(b2, c2);
+		boxInCity(b3, c3);
+		boxInCity(b4, c4);
+		 
+	};
+  
+	// For easy and compact translation to PPDDL, max-nondef-actions should be 1.
+	// max-nondef-actions > 1 implies that multiple actions can be executed
+	// concurrently, but care must be taken in the cpf definitions to ensure
+	// that action conflicts are resolved in a reasonable way.
+	max-nondef-actions = 3;
+  
+	// We assume the objective is expected discounted reward over a fixed horizon
+	// length.  Indefinite horizon and average reward objectives are not being 
+	// considered in this first draft.
+	horizon  = 50;
+	discount = 0.9;
+}
