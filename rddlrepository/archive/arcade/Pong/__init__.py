@@ -1,7 +1,7 @@
 info = {
     'name': 'Pong',
     'description': 'Single player pong/tennis problem.',
-    'context': '',
+    'context': 'arcade',
     'tags': '',
     'viz': 'PongViz.PongVisualizer'
 }
