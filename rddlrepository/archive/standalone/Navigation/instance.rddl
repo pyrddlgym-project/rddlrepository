@@ -1,0 +1,19 @@
+non-fluents nf_Navigation {
+
+    domain = Navigation;
+    
+    objects {
+		obstacle : { o1 };
+    };
+}
+
+instance Navigation_inst {
+
+    domain = Navigation;
+
+    non-fluents = nf_Navigation;
+    
+    max-nondef-actions = pos-inf;
+    horizon = 120;
+    discount = 1.0;
+}
