@@ -1,0 +1,151 @@
+non-fluents nf_tetris {
+
+    domain = tetris;
+    
+    objects {
+		board-x : { x1, x2, x3, x4 };
+		board-y : { y1, y2, y3, y4, y5, y6 };
+		shape-x : { i1, i2, i3, i4 };
+		shape-y : { j1, j2, j3, j4 };
+		shape-type : { L, SQ, SK, T, ST };
+    };
+    
+    non-fluents {
+
+		//   *
+		//   *
+		//   * *
+		SHAPES(L, @0, i1, j1);
+		SHAPES(L, @0, i1, j2);
+		SHAPES(L, @0, i1, j3);
+		SHAPES(L, @0, i2, j1);
+		SHAPES(L, @90, i1, j1);
+		SHAPES(L, @90, i2, j1);
+		SHAPES(L, @90, i3, j1);
+		SHAPES(L, @90, i3, j2);
+		SHAPES(L, @180, i2, j1);
+		SHAPES(L, @180, i2, j2);
+		SHAPES(L, @180, i2, j3);
+		SHAPES(L, @180, i1, j3);
+		SHAPES(L, @270, i1, j2);
+		SHAPES(L, @270, i2, j2);
+		SHAPES(L, @270, i3, j2);
+		SHAPES(L, @270, i1, j1);
+	
+		//    * *
+		//    * * 
+		SHAPES(SQ, @0, i1, j1);
+		SHAPES(SQ, @0, i1, j2);
+		SHAPES(SQ, @0, i2, j1);
+		SHAPES(SQ, @0, i2, j2);
+		SHAPES(SQ, @90, i1, j1);
+		SHAPES(SQ, @90, i1, j2);
+		SHAPES(SQ, @90, i2, j1);
+		SHAPES(SQ, @90, i2, j2);
+		SHAPES(SQ, @180, i1, j1);
+		SHAPES(SQ, @180, i1, j2);
+		SHAPES(SQ, @180, i2, j1);
+		SHAPES(SQ, @180, i2, j2);
+		SHAPES(SQ, @270, i1, j1);
+		SHAPES(SQ, @270, i1, j2);
+		SHAPES(SQ, @270, i2, j1);
+		SHAPES(SQ, @270, i2, j2);
+		
+		//      * * 
+		//    * *
+		SHAPES(SK, @0, i1, j1);
+		SHAPES(SK, @0, i2, j1);
+		SHAPES(SK, @0, i2, j2);
+		SHAPES(SK, @0, i3, j2);
+		SHAPES(SK, @90, i2, j1);
+		SHAPES(SK, @90, i2, j2);
+		SHAPES(SK, @90, i1, j2);
+		SHAPES(SK, @90, i1, j3);
+		SHAPES(SK, @180, i1, j1);
+		SHAPES(SK, @180, i2, j1);
+		SHAPES(SK, @180, i2, j2);
+		SHAPES(SK, @180, i3, j2);
+		SHAPES(SK, @270, i2, j1);
+		SHAPES(SK, @270, i2, j2);
+		SHAPES(SK, @270, i1, j2);
+		SHAPES(SK, @270, i1, j3);
+		
+		//      *
+		//    * * * 
+		SHAPES(T, @0, i1, j1);
+		SHAPES(T, @0, i2, j1);
+		SHAPES(T, @0, i3, j1);
+		SHAPES(T, @0, i2, j2);
+		SHAPES(T, @90, i1, j2);
+		SHAPES(T, @90, i2, j1);
+		SHAPES(T, @90, i2, j2);
+		SHAPES(T, @90, i2, j3);
+		SHAPES(T, @180, i1, j2);
+		SHAPES(T, @180, i2, j2);
+		SHAPES(T, @180, i3, j2);
+		SHAPES(T, @180, i2, j1);
+		SHAPES(T, @270, i1, j1);
+		SHAPES(T, @270, i1, j2);
+		SHAPES(T, @270, i1, j3);
+		SHAPES(T, @270, i2, j2);
+		
+		// 
+		//    * * * *
+		SHAPES(ST, @0, i1, j1);
+		SHAPES(ST, @0, i2, j1);
+		SHAPES(ST, @0, i3, j1);
+		SHAPES(ST, @0, i4, j1);
+		SHAPES(ST, @90, i1, j1);
+		SHAPES(ST, @90, i1, j2);
+		SHAPES(ST, @90, i1, j3);
+		SHAPES(ST, @90, i1, j4);
+		SHAPES(ST, @180, i1, j1);
+		SHAPES(ST, @180, i2, j1);
+		SHAPES(ST, @180, i3, j1);
+		SHAPES(ST, @180, i4, j1);
+		SHAPES(ST, @270, i1, j1);
+		SHAPES(ST, @270, i1, j2);
+		SHAPES(ST, @270, i1, j3);
+		SHAPES(ST, @270, i1, j4);
+		
+		WIDTH(x1) = 1;
+		WIDTH(x2) = 2;
+		WIDTH(x3) = 3;
+		WIDTH(x4) = 4;
+		HEIGHT(y1) = 1;
+		HEIGHT(y2) = 2;
+		HEIGHT(y3) = 3;
+		HEIGHT(y4) = 4;
+		HEIGHT(y5) = 5;
+		HEIGHT(y6) = 6;
+		
+		OFFSET-X(i1) = 0;
+		OFFSET-X(i2) = 1;
+		OFFSET-X(i3) = 2;
+		OFFSET-X(i4) = 3;
+		OFFSET-Y(j1) = 0;
+		OFFSET-Y(j2) = 1;
+		OFFSET-Y(j3) = 2;
+		OFFSET-Y(j4) = 3;
+    };
+}
+
+instance tetris_inst {
+
+    domain = tetris;
+
+    non-fluents = nf_tetris;
+    
+    init-state {
+		current-shape-type(L);
+    };
+
+    max-nondef-actions = 2;
+    horizon = 100;
+    discount = 1.0;
+}
+
+
+
+
+
