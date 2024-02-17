@@ -1,0 +1,75 @@
+non-fluents nf_sokoban {
+
+    domain = sokoban;
+    
+    objects {
+		x-pos : { x1, x2, x3, x4, x5 };
+		y-pos : { y1, y2, y3, y4, y5, y6, y7 };
+    };
+    
+    non-fluents {
+		STORAGE(x2, y3);
+		STORAGE(x4, y2);
+
+		WALL(x1, y1);
+		WALL(x1, y2);
+		WALL(x1, y3);
+		WALL(x1, y4);
+		WALL(x1, y5);
+		WALL(x1, y6);
+		WALL(x1, y7);
+		WALL(x5, y1);
+		WALL(x5, y2);
+		WALL(x5, y3);
+		WALL(x5, y4);
+		WALL(x5, y5);
+		WALL(x5, y6);
+		WALL(x5, y7);
+		WALL(x1, y1);
+		WALL(x2, y1);
+		WALL(x3, y1);
+		WALL(x4, y1);
+		WALL(x5, y1);
+		WALL(x1, y7);
+		WALL(x2, y7);
+		WALL(x3, y7);
+		WALL(x4, y7);
+		WALL(x5, y7);
+		WALL(x1, y4);
+		WALL(x2, y4);
+		WALL(x3, y4);
+		
+		IX(x1) = 1;
+		IX(x2) = 2;
+		IX(x3) = 3;
+		IX(x4) = 4;
+		IX(x5) = 5;
+		IY(y1) = 1;
+		IY(y2) = 2;
+		IY(y3) = 3;
+		IY(y4) = 4;
+		IY(y5) = 5;
+		IY(y6) = 6;
+		IY(y7) = 7;	
+    };
+}
+
+instance sokoban_inst {
+
+    domain = sokoban;
+
+    non-fluents = nf_sokoban;
+    
+    init-state {
+		box(x3, y3);
+		box(x3, y5);
+
+		man(x2, y6);
+    };
+
+    max-nondef-actions = 1;
+    horizon = 10;
+    discount = 1.0;
+}
+
+
