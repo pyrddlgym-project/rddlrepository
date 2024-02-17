@@ -1,0 +1,78 @@
+////////////////////////////////////////////////////////////////////
+// The classic Tower of Hanoi puzzle game. Here, disks of various 
+// sizes are stacked vertically on a set of rods. Only one disk
+// can be moved at a time, and it can only be placed on top of another
+// disk whose size is greater. The goal is to stack all the disks on
+// a desired rod.
+// 
+// Author:
+//    Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+
+domain tower_of_hanoi {
+        
+    types {
+		rod : object;
+		disk : object;
+    };
+            
+    pvariables {
+		SIZE(disk) : { non-fluent, int, default = 1 };
+		TARGET(rod) : { non-fluent, bool, default = false };
+		
+		on-same-rod(disk, disk) : { interm-fluent, bool };
+		disk-on-top(disk) : { interm-fluent, bool };
+		valid-move(disk, rod) : { interm-fluent, bool };
+		disk-count(rod) : { interm-fluent, int };
+
+		disk-on-rod(disk, rod) : { state-fluent, bool, default = false };
+		disk-order(disk) : { state-fluent, int, default = 0 };	
+
+		move(disk, rod) : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {	
+
+		// whether two disks are on the same rod
+		// disk is on the top if there is no disk on the same rod with a higher order
+		// valid move if selected disk is on top and there is no disk at destination smaller than it 
+		// count disks on each rod
+		on-same-rod(?d, ?d2) = (exists_{?r: rod}[disk-on-rod(?d, ?r) ^ disk-on-rod(?d2, ?r)]);
+		disk-on-top(?d) = ~(exists_{?d2: disk}[on-same-rod(?d2, ?d) ^ (disk-order(?d2) > disk-order(?d))]);
+		valid-move(?d, ?r) = move(?d, ?r) ^ disk-on-top(?d) ^ ~(exists_{?d2: disk}[disk-on-rod(?d2, ?r) ^ (SIZE(?d2) < SIZE(?d))]);
+		disk-count(?r) = (sum_{?d: disk} KronDelta(disk-on-rod(?d, ?r)));
+		
+		// true if the disk can be moved to this rod 
+		// false if the disk is on the rod currently and moved to another rod
+		// remains the same otherwise
+		disk-on-rod'(?d, ?r) = if(valid-move(?d, ?r)) then true
+					else if (disk-on-rod(?d, ?r) ^ (exists_{?r2: rod}[valid-move(?d, ?r2) ^ (?r2 ~= ?r)])) then false
+					else disk-on-rod(?d, ?r);
+
+		// if the disk is moved to a new rod, then its the count of disks already on the new rod
+		// otherwise it retains its order
+		disk-order'(?d) = if (exists_{?r: rod}[valid-move(?d, ?r) ^ ~disk-on-rod(?d, ?r)]) 
+					then (sum_{?r: rod}[valid-move(?d, ?r) * disk-count(?r)])
+				   else disk-order(?d);
+    };
+    
+    // reward is 1 if all the disks are stacked on the target rod
+    reward = 1 - (exists_{?d: disk, ?r: rod}[TARGET(?r) ^ ~disk-on-rod(?d, ?r)]);
+	
+    state-invariants {
+	
+		// each disk is on exactly one tower
+		forall_{?d: disk}[(sum_{?r: rod} disk-on-rod(?d, ?r)) == 1];
+		
+		// disk order is unique on each rod
+		forall_{?r: rod, ?d: disk, ?d2: disk}[((?d ~= ?d2) ^ disk-on-rod(?d, ?r) ^ disk-on-rod(?d2, ?r)) 
+							=> (disk-order(?d) ~= disk-order(?d2))];
+
+		// each disk is smaller than the one below it
+		forall_{?r: rod, ?d: disk, ?d2: disk}[((?d ~= ?d2) ^ disk-on-rod(?d, ?r) ^ disk-on-rod(?d2, ?r) ^ (SIZE(?d) > SIZE(?d2))) 
+							=> (disk-order(?d) < disk-order(?d2))];
+    };
+}
+
+
