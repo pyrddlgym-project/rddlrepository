@@ -1,0 +1,45 @@
+// ////////////////////////////////////////////////////////////////////
+// The travelling salesman problem involves finding a least cost route
+// that visits each city exactly once. In this slightly relaxed version
+// the reward includes a fuel cost of traversing from one city to another
+// and a bonus if all the cities have previously been visited (including
+// if they were visited more than once). Due to the structure of the
+// reward, an optimal policy should visit each city exactly once.
+// 
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain travelling_salesman {
+        
+    types {
+		node : object;
+    };
+            
+    pvariables {
+		ARC(node, node) : { non-fluent, bool, default = false };
+		COST(node, node) : { non-fluent, real, default = 1.0 };
+		COMPLETE-REWARD : { non-fluent, real, default = 100.0 };
+
+		current(node) : { state-fluent, bool, default = false };
+		visited(node) : { state-fluent, bool, default = false };
+		
+		valid-move : { interm-fluent, bool };
+
+		move(node) : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {
+		valid-move = exists_{?n: node, ?n2: node}[current(?n) ^ move(?n2) ^ ARC(?n, ?n2)];
+		current'(?n) = if(valid-move) then move(?n) else current(?n);
+		visited'(?n) = visited(?n) | current(?n) | (valid-move ^ move(?n));
+    };
+                
+    reward = COMPLETE-REWARD * (forall_{?n: node} visited(?n)) 
+		- (sum_{?n: node, ?n2: node}[COST(?n, ?n2) * (current(?n) ^ move(?n2) ^ ARC(?n, ?n2))]); 
+
+    state-invariants { 
+		(sum_{?n: node} current(?n)) == 1;
+    }; 
+}

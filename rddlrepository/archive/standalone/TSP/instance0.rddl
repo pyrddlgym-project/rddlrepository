@@ -1,0 +1,59 @@
+non-fluents nf_tsp {
+
+    domain = travelling_salesman;
+    
+    objects {
+	node : { a, b, c, d, e };
+    };
+    
+    non-fluents {
+	ARC(a, b);
+	ARC(b, a);
+	ARC(b, c);
+	ARC(c, b);
+	ARC(c, d);
+	ARC(d, c);
+	ARC(d, e);
+	ARC(e, d);
+	ARC(a, e);
+	ARC(e, a);
+	ARC(a, d);
+	ARC(d, a);
+	ARC(e, c);
+	ARC(c, e);
+	ARC(e, b);
+	ARC(b, e);
+
+	COST(a, b) = 7;
+	COST(b, a) = 7;
+	COST(b, c) = 3;
+	COST(c, b) = 3;
+	COST(c, d) = 6;
+	COST(d, c) = 6;
+	COST(d, e) = 7;
+	COST(e, d) = 7;
+	COST(a, e) = 1;
+	COST(e, a) = 1;
+	COST(a, d) = 1;
+	COST(d, a) = 1;
+	COST(e, c) = 2;
+	COST(c, e) = 2;
+	COST(e, b) = 8;
+	COST(b, e) = 8;
+    };
+}
+
+instance tsp_inst {
+
+    domain = travelling_salesman;
+
+    non-fluents = nf_tsp;
+    
+    init-state {
+	current(a);
+    };
+
+    max-nondef-actions = 1;
+    horizon = 40;
+    discount = 1.0;
+}
