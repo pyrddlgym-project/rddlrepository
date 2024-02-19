@@ -1,7 +1,7 @@
 info = {
     'name': 'SupplyChain',
     'description': 'A supply chain with factory and multiple warehouses.',
-    'context': '',
+    'context': 'or',
     'tags': '',
     'viz': 'None'
 }
