@@ -1,0 +1,37 @@
+non-fluents nf_bin_packing {
+
+    domain = bin_packing;
+    
+    objects {
+		item : { i1, i2, i3 };
+		bin : { b1, b2 };
+    };
+
+    non-fluents {
+		ITEM-PROB(i1) = 0.4;
+		ITEM-PROB(i2) = 0.3;
+		ITEM-PROB(i3) = 0.3;
+		ITEM-SIZE(i1) = 2;
+		ITEM-SIZE(i2) = 4;
+		ITEM-SIZE(i3) = 8;
+		ITEM-VALUE(i1) = 2;
+		ITEM-VALUE(i2) = 5;
+		ITEM-VALUE(i3) = 15;
+    };
+}
+
+instance Untitled_inst {
+
+    domain = bin_packing;
+
+    non-fluents = nf_bin_packing;
+    
+    init-state {
+		current-size = 2;
+		current-value = 2;
+    };
+
+    max-nondef-actions = 1;
+    horizon = 40;
+    discount = 0.99;
+}
