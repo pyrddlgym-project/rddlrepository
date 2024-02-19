@@ -1,0 +1,53 @@
+// ////////////////////////////////////////////////////////////////////
+// A set of bins must be filled with items while ensuring the total
+// weight of each bin is not greater than some limit. Items of random
+// weight and value are presented sequentially one at a time, and the 
+// goal is to either reject each item, or add it to a designated bin
+// while maximizing the total value across all bins.
+// 
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain bin_packing {
+        
+    types {
+		item : object;
+		bin : object;
+    };
+            
+    pvariables {
+		ITEM-SIZE(item) : { non-fluent, int, default = 1 };
+		ITEM-PROB(item) : { non-fluent, real, default = 0.0 };
+		ITEM-VALUE(item) : { non-fluent, int, default = 1 };
+		CAPACITY : { non-fluent, int, default = 15 };
+		OVERFLOW : { non-fluent, int, default = 100 };
+		
+		current-size : { state-fluent, int, default = 0 };
+		current-value : { state-fluent, int, default = 0 };
+		bin-size(bin) : { state-fluent, int, default = 0 };
+		bin-value(bin) : { state-fluent, int, default = 0 };
+
+		item-rand(item) : { interm-fluent, bool };
+
+		action(bin) : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {
+		// add the item to the bin
+		bin-size'(?b) = if(action(?b)) then bin-size(?b) + current-size' else bin-size(?b);
+		bin-value'(?b) = if(action(?b)) then bin-value(?b) + current-value' else bin-value(?b);
+		
+		// sample the next item
+		item-rand(?i) = Bernoulli(ITEM-PROB(?i));
+		current-size' = sum_{?i: item} ITEM-SIZE(?i) * (?i == argmax_{?i2: item} item-rand(?i2));
+		current-value' = sum_{?i: item} ITEM-VALUE(?i) * (?i == argmax_{?i2: item} item-rand(?i2));
+    };
+                
+    // reward is the sum of all weights across all bins if within capacity
+    // a huge negative value for each bin that overflows if there is one
+    reward = if(exists_{?b: bin}[bin-size(?b) > CAPACITY]) 
+		then -OVERFLOW * (sum_{?b: bin}[bin-size(?b) > CAPACITY])
+		else (sum_{?b: bin} bin-value(?b));  
+}
