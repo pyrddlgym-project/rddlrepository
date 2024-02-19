@@ -1,7 +1,7 @@
 info = {
     'name': 'TSP',
     'description': 'The travelling salesman problem.',
-    'context': '',
+    'context': 'or',
     'tags': '',
     'viz': 'None'
 }
