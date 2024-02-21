@@ -1,6 +1,6 @@
 info = {
     'name': 'BinPacking',
-    'description': 'Reject or place items into a bin to maximize total value of all items while keeping the total weight of each bin within limits.',
+    'description': 'Items of random weight are drawn, the goal is to place them into bins while minimizing the number of bins used and the total weight of each bin is within limits.',
     'context': 'or',
     'tags': '',
     'viz': 'None'
