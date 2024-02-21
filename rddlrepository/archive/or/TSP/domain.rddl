@@ -18,28 +18,46 @@ domain travelling_salesman {
     };
             
     pvariables {
-		ARC(node, node) : { non-fluent, bool, default = false };
-		COST(node, node) : { non-fluent, real, default = 1.0 };
-		COMPLETE-REWARD : { non-fluent, real, default = 100.0 };
+		COST(node, node) : { non-fluent, real, default = 0.0 };
+		ORIGIN(node) : { non-fluent, bool, default = false };
 
 		current(node) : { state-fluent, bool, default = false };
 		visited(node) : { state-fluent, bool, default = false };
-		
-		valid-move : { interm-fluent, bool };
 
 		move(node) : { action-fluent, bool, default = false };
     };
         
     cpfs {
-		valid-move = exists_{?n: node, ?n2: node}[current(?n) ^ move(?n2) ^ ARC(?n, ?n2)];
-		current'(?n) = if(valid-move) then move(?n) else current(?n);
-		visited'(?n) = visited(?n) | current(?n) | (valid-move ^ move(?n));
+		current'(?n) = move(?n);
+		visited'(?n) = visited(?n) | move(?n);
     };
                 
-    reward = COMPLETE-REWARD * (forall_{?n: node} visited(?n)) 
-		- (sum_{?n: node, ?n2: node}[COST(?n, ?n2) * (current(?n) ^ move(?n2) ^ ARC(?n, ?n2))]); 
+    reward = -(sum_{?n: node, ?n2: node}[COST(?n, ?n2) * current(?n) * current'(?n2)]); 
 
+	termination {
+		(forall_{?n: node} visited(?n)) ^ (forall_{?n: node}[current(?n) <=> ORIGIN(?n)]);
+	};
+	
     state-invariants { 
+		
+		// one origin
+		(sum_{?n: node} ORIGIN(?n)) == 1;
+		
+		// current node exists
 		(sum_{?n: node} current(?n)) == 1;
+		
+		// origin is visited
+		forall_{?n: node}[ORIGIN(?n) => visited(?n)];
     }; 
+	
+	action-preconditions {
+		
+		// move somewhere
+		(sum_{?n: node} move(?n)) == 1;
+		
+		// all nodes are visited and move back to origin or move to unvisited node
+		(exists_{?n: node}[~visited(?n)]) ^ (forall_{?n: node}[move(?n) => ~visited(?n)])
+			| (forall_{?n: node}[move(?n) <=> ORIGIN(?n)]);
+	};
 }
+
