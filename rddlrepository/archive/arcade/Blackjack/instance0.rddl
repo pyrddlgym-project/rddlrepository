@@ -13,3 +13,6 @@ instance blackjack_inst {
     horizon = 40;
     discount = 1.0;
 }
+
+
+
