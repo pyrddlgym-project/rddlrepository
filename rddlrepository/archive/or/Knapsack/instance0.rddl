@@ -1,0 +1,39 @@
+non-fluents nf_knapsack {
+
+    domain = multi_knapsack;
+    
+    objects {
+		item : { i1, i2, i3 };
+		knapsack : { k1 };
+    };
+
+    non-fluents {
+		ITEM-PROB(i1) = 0.2;
+		ITEM-PROB(i2) = 0.5;
+		ITEM-PROB(i3) = 0.3;
+		ITEM-WEIGHT(i1) = 2;
+		ITEM-WEIGHT(i2) = 3;
+		ITEM-WEIGHT(i3) = 6;
+		ITEM-VALUE(i1) = 1;
+		ITEM-VALUE(i2) = 4;
+		ITEM-VALUE(i3) = 12;
+    };
+}
+
+instance knapsack_inst {
+
+    domain = multi_knapsack;
+
+    non-fluents = nf_knapsack;
+    
+    init-state {
+		current-weight = 3;
+		current-value = 4;
+    };
+
+    max-nondef-actions = 1;
+    horizon = 40;
+    discount = 1.0;
+}
+
+

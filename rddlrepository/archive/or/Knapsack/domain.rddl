@@ -1,0 +1,67 @@
+// ////////////////////////////////////////////////////////////////////
+// Items of various weight and value are shown sequentially one at a 
+// time. The item can be accepted and placed into a specific knapsack
+// of fixed capacity, or discarded. The goal is to maximize the value
+// stored across all knapsacks.
+// 
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain multi_knapsack {
+        
+    types {
+		item : object;
+		knapsack : object;
+    };
+            
+    pvariables {
+		ITEM-WEIGHT(item) : { non-fluent, int, default = 1 };
+		ITEM-VALUE(item) : { non-fluent, int, default = 1 };
+		ITEM-PROB(item) : { non-fluent, real, default = 0.0 };
+		CAPACITY(knapsack) : { non-fluent, int, default = 20 };
+		
+		total-weight(knapsack) : { state-fluent, int, default = 0 };
+		total-value(knapsack) : { state-fluent, int, default = 0 };
+		current-weight : { state-fluent, int, default = 0 };
+		current-value : { state-fluent, int, default = 0 };
+
+		real-place(knapsack) : { interm-fluent, bool };
+		item-rand(item) : { interm-fluent, bool };
+
+		place(knapsack) : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {
+	
+		// if a knapsack can hold the item, keep placement
+		real-place(?k) = place(?k) ^ (total-weight(?k) + current-weight <= CAPACITY(?k));
+		
+		// place the new item into the knapsack
+		total-weight'(?k) = if(real-place(?k)) then (total-weight(?k) + current-weight) else total-weight(?k);		
+		total-value'(?k) = if(real-place(?k)) then (total-value(?k) + current-value) else total-value(?k);
+		
+		// sample the next item
+		item-rand(?i) = Bernoulli(ITEM-PROB(?i));
+		current-weight' = sum_{?i: item}[ITEM-WEIGHT(?i) * (?i == argmax_{?i2: item} item-rand(?i2))];		
+		current-value' = sum_{?i: item}[ITEM-VALUE(?i) * (?i == argmax_{?i2: item} item-rand(?i2))];
+    };
+                
+    // reward is total value
+    reward = sum_{?k: knapsack} total-value(?k);
+		
+	state-invariants {
+		
+		// valid total knapsack weight
+		forall_{?k: knapsack}[total-weight(?k) >= 0];
+		forall_{?k: knapsack}[total-weight(?k) <= CAPACITY(?k)];
+		
+		// valid current weight and value
+		forall_{?i: item}[ITEM-WEIGHT(?i) >= 0];
+		exists_{?i: item}[current-weight == ITEM-WEIGHT(?i)];
+		exists_{?i: item}[current-value == ITEM-VALUE(?i)];
+	};
+}
+
+
