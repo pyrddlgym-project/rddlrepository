@@ -143,8 +143,8 @@ problem_info.register_instance("MyInstance", instance_content)
 
 A listing of all domains currently supported in the main branch of rddlrepository can be found [here](https://github.com/pyrddlgym-project/rddlrepository/blob/main/rddlrepository/domains.pdf).
 
-Domains are broken down into contexts, which includes the following past competitions:
+Domains are broken down into contexts, which includes some standalone domains, as well as domains used in the past competitions:
 * IPC 2011: [http://users.cecs.anu.edu.au/~ssanner/IPPC_2011/](http://users.cecs.anu.edu.au/~ssanner/IPPC_2011/)
 * IPC 2014: [https://ssanner.github.io/IPPC_2014/](https://ssanner.github.io/IPPC_2014/)
 * IPC 2018: [https://ipc2018-probabilistic.bitbucket.io/](https://ipc2018-probabilistic.bitbucket.io/)
-as well as a number of standalone domains.
+* IPC 2023: [https://ipc2023.github.io](https://ipc2023.github.io).
