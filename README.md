@@ -29,7 +29,7 @@ To install via github
 git clone https://github.com/pyRDDLGym-project/rddlrepository.git
 ```
 
-To make use of the existing visualizers, you also require [pyRDDLGym](https://github.com/pyRDDLGym-project/pyRDDLGym) (``pip install pyRDDLGym```).
+To make use of the existing visualizers, you also require [pyRDDLGym](https://github.com/pyRDDLGym-project/pyRDDLGym) (``pip install pyRDDLGym``).
 
 ## Usage
 
