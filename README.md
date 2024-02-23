@@ -141,7 +141,7 @@ problem_info.register_instance("MyInstance", instance_content)
 
 ## Domains Included
 
-A listing of all domains currently supported in the main branch of rddlrepository can be found [here](https://github.com/pyrddlgym-project/rddlrepository/blob/main/rddlrepository/domains.pdf).
+A listing of all domains currently supported in the main branch of rddlrepository can be found [here](https://github.com/pyrddlgym-project/rddlrepository/blob/main/domains.pdf).
 
 Domains are broken down into contexts, which includes some standalone domains, as well as domains used in the past competitions:
 * IPC 2011: [http://users.cecs.anu.edu.au/~ssanner/IPPC_2011/](http://users.cecs.anu.edu.au/~ssanner/IPPC_2011/)
