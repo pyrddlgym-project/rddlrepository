@@ -1,14 +1,17 @@
 # A Guide for the BLXed
 
 The goal of this document is to describe the BLX traffic model, as well as some of the subtle points of
-its implementation in the RDDL language. The title is a play on "A Guide for the Perplexed",
-a work of philosophy by Maimonides. The author apologizes for the pun, but it seemed too good to pass up :)
+its implementation in the RDDL language.
 
-The rest of the document is structured as follows. The first section will describe the BLX model in general terms,
+The document is structured as follows. The first section will describe the BLX model in general terms,
 discuss the issue of how vehicle flow propagation is implemented in RDDL, and discuss linear blending. The
 second section will discuss the difference between so-called "Simple" and "Complex" phasing schemes.
 The final section will describe how to use the instance file generator to create a grid network and run
 the instance as a RDDLEnv using pyRDDLGym.
+
+(What's with the title? The title is a play on "A Guide for the Perplexed", a work of philosophy by Maimonides.
+The author apologizes for the pun, but it seemed too good to pass up :))
+
 
 ## The van den Berg - Lin - Xi (BLX) model
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
@@ -31,7 +34,7 @@ the link (the value of the speed may depend on the link), until joining the end 
 The outgoing flow of a turn that has a green light is determined as the *minimum* of the following three terms:
  - The sum queue length + current incoming flow
  - Saturation flow rate (parameter of a turn)
- - Storage capacity of the downstream (target) link (parameter of a link)
+ - Remaining storage of the downstream (target) link (the maximal storage capacity is a parameter of a link)
 
 In this way, BLX models three different traffic modalities. Respectively, they are:
  - Undersaturated flow (there are few enough vehicles in the queue and currently arriving that they can be totally cleared)
