@@ -1,26 +1,21 @@
-# A Guide for the BLXed
+# RDDL implementation of the van den Berg - Lin - Xi (BLX) model
+The goal of this document is to describe the BLX traffic model, and to explain some of the details of
+its implementation in the RDDL language.
 
-The goal of this document is to describe the BLX traffic model, as well as some of the important and 
-subtle details of its implementation in the RDDL language.
+The document is structured as follows. The first section describes the BLX model in general terms.
+The second section discusses how vehicle flow propagation is implemented in RDDL, and discusses linear blending of
+incoming flows. The third section discusses the difference between "Simple" and "Complex" phasing schemes.
+The final section describes how to use the instance file generator to create a grid network and run the
+instance as a RDDLEnv using pyRDDLGym.
 
-The document is structured as follows. The first section will describe the BLX model in general terms,
-discuss the issue of how vehicle flow propagation is implemented in RDDL, and discuss linear blending of
-incoming flows. The second section will discuss the difference between so-called "Simple" and "Complex"
-phasing schemes. The final section will describe how to use the instance file generator to create a grid
-network and run the instance as a RDDLEnv using pyRDDLGym.
-
-(What's with the title? The title is a play on "A Guide for the Perplexed", a work of philosophy by Maimonides.
-The author apologizes for the pun, but it seemed too good to pass up :))
-
-
-## The van den Berg - Lin - Xi (BLX) model
+## BLX model
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
 the traffic network. If we think of the traffic network as a directed graph, "link" is another name for
 a directed edge. Each link may have several incoming turns from other links, and several outgoing turns
-to other links. Each turn has some number of incoming lanes, which affects its saturation flow rate, i.e.
-the highest rate at which the turn can drain traffic (for simplicity we assume that the number of lanes does
-not change throughout the link). The number of lanes on the link is equal to the sum of the number of lanes 
-over all of its outgoing turns.
+to other links. Each turn has some number of incoming lanes, which affects the saturation flow rate of the
+turn, i.e. the highest rate at which the turn can drain traffic (for simplicity we assume that the number
+of lanes does not change throughout the link). The number of lanes on the link is equal to the sum of the
+number of lanes over all of its outgoing turns.
 
 The van den Berg - Lin - Xi (BLX) model is a traffic flow model that strikes a good balance between simplicity
 and detail. The model operates in discrete time-steps of equal duration (although in principle the duration
@@ -29,9 +24,11 @@ link, the model keeps track of:
  - The current queue length (number of stopped vehicles at the downstream end of the link)
  - The flows along the link
 
-Incoming flows are split into different outgoing turns by multiplying the flow by the turning probability of the turn.
-The flows that are split according to their outgoing turn are then assumed to propagate at some constant speed along 
-the link (the value of the speed may depend on the link), until joining the end of a queue for that turn.
+Incoming flows are assumed to propagate at some constant speed along the link (the value of the speed may depend on the link),
+until joining the upstream end of the queued vehicles. Upon reaching the queued vehicles, the flows are divided up
+into the queues for each outgoing turn. The amount of inflow to the queue for a particular turn is computed by multiplying
+the inflow by the probability of the turn.
+
 The outgoing flow of a turn that has a green light is determined as the *minimum* of the following three terms:
  - The sum queue length + current incoming flow
  - Saturation flow rate (parameter of a turn)
@@ -55,6 +52,8 @@ the similar Queue Transmission Model appeared in
    time mixed integer linear programming formulation for traffic signal control,"
    Transportation Research Record, pp. 128--138 2595(1), 2016
 
+
+## RDDL implementation
 We now describe two subtleties in the RDDL implementation of the BLX model.
 
 ### Vehicle flow propagation in RDDL (Why is time encoded as an object?)
@@ -65,33 +64,41 @@ It becomes necessary to keep information from previous time-steps as part of the
 For example, let us imagine that the link is 100 m long, and the propagation speed is 20 m/s. In addition, let the model operate with a time-step of 1 s.
 First, imagine that the queues are empty. Then the vehicle flows that are entering the link at the current time-step will be arriving at the downstream end of the link in
 100/20 = 5 s (time-steps). For scheduling the traffic light phases, it is important to know the full picture of the incoming flows,
-that is, how many vehicles will be arriving in 0, 1, 2, 3, 4 seconds.
+that is, how many vehicles will be arriving in 0, 1, 2, 3, 4, 5 seconds.
 
 We can encode all of this information into an array-like object
-``` flow-on-link(time) ```
-where ``time`` is a RDDL object that has instances t0, t1, t2, t3, and t4.
+```
+flow-on-link(time)
+```
+where ``time`` is a RDDL object that has instances t0, t1, t2, t3, t4 and t5.
 
 If the queues are not empty, we would like to find the time that the incoming vehicle flows take to reach the
 *upstream end* of the queue. This time will necessarily be <= 5 seconds. Therefore, with non-empty queues we
-can continue using the same ``flow-on-link(time)`` array-like object.
+can continue using the same ``flow-on-link(time)`` array-like object to record the inflows.
 
-Although RDDL does not provide a native array-element-access mechanism, we can mimic this as follows. Each
-time object has a ``TIME-VAL(time)`` non-fluent, which acts as the array index. Then, if ``tau`` denotes
-the propagation time to the end of queue (it could be 3 seconds, for example) and ``flow-into-link`` denotes
-the incoming vehicle flows, we can add the new flows as
+Although RDDL does not provide a native mechanism for accessing array elements, we can mimic this as follows.
+For each time object, we define a ``TIME-VAL(time)`` non-fluent, which acts as the array index. Then, if ``tau``
+denotes the propagation time to the end of queue (it could be 3 seconds, for example) and ``flow-into-link``
+denotes the incoming vehicle flows, we can add the new flows as
 
-``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link; ```
+```
+flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link;
+```
 
 in addition, to propagate the flows along the link, we need the concept of a sequential order
-(or ordinal structure) on the time objects. We implement this using the boolean non-fluent ``NEXT(?ta,?tb)``,
-where for example ``NEXT(t3,t2)`` is true and ``NEXT(t4,t2)`` is false. Using this concept, we can propagate
-flows as
+on the time objects (a successor function like in Peano arithmetic). We implement this using
+the boolean non-fluent ``NEXT(?ta,?tb)``, where for example ``NEXT(t3,t2)`` is true and
+``NEXT(t4,t2)`` is false. Using this concept, we can propagate flows as
 
-``` flow-on-link'(?t) = (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]); ```
+```
+flow-on-link'(?t) = (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]);
+```
 
 Putting the incoming and propagated flows together, we obtain the update rule
 
-``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]); ```
+```
+flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]);
+```
 
 ### Linear blending of incoming flows
 If we compare the update rule for ``flow-on-link(?t)`` described in the previous subsection with the update rule used in the
@@ -118,9 +125,9 @@ flow-on-link'(?t) =  (TIME-VAL(?t) == tau) * (1-gamma) * flow-into-link
 
 We have now explained all of the elements of the ``flow-on-link`` update rule.
 
-## Simple and Complex phasing structures
-### Simple phasing
-### Complex phasing
+### Simple and Complex phasing structures
+#### Simple phasing
+#### Complex phasing
 
 ## Start-up guide
 ### Generating a domain instance
