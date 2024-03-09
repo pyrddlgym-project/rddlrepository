@@ -17,9 +17,10 @@ The author apologizes for the pun, but it seemed too good to pass up :))
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
 the traffic network. If we think of the traffic network as a directed graph, "link" is another name for
 a directed edge. Each link may have several incoming turns from other links, and several outgoing turns
-to other links. Each turn has some number of incoming lanes, which affects its saturation flow rate
-(for simplicity we assume that the number of lanes does not change throughout the link). The number of lanes
-on the link is equal to the sum of the number of lanes over all of its outgoing turns.
+to other links. Each turn has some number of incoming lanes, which affects its saturation flow rate, i.e.
+the highest rate at which the turn can drain traffic (for simplicity we assume that the number of lanes does
+not change throughout the link). The number of lanes on the link is equal to the sum of the number of lanes 
+over all of its outgoing turns.
 
 The van den Berg - Lin - Xi (BLX) model is a traffic flow model that strikes a good balance between simplicity
 and detail. The model operates in discrete time-steps of equal duration (although in principle the duration
@@ -52,7 +53,7 @@ the similar Queue Transmission Model appeared in
 
  > Guilliard, I., Sanner, S., Trevizan, F. W., & Williams, B. C. "Nonhomogeneous
    time mixed integer linear programming formulation for traffic signal control,"
-   Transportation Research Record, pp. 128-138 2595(1), 2016
+   Transportation Research Record, pp. 128--138 2595(1), 2016
 
 We now describe two subtleties in the RDDL implementation of the BLX model.
 
@@ -60,6 +61,30 @@ We now describe two subtleties in the RDDL implementation of the BLX model.
 A special feature of the BLX model that is a bit tricky to deal with from the MDP perspective is that the incoming flows
 join the end of a queue after a time offset (the time it takes the flow to propagate from entrance until reaching the queue).
 It becomes necessary to keep information from previous time-steps as part of the state.
+
+For example, let us imagine that the link is 100 m long, and the propagation speed is 20 m/s. In addition, let the model operate with a time-step of 1 s.
+First, imagine that the queues are empty. Then the vehicle flows that are entering the link at the current time-step will be arriving at the downstream end of the link in
+100/20 = 5 s (time-steps). For scheduling the traffic light phases, it is important to know the full picture of the incoming flows,
+that is, how many vehicles will be arriving in 0, 1, 2, 3, 4 seconds.
+
+We can encode all of this information into an array-like object
+``` flow-on-link(time) ```
+where time is a RDDL object that can take on the values t0, t1, t2, t3, and t4.
+
+If the queues are not empty, we would like to find the time that the incoming vehicle flows take to reach the
+*upstream end* of the queue. This time will necessarily be <= 5 seconds. Therefore, with non-empty queues we
+can continue using the same ``flow-on-link(time)`` array object.
+
+Although RDDL does not provide a native array-element-access mechanism, we can mimic this as follows. Each
+time object has a ``TIME-VAL(time)`` non-fluent, which acts as the array index. Then, if ``tau`` denotes
+the propagation time to the end of queue (it could be 3 seconds, for example) and ``flow-into-link`` denotes
+the incoming vehicle flows, we can add the new flows as
+
+``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link ```
+
+in addition, to propagate the flows along the link, we need the concept of a sequential order
+(or ordinal structure) on the time objects. We implement this using the non-fluent ``NEXT(?t0,?t1)``.
+
 
 ### Linear blending of incoming flows
 
