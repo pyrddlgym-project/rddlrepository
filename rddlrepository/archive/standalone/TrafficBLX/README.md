@@ -91,7 +91,7 @@ flows as
 
 Putting the incoming and propagated flows together, we obtain the update rule
 
-``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]);
+``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]); ```
 
 ### Linear blending of incoming flows
 If we compare the update rule for ``flow-on-link(?t)`` above with the RDDL domain files, we see that there is an
