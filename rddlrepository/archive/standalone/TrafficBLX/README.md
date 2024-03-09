@@ -1,7 +1,7 @@
 # A Guide for the BLXed
 
-The goal of this document is to describe the BLX traffic model, as well as some of the subtle points of
-its implementation in the RDDL language.
+The goal of this document is to describe the BLX traffic model, as well as some of the important and 
+subtle details of its implementation in the RDDL language.
 
 The document is structured as follows. The first section will describe the BLX model in general terms,
 discuss the issue of how vehicle flow propagation is implemented in RDDL, and discuss linear blending. The
@@ -69,24 +69,33 @@ that is, how many vehicles will be arriving in 0, 1, 2, 3, 4 seconds.
 
 We can encode all of this information into an array-like object
 ``` flow-on-link(time) ```
-where time is a RDDL object that can take on the values t0, t1, t2, t3, and t4.
+where ``time`` is a RDDL object that has instances t0, t1, t2, t3, and t4.
 
 If the queues are not empty, we would like to find the time that the incoming vehicle flows take to reach the
 *upstream end* of the queue. This time will necessarily be <= 5 seconds. Therefore, with non-empty queues we
-can continue using the same ``flow-on-link(time)`` array object.
+can continue using the same ``flow-on-link(time)`` array-like object.
 
 Although RDDL does not provide a native array-element-access mechanism, we can mimic this as follows. Each
 time object has a ``TIME-VAL(time)`` non-fluent, which acts as the array index. Then, if ``tau`` denotes
 the propagation time to the end of queue (it could be 3 seconds, for example) and ``flow-into-link`` denotes
 the incoming vehicle flows, we can add the new flows as
 
-``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link ```
+``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link; ```
 
 in addition, to propagate the flows along the link, we need the concept of a sequential order
-(or ordinal structure) on the time objects. We implement this using the non-fluent ``NEXT(?t0,?t1)``.
+(or ordinal structure) on the time objects. We implement this using the boolean non-fluent ``NEXT(?ta,?tb)``,
+where for example ``NEXT(t3,t2)`` is true and ``NEXT(t4,t2)`` is false. Using this concept, we can propagate
+flows as
 
+``` flow-on-link'(?t) = (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]); ```
+
+Putting the incoming and propagated flows together, we obtain the update rule
+
+``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]);
 
 ### Linear blending of incoming flows
+If we compare the update rule for ``flow-on-link(?t)`` above with the RDDL domain files, we see that there is an
+additional detail that is still missing. This is linear blending of incoming flows.
 
 ## Simple and Complex phasing structures
 ### Simple phasing
