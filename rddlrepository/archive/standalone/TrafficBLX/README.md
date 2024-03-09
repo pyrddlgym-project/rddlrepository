@@ -106,13 +106,15 @@ operations can all be fairly inaccurate.
 Therefore, BLX instead *linearly blends* the incoming flows into two adjacent entries of the ``flow-on-link(?t)``
 array. Some of the inflow goes into the 8-second-offset and some of the inflow goes into the 9-second offset.
 The split is done linearly. In the example, because 8.3 is closer to 8 than to 9, more of the inflow should
-go into the 8-second-offset. (1-0.3)*10 goes into 8-second offset and 0.3*10 goes into 9-second offset.
+go into the 8-second-offset. ``(1-0.3)*10`` goes into 8-second offset and ``0.3*10`` goes into 9-second offset.
 
-More generally, we write the propagation estimate as ``tau + gamma``, where ``tau`` is an integer and ``gamma``
+More generally, we write the propagation time estimate as ``tau + gamma``, where ``tau`` is an integer and ``gamma``
 is a real number in the interval [0, 1). Then the incoming inflow is linearly blended as
 
-``` flow-on-link'(?t) =  (TIME-VAL(?t) == tau) * (1-gamma) * flow-into-link
-                       + (TIME-VAL(?t) == tau+1) * gamma   * flow-into-link; ```
+```
+flow-on-link'(?t) =  (TIME-VAL(?t) == tau) * (1-gamma) * flow-into-link
+                   + (TIME-VAL(?t) == tau+1) * gamma   * flow-into-link;
+```
 
 We have now explained all of the elements of the ``flow-on-link`` update rule.
 
