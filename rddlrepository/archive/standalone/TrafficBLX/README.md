@@ -9,18 +9,19 @@ phasing schemes. The final section describes how to use the instance file genera
 and run the instance as a RDDLEnv using pyRDDLGym.
 
 ## BLX model
+The BLX model is a traffic flow model that strikes a good balance between simplicity and detail. The model
+operates in discrete time-steps of equal duration (although in principle the duration may be made to vary,
+as was done in the similar Queue Transmission Model (QTM)).
+
+The traffic flows in the BLX model are organized by the links of a traffic network.
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
 the traffic network. If we think of the traffic network as a directed graph, "link" is another name for
 a directed edge. Each link may have several incoming turns from other links, and several outgoing turns
 to other links. Each turn has some number of incoming lanes, which affects the saturation flow rate of the
 turn, i.e. the highest rate at which the turn can drain traffic (for simplicity we assume that the number
 of lanes does not change throughout the link). The number of lanes on the link is equal to the sum of the
-number of lanes over all of its outgoing turns.
-
-The van den Berg - Lin - Xi (BLX) model is a traffic flow model that strikes a good balance between simplicity
-and detail. The model operates in discrete time-steps of equal duration (although in principle the duration
-may be made to vary, as was done in the similar Queue Transmission Model (QTM)). For each outgoing turn on a
-link, the model keeps track of:
+number of lanes over all of its outgoing turns. For each outgoing turn on a link, the model keeps
+track of:
  - The current queue length (number of stopped vehicles at the downstream end of the link)
  - The flows along the link
 
@@ -52,10 +53,10 @@ the similar Queue Transmission Model appeared in
    time mixed integer linear programming formulation for traffic signal control,"
    Transportation Research Record, pp. 128--138 2595(1), 2016
 
-The BLX model can be used for various control problems. The current implementations control
-the states of the traffic lights in the network in order to minimize the total travel
-time of the vehicles in the network. The actions available for each traffic light either
-advance the current green phase, or switch to another phase.
+The BLX model can be used for evaluating various control methodologies. The current RDDL
+implementations control the states of the traffic lights in the network in order to minimize
+the total travel time of the vehicles in the network. The actions available for each traffic
+light either advance the current green phase, or switch to another phase.
 
 ## RDDL implementation
 We now describe several details of the RDDL implementation of the BLX model to help
