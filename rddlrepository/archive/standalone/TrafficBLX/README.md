@@ -29,7 +29,7 @@ Incoming flows are split into different outgoing turns by multiplying the flow b
 The flows that are split according to their outgoing turn are then assumed to propagate at some constant speed along 
 the link (the value of the speed may depend on the link), until joining the end of a queue for that turn.
 The outgoing flow of a turn that has a green light is determined as the *minimum* of the following three terms:
- - The sum Queue length + Current incoming flow
+ - The sum queue length + current incoming flow
  - Saturation flow rate (parameter of a turn)
  - Storage capacity of the downstream (target) link (parameter of a link)
 
@@ -38,7 +38,7 @@ In this way, BLX models three different traffic modalities. Respectively, they a
  - Saturated flow (as many vehicles as possible are cleared in the time-step)
  - Oversaturated flow (saturated flow cannot be reached because of limits on downstream capacity)
 
-A reference for the BLX model is
+More detailed information may be found by inspecting the domain RDDL file, or referring to the paper
 
  > S. Lin, B. De Schutter, Y. Xi, and J. Hellendoorn, "A simplified macroscopic urban
    traffic network model for model-based predictive control," Proceedings of the 12th
@@ -51,8 +51,13 @@ the similar Queue Transmission Model appeared in
    time mixed integer linear programming formulation for traffic signal control,"
    Transportation Research Record, pp. 128-138 2595(1), 2016
 
-### Description of the model
+We now describe two subtleties in the RDDL implementation of the BLX model.
+
 ### Vehicle flow propagation in RDDL (Why is time encoded as an object?)
+A special feature of the BLX model that is a bit tricky to deal with from the MDP perspective is that the incoming flows
+join the end of a queue after a time offset (the time it takes the flow to propagate from entrance until reaching the queue).
+It becomes necessary to keep information from previous time-steps as part of the state.
+
 ### Linear blending of incoming flows
 
 ## Simple and Complex phasing structures
