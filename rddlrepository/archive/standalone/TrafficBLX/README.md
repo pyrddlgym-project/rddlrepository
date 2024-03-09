@@ -30,7 +30,8 @@ of the following three terms:
  - Queue length + Current incoming flow
  - Saturation flow rate (parameter of a turn)
  - Storage capacity of the downstream (target) link (parameter of a link)
-In this way, BLX models three different traffic modalities:
+
+In this way, BLX models three different traffic modalities. Respectively, they are:
  - Undersaturated flow (there are few enough vehicles in the queue and currently arriving that they can be totally cleared)
  - Saturated flow (as many vehicles as possible are cleared in the time-step)
  - Oversaturated flow (saturated flow cannot be reached because of limits on downstream capacity)
