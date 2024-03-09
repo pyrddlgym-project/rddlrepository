@@ -14,8 +14,9 @@ the instance as a RDDLEnv using pyRDDLGym.
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
 the traffic network. If we think of the traffic network as a directed graph, "link" is another name for
 a directed edge. Each link may have several incoming turns from other links, and several outgoing turns
-to other links. Each turn has some number of lanes (for simplicity we assume that the number of lanes
-does not change throughout the link).
+to other links. Each turn has some number of incoming lanes, which affects its saturation flow rate
+(for simplicity we assume that the number of lanes does not change throughout the link). The number of lanes
+on the link is equal to the sum of the number of lanes over all of its outgoing turns.
 
 The van den Berg - Lin - Xi (BLX) model is a traffic flow model that strikes a good balance between simplicity
 and detail. The model operates in discrete time-steps of equal duration (although in principle the duration
@@ -24,10 +25,11 @@ link, the model keeps track of:
  - The current queue length (number of stopped vehicles at the downstream end of the link)
  - The flows along the link
 
-Incoming flows are assumed to propagate at some constant speed along the link (the value of the speed may depend on the link),
-until joining the end of a queue. The outgoing flow of a turn that has a green light is determined as the *minimum*
-of the following three terms:
- - Queue length + Current incoming flow
+Incoming flows are split into different outgoing turns by multiplying the flow by the turning probability of the turn.
+The flows that are split according to their outgoing turn are then assumed to propagate at some constant speed along 
+the link (the value of the speed may depend on the link), until joining the end of a queue for that turn.
+The outgoing flow of a turn that has a green light is determined as the *minimum* of the following three terms:
+ - The sum Queue length + Current incoming flow
  - Saturation flow rate (parameter of a turn)
  - Storage capacity of the downstream (target) link (parameter of a link)
 
