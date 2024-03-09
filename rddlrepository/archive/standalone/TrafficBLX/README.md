@@ -3,10 +3,10 @@ The goal of this document is to describe the BLX traffic model, and to explain s
 its implementation in the RDDL language.
 
 The document is structured as follows. The first section describes the BLX model in general terms.
-The second section discusses how vehicle flow propagation is implemented in RDDL, and discusses linear blending of
-incoming flows. The third section discusses the difference between "Simple" and "Complex" phasing schemes.
-The final section describes how to use the instance file generator to create a grid network and run the
-instance as a RDDLEnv using pyRDDLGym.
+The second section discusses some aspects of the RDDL implementation, including how vehicle flow propagation
+is implemented, how linear blending of incoming flows works, and the difference between "Simple" and "Complex"
+phasing schemes. The final section describes how to use the instance file generator to create a grid network
+and run the instance as a RDDLEnv using pyRDDLGym.
 
 ## BLX model
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
@@ -52,9 +52,14 @@ the similar Queue Transmission Model appeared in
    time mixed integer linear programming formulation for traffic signal control,"
    Transportation Research Record, pp. 128--138 2595(1), 2016
 
+The BLX model can be used for various control problems. The current implementations control
+the states of the traffic lights in the network in order to minimize the total travel
+time of the vehicles in the network. The actions available for each traffic light either
+advance the current green phase, or switch to another phase.
 
 ## RDDL implementation
-We now describe two subtleties in the RDDL implementation of the BLX model.
+We now describe several details of the RDDL implementation of the BLX model to help
+the reader's understanding.
 
 ### Vehicle flow propagation in RDDL (Why is time encoded as an object?)
 A special feature of the BLX model that is a bit tricky to deal with from the MDP perspective is that the incoming flows
@@ -80,22 +85,21 @@ Although RDDL does not provide a native mechanism for accessing array elements, 
 For each time object, we define a ``TIME-VAL(time)`` non-fluent, which acts as the array index. Then, if ``tau``
 denotes the propagation time to the end of queue (it could be 3 seconds, for example) and ``flow-into-link``
 denotes the incoming vehicle flows, we can add the new flows as
-
 ```
 flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link;
 ```
 
-in addition, to propagate the flows along the link, we need the concept of a sequential order
+In addition, to propagate the flows along the link, we need the concept of a sequential order
 on the time objects (a successor function like in Peano arithmetic). We implement this using
-the boolean non-fluent ``NEXT(?ta,?tb)``, where for example ``NEXT(t3,t2)`` is true and
-``NEXT(t4,t2)`` is false. Using this concept, we can propagate flows as
-
+the boolean non-fluent ``NEXT(?ta,?tb)``, where for example ``NEXT(t2,t3)`` is true, but
+``NEXT(t2,t4)`` and ``NEXT(t3,t2)`` are false. Using this concept, we can propagate flows as
 ```
 flow-on-link'(?t) = (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]);
 ```
+Please note that when a flow gets propagated its index (time until reaching the queue) gets
+decreased by one, not increased.
 
 Putting the incoming and propagated flows together, we obtain the update rule
-
 ```
 flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]);
 ```
@@ -126,6 +130,9 @@ flow-on-link'(?t) =  (TIME-VAL(?t) == tau) * (1-gamma) * flow-into-link
 We have now explained all of the elements of the ``flow-on-link`` update rule.
 
 ### Simple and Complex phasing structures
+We now explain the difference between the "Simple" and "Complex" phasing structures implemented 
+for the RDDL BTX domains.
+
 #### Simple phasing
 #### Complex phasing
 
