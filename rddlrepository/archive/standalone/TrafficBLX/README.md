@@ -4,10 +4,10 @@ The goal of this document is to describe the BLX traffic model, as well as some 
 subtle details of its implementation in the RDDL language.
 
 The document is structured as follows. The first section will describe the BLX model in general terms,
-discuss the issue of how vehicle flow propagation is implemented in RDDL, and discuss linear blending. The
-second section will discuss the difference between so-called "Simple" and "Complex" phasing schemes.
-The final section will describe how to use the instance file generator to create a grid network and run
-the instance as a RDDLEnv using pyRDDLGym.
+discuss the issue of how vehicle flow propagation is implemented in RDDL, and discuss linear blending of
+incoming flows. The second section will discuss the difference between so-called "Simple" and "Complex"
+phasing schemes. The final section will describe how to use the instance file generator to create a grid
+network and run the instance as a RDDLEnv using pyRDDLGym.
 
 (What's with the title? The title is a play on "A Guide for the Perplexed", a work of philosophy by Maimonides.
 The author apologizes for the pun, but it seemed too good to pass up :))
@@ -94,8 +94,27 @@ Putting the incoming and propagated flows together, we obtain the update rule
 ``` flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]); ```
 
 ### Linear blending of incoming flows
-If we compare the update rule for ``flow-on-link(?t)`` above with the RDDL domain files, we see that there is an
-additional detail that is still missing. This is linear blending of incoming flows.
+If we compare the update rule for ``flow-on-link(?t)`` described in the previous subsection with the update rule used in the
+RDDL domain files, we see that there is an additional detail that is still missing. This is linear blending of incoming flows.
+
+Imagine that we are getting a 10 vehicle inflow into our link, and that the estimated propagation time to the end
+of the current queue is equal to 8.3 time-steps. Should we round up or round down 8.3 to find the time-index where
+the inflow is inserted into the ``flow-on-link(?t)`` "array"? Because at different times of the simulation the
+estimated propagation time could take values 8.01, 8.49, 8.51, or 8.99 (for example), the floor, round, and ceiling
+operations can all be fairly inaccurate.
+
+Therefore, BLX instead *linearly blends* the incoming flows into two adjacent entries of the ``flow-on-link(?t)``
+array. Some of the inflow goes into the 8-second-offset and some of the inflow goes into the 9-second offset.
+The split is done linearly. In the example, because 8.3 is closer to 8 than to 9, more of the inflow should
+go into the 8-second-offset. (1-0.3)*10 goes into 8-second offset and 0.3*10 goes into 9-second offset.
+
+More generally, we write the propagation estimate as ``tau + gamma``, where ``tau`` is an integer and ``gamma``
+is a real number in the interval [0, 1). Then the incoming inflow is linearly blended as
+
+``` flow-on-link'(?t) =  (TIME-VAL(?t) == tau) * (1-gamma) * flow-into-link
+                       + (TIME-VAL(?t) == tau+1) * gamma   * flow-into-link; ```
+
+We have now explained all of the elements of the ``flow-on-link`` update rule.
 
 ## Simple and Complex phasing structures
 ### Simple phasing
