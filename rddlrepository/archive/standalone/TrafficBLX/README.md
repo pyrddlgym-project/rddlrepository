@@ -2,7 +2,7 @@
 The goal of this document is to describe the BLX traffic model, and to explain some of the details of
 its implementation in the RDDL language.
 
-The document is structured as follows. The first section describes the BLX model in general terms.
+The document is structured as follows. The first section contains a general description of the BLX model.
 The second section discusses some aspects of the RDDL implementation, including how vehicle flow propagation
 is implemented, how linear blending of incoming flows works, and the difference between "Simple" and "Complex"
 phasing schemes. The final section describes how to use the instance file generator to create a grid network
@@ -13,7 +13,7 @@ The BLX model is a traffic flow model that strikes a good balance between simpli
 operates in discrete time-steps of equal duration (although in principle the duration may be made to vary,
 as was done in the similar Queue Transmission Model (QTM)).
 
-The traffic flows in the BLX model are organized by the links of a traffic network.
+The BLX model propagates traffic flows along the links of a traffic network.
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
 the traffic network. If we think of the traffic network as a directed graph, "link" is another name for
 a directed edge. Each link may have several incoming turns from other links, and several outgoing turns
@@ -64,13 +64,15 @@ the reader's understanding.
 
 ### Vehicle flow propagation in RDDL (Why is time encoded as an object?)
 A special feature of the BLX model that is a bit tricky to deal with from the MDP perspective is that the incoming flows
-join the end of a queue after a time offset (the time it takes the flow to propagate from entrance until reaching the queue).
+join the end of a queue with a time offset (the time it takes the flow to propagate from entrance until reaching the queue).
 It becomes necessary to keep information from previous time-steps as part of the state.
 
 For example, let us imagine that the link is 100 m long, and the propagation speed is 20 m/s. In addition, let the model operate with a time-step of 1 s.
 First, imagine that the queues are empty. Then the vehicle flows that are entering the link at the current time-step will be arriving at the downstream end of the link in
 100/20 = 5 s (time-steps). For scheduling the traffic light phases, it is important to know the full picture of the incoming flows,
 that is, how many vehicles will be arriving in 0, 1, 2, 3, 4, 5 seconds.
+
+![Image of inflows on a link organized by propagation time](img/flow1_cropped.png)
 
 We can encode all of this information into an array-like object
 ```
