@@ -97,14 +97,18 @@ If the queues are not empty, we would like to find the time that the incoming ve
 *upstream end* of the queue. This time will necessarily be <= 5 seconds. Therefore, with non-empty queues we
 can continue using the same ``flow-on-link(time)`` array-like object to record the inflows.
 
-The following image demonstrates this point.
+The following image demonstrates this point. Note that the propagation time to the end of
+queue is estimated by summing the total number of queued vehicles and finding the space
+they occupy, so that the "queue line" used for estimating propagation time is obtained
+as a weighted average of the queues.
 
 ![Image of arriving inflows, with queues present](img/flow3_cropped.png)
 
-In addition, to propagate the flows along the link, we need the concept of a sequential order
-on the time objects (a successor function like in Peano arithmetic). We implement this using
+The preceding describes how new inflows are added into the "propagating flows array". 
+To propagate previously entered flows along the link, we need in addition to define a sequential
+ordering on the time objects (a successor function like in Peano arithmetic). We implement this using
 the boolean non-fluent ``NEXT(?ta,?tb)``, where for example ``NEXT(t2,t3)`` is true, but
-``NEXT(t2,t4)`` and ``NEXT(t3,t2)`` are false. Using this concept, we can propagate flows as
+``NEXT(t2,t4)`` and ``NEXT(t3,t2)`` are false. Using the ``NEXT`` concept, we can propagate flows as
 ```
 flow-on-link'(?t) = (sum_{?tb : time} [ NEXT(?t,?tb) * flow-on-link(?tb) ]);
 ```
