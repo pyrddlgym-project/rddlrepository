@@ -12,8 +12,7 @@ and run the instance as a RDDLEnv using pyRDDLGym.
 
 ## BLX model
 The BLX model is a traffic flow model that strikes a good balance between simplicity and detail. The model
-operates in discrete time-steps of equal duration (although in principle the duration may be made to vary,
-as was done in the similar Queue Transmission Model (QTM)).
+operates in discrete time-steps of equal duration.[^1]
 
 The BLX model propagates traffic flows along the links of a traffic network.
 A link is a piece of road connecting two intersections or connecting an intersection to the boundary of
@@ -205,3 +204,7 @@ for step in range(env.horizon):
 print(f'Episode ended with cumulative reward {cmlt_reward}')
 env.close()
 ```
+
+[^1]: In principle the duration may be made to vary, as was done in the Queue Transmission Model (QTM),
+which is similar to BLX.
+
