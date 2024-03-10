@@ -177,7 +177,7 @@ steps. For example, the following runs a random agent to control the 2x2 grid ne
 in the previous subsection. The code is mostly borrowed from the examples in the pyRDDLGym
 documentation. It is assumed that pyRDDLGym is installed.
 
-```
+```python
 import pyRDDLGym
 import pyRDDLGym.core.policy
 
