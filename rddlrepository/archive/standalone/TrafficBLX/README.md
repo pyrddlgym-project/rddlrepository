@@ -8,6 +8,8 @@ is implemented, how linear blending of incoming flows works, and the difference 
 phasing schemes. The final section describes how to use the instance file generator to create a grid network
 and run the instance as a RDDLEnv using pyRDDLGym.
 
+![Animation of the RDDL implementation](img/TrafficBLX_small.gif)
+
 ## BLX model
 The BLX model is a traffic flow model that strikes a good balance between simplicity and detail. The model
 operates in discrete time-steps of equal duration (although in principle the duration may be made to vary,
