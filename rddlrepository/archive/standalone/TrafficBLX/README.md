@@ -40,6 +40,11 @@ In this way, BLX models three different traffic modalities. Respectively, they a
  - Saturated flow (as many vehicles as possible are cleared in the time-step)
  - Oversaturated flow (saturated flow cannot be reached because of limits on downstream capacity)
 
+The BLX model can be used for evaluating various control methodologies. The current RDDL
+implementations control the states of the traffic lights in the network in order to minimize
+the total travel time of the vehicles in the network. The actions available for each traffic
+light either advance the current green phase, or switch to another phase.
+
 More detailed information may be found by inspecting the domain RDDL file, or referring to the paper
 
  > S. Lin, B. De Schutter, Y. Xi, and J. Hellendoorn, "A simplified macroscopic urban
@@ -52,11 +57,6 @@ the similar Queue Transmission Model appeared in
  > Guilliard, I., Sanner, S., Trevizan, F. W., & Williams, B. C. "Nonhomogeneous
    time mixed integer linear programming formulation for traffic signal control,"
    Transportation Research Record, pp. 128--138 2595(1), 2016
-
-The BLX model can be used for evaluating various control methodologies. The current RDDL
-implementations control the states of the traffic lights in the network in order to minimize
-the total travel time of the vehicles in the network. The actions available for each traffic
-light either advance the current green phase, or switch to another phase.
 
 ## RDDL implementation
 We now describe several details of the RDDL implementation of the BLX model to help
