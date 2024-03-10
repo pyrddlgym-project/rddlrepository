@@ -72,6 +72,9 @@ First, imagine that the queues are empty. Then the vehicle flows that are enteri
 100/20 = 5 s (time-steps). For scheduling the traffic light phases, it is important to know the full picture of the incoming flows,
 that is, how many vehicles will be arriving in 0, 1, 2, 3, 4, 5 seconds.
 
+In the following image, an inflow of 0.20 arrives at the downstream link end in 1 time-step, followed by inflows
+of 0.0 in 2 time-steps, 0.40 in 3 time-steps, and so on.
+
 ![Image of inflows on a link organized by propagation time](img/flow1_cropped.png)
 
 We can encode all of this information into an array-like object
@@ -80,9 +83,7 @@ flow-on-link(time)
 ```
 where ``time`` is a RDDL object that has instances t0, t1, t2, t3, t4 and t5.
 
-If the queues are not empty, we would like to find the time that the incoming vehicle flows take to reach the
-*upstream end* of the queue. This time will necessarily be <= 5 seconds. Therefore, with non-empty queues we
-can continue using the same ``flow-on-link(time)`` array-like object to record the inflows.
+![Image of inflows, recorded in the flow-on-link(time) "array"](img/flow2_cropped.png)
 
 Although RDDL does not provide a native mechanism for accessing array elements, we can mimic this as follows.
 For each time object, we define a ``TIME-VAL(time)`` non-fluent, which acts as the array index. Then, if ``tau``
@@ -91,6 +92,14 @@ denotes the incoming vehicle flows, we can add the new flows as
 ```
 flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link;
 ```
+
+If the queues are not empty, we would like to find the time that the incoming vehicle flows take to reach the
+*upstream end* of the queue. This time will necessarily be <= 5 seconds. Therefore, with non-empty queues we
+can continue using the same ``flow-on-link(time)`` array-like object to record the inflows.
+
+The following image demonstrates this point.
+
+![Image of arriving inflows, with queues present](img/flow3_cropped.png)
 
 In addition, to propagate the flows along the link, we need the concept of a sequential order
 on the time objects (a successor function like in Peano arithmetic). We implement this using
