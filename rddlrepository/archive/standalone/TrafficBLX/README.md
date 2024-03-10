@@ -161,6 +161,47 @@ for the RDDL BTX domains.
 #### Complex phasing
 
 ## Start-up guide
+In the final section, we run through the steps necessary to generate a
+domain instance using the instance generator and run it as a pyRDDLGym
+environment.
+
 ### Generating a domain instance
+words..
+
+Note: The instance generator has limited features. The user may wish to
+build upon it, develop their own generator, or simply write the desired
+instance files by hand.
+
 ### Running and interfacing with an instance as a RDDLEnv
-### Viewing in the visualizer
+The instance file can now be used to create a pyRDDLGym environment following the standard
+steps. For example, the following runs a random agent to control the 2x2 grid network constructed
+in the previous subsection. The code is mostly borrowed from the examples in the pyRDDLGym
+documentation. It is assumed that pyRDDLGym is installed.
+
+```
+import pyRDDLGym
+import pyRDDLGym.core.policy
+
+env = pyRDDLGym.make(
+    domain='SimplePhases/domain.rddl',
+    instance='example_2x2_grid_instance.rddl')
+
+agent = pyRDDLGym.core.policy.RandomAgent(
+    action_space=env.action_space,
+    num_actions=env.max_allowed_actions)
+
+cmlt_reward = 0
+state, _ = env.reset()
+for step in range(env.horizon):
+    env.render()
+    action = agent.sample_action()
+    next_state, reward, terminated, truncated, _ = env.step(action)
+
+    cmlt_reward = cmlt_reward + reward
+    state = next_state
+    if truncated or terminated:
+        break
+
+print(f'Episode ended with cumulative reward {cmlt_reward}')
+env.close()
+```
