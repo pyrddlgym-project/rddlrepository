@@ -135,6 +135,10 @@ array. Some of the inflow goes into the 8-second-offset and some of the inflow g
 The split is done linearly. In the example, because 8.3 is closer to 8 than to 9, more of the inflow should
 go into the 8-second-offset. ``(1-0.3)*10`` goes into 8-second offset and ``0.3*10`` goes into 9-second offset.
 
+The following picture illustrates the point (in a situation with a shorter propagation time and smaller 
+flows):
+![Illustration of linear blending](img/lin_interp.png)
+
 More generally, we write the propagation time estimate as ``tau + gamma``, where ``tau`` is an integer and ``gamma``
 is a real number in the interval [0, 1). Then the incoming inflow is linearly blended as
 
@@ -143,7 +147,9 @@ flow-on-link'(?t) =  (TIME-VAL(?t) == tau) * (1-gamma) * flow-into-link
                    + (TIME-VAL(?t) == tau+1) * gamma   * flow-into-link;
 ```
 
-We have now explained all of the elements of the ``flow-on-link`` update rule.
+We have now explained all of the elements of the ``flow-on-link`` update rule in the RDDL
+implementation: registering the incoming flows using linear blending, and propagating
+the flows (the latter in the previous subsection).
 
 ### Simple and Complex phasing structures
 We now explain the difference between the "Simple" and "Complex" phasing structures implemented 
