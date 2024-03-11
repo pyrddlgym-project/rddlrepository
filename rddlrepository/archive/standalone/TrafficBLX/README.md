@@ -174,7 +174,7 @@ Although in principle, the four phases in the cycle can be arbitrary, by convent
 a typical four-phase cycle with leading protected left phases followed by a through phase, as
 illustrated in the following image:
 
-
+![Illustration of the 4 phases](img/4phase.png)
 
 #### Complex phasing
 In real-world applications, it is common to use a more complex phasing scheme than the four-phase
@@ -185,6 +185,7 @@ The following image illustrates the NEMA phasing scheme. Each vertex of the dire
 a phase (the arrows indicate which turns get the green light), and there is an arrow between two 
 vertices if the phase transition is allowed:
 
+![Illustration of the NEMA phasing scheme](img/nema8.png)
 
 In order to represent NEMA as well as other more complex phasing schemes, a "Complex phasing" version
 of the TrafficBLX domain is provided in addition to the "Simple phasing" one. Inspired by the NEMA
