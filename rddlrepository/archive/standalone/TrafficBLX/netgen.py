@@ -1,256 +1,464 @@
-# A tool for generating traffic instances
+"""A tool for generating instances of the Traffic domain"""
 
 import numpy as np
+from itertools import product
 
-def generate_NEMA8_phasing_data(center, north, east, south, west,
-                                minor_min, minor_max, minor_red,
-                                major_min, major_max, major_red,
-                                p0, right_on_red=True):
-    """ Generates the non-fluents for a four-leg NEMA8 intersection.
+indent_str = ' ' * 8
+newline_indent_str = '\n' + indent_str
 
-        center, north, east, south, west (string):
-            Intersection ids
-        minor_min, minor_max, minor_red,
-        major_min, major_max, major_red (int):
-            Phase properties
-            Typically, minor phases are the ones that have protected left turns
-               (phases 0,1,2 and 4,5,6)
-        p0 (int):
-            The index of the initial phase for the traffic light
-            Phases with indices p0, p0+1, p0+2, ..., p0+7 will be used
-        right_on_red (bool):
-            Whether right turns are permitted on red
-    """
-    nonfluents_str = f'\n        // NEMA8 scheme for intersection {center},{north},{east},{south},{west}'
-    nonfluents_str += f'\n        NUM-ACTION-TOKENS({center}) = 5;'
-    nonfluents_str += '\n        '.join( ('',) +
-        tuple(f'PHASE-INDEX(p{p0+i}) = {i};'
-             for i in range(8) ))
+def dist(p0, p1): return np.linalg.norm(p1-p0)
 
-    nonfluents_str += '\n        '.join( ('',) +
-        tuple(f'PHASE-OF(p{p0+i},{center}) = true;'
-              for i in range(8) ))
 
-    nonfluents_str += ''.join(('',
-        f'\n        GREEN({north},{center},{east},p{p0}) = true;',
-        f'\n        GREEN({south},{center},{west},p{p0}) = true;',
-        f'\n        GREEN({north},{center},{east},p{p0+1}) = true;',
-        f'\n        GREEN({north},{center},{south},p{p0+1}) = true;',
-        f'\n        GREEN({south},{center},{north},p{p0+2}) = true;',
-        f'\n        GREEN({south},{center},{west},p{p0+2}) = true;',
-        f'\n        GREEN({north},{center},{south},p{p0+3}) = true;',
-        f'\n        GREEN({south},{center},{north},p{p0+3}) = true;',
-        f'\n        GREEN({west},{center},{north},p{p0+4}) = true;',
-        f'\n        GREEN({east},{center},{south},p{p0+4}) = true;',
-        f'\n        GREEN({east},{center},{west},p{p0+5}) = true;',
-        f'\n        GREEN({east},{center},{south},p{p0+5}) = true;',
-        f'\n        GREEN({west},{center},{north},p{p0+6}) = true;',
-        f'\n        GREEN({west},{center},{east},p{p0+6}) = true;',
-        f'\n        GREEN({east},{center},{west},p{p0+7}) = true;',
-        f'\n        GREEN({west},{center},{east},p{p0+7}) = true;'))
+def generate_4leg_intersection(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
+                               min, max, red, right_on_red=True):
+    """Generates the non-fluents for a four-leg intersection,
+    with left, through, and right movements"""
 
+    nonfluents_str = newline_indent_str*2 + f'//intersection {i}'
+    nonfluents_str += newline_indent_str + '//turns' + newline_indent_str
+    nonfluents_str += newline_indent_str.join((
+        f'TURN({Ein},{Nout});',
+        f'TURN({Ein},{Wout});',
+        f'TURN({Ein},{Sout});',
+        f'TURN({Nin},{Wout});',
+        f'TURN({Nin},{Sout});',
+        f'TURN({Nin},{Eout});',
+        f'TURN({Win},{Sout});',
+        f'TURN({Win},{Eout});',
+        f'TURN({Win},{Nout});',
+        f'TURN({Sin},{Eout});',
+        f'TURN({Sin},{Nout});',
+        f'TURN({Sin},{Wout});',
+         '//link-to',
+        f'LINK-TO({Ein},{i});',
+        f'LINK-TO({Nin},{i});',
+        f'LINK-TO({Win},{i});',
+        f'LINK-TO({Sin},{i});',
+         '//link-from',
+        f'LINK-FROM({i},{Eout});',
+        f'LINK-FROM({i},{Nout});',
+        f'LINK-FROM({i},{Wout});',
+        f'LINK-FROM({i},{Sout});',
+         '//phase properties',
+        f'PHASE-MIN({i}) = {min};',
+        f'PHASE-MAX({i}) = {max};',
+        f'PHASE-ALL-RED-DUR({i}) = {red};',
+         '//green turns',
+        f'GREEN({Ein},{Sout},@WEST-EAST-LEFT);',
+        f'GREEN({Win},{Nout},@WEST-EAST-LEFT);',
+        f'GREEN({Ein},{Wout},@WEST-EAST-THROUGH);',
+        f'GREEN({Win},{Eout},@WEST-EAST-THROUGH);',
+        f'GREEN({Nin},{Eout},@NORTH-SOUTH-LEFT);',
+        f'GREEN({Sin},{Wout},@NORTH-SOUTH-LEFT);',
+        f'GREEN({Nin},{Sout},@NORTH-SOUTH-THROUGH);',
+        f'GREEN({Sin},{Nout},@NORTH-SOUTH-THROUGH);'))
+
+    # Add right turns on green
+    right_turn_pairs = ((Ein,Nout),
+                        (Nin,Wout),
+                        (Win,Sout),
+                        (Sin,Eout))
+    phases = ('@WEST-EAST-LEFT',
+              '@WEST-EAST-THROUGH',
+              '@NORTH-SOUTH-LEFT',
+              '@NORTH-SOUTH-THROUGH')
+
+    nonfluents_str += newline_indent_str
+    nonfluents_str += newline_indent_str.join( (f'GREEN({i},{j},{p});'
+                                                for (i,j) in right_turn_pairs for p in phases) )
+
+    # Optionally, add right turns on red
     if right_on_red:
-        nonfluents_str += ''.join(('',
-            f'\n        GREEN({north},{center},{west},p{p0})=true; GREEN({north},{center},{west},p{p0+1})=true;',
-            f'\n        GREEN({north},{center},{west},p{p0+2})=true; GREEN({north},{center},{west},p{p0+3})=true;',
-            f'\n        GREEN({north},{center},{west},p{p0+4})=true; GREEN({north},{center},{west},p{p0+5})=true;',
-            f'\n        GREEN({north},{center},{west},p{p0+6})=true; GREEN({north},{center},{west},p{p0+7})=true;',
-
-            f'\n        GREEN({west},{center},{south},p{p0})=true; GREEN({west},{center},{south},p{p0+1})=true;',
-            f'\n        GREEN({west},{center},{south},p{p0+2})=true; GREEN({west},{center},{south},p{p0+3})=true;',
-            f'\n        GREEN({west},{center},{south},p{p0+4})=true; GREEN({west},{center},{south},p{p0+5})=true;',
-            f'\n        GREEN({west},{center},{south},p{p0+6})=true; GREEN({west},{center},{south},p{p0+7})=true;',
-
-            f'\n        GREEN({south},{center},{east},p{p0})=true; GREEN({south},{center},{east},p{p0+1})=true;',
-            f'\n        GREEN({south},{center},{east},p{p0+2})=true; GREEN({south},{center},{east},p{p0+3})=true;',
-            f'\n        GREEN({south},{center},{east},p{p0+4})=true; GREEN({south},{center},{east},p{p0+5})=true;',
-            f'\n        GREEN({south},{center},{east},p{p0+6})=true; GREEN({south},{center},{east},p{p0+7})=true;',
-
-            f'\n        GREEN({east},{center},{north},p{p0})=true; GREEN({east},{center},{north},p{p0+1})=true;',
-            f'\n        GREEN({east},{center},{north},p{p0+2})=true; GREEN({east},{center},{north},p{p0+3})=true;',
-            f'\n        GREEN({east},{center},{north},p{p0+4})=true; GREEN({east},{center},{north},p{p0+5})=true;',
-            f'\n        GREEN({east},{center},{north},p{p0+6})=true; GREEN({east},{center},{north},p{p0+7})=true;'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        TRANSITION(p{p0},a0) = 0;',
-        f'\n        TRANSITION(p{p0},a1) = 1;',
-        f'\n        TRANSITION(p{p0},a2) = 2;',
-        f'\n        TRANSITION(p{p0},a3) = 3;',
-        f'\n        TRANSITION(p{p0+1},a0) = 1;',
-        f'\n        TRANSITION(p{p0+1},a1) = 3;',
-        f'\n        TRANSITION(p{p0+2},a0) = 2;',
-        f'\n        TRANSITION(p{p0+2},a1) = 3;',
-        f'\n        TRANSITION(p{p0+3},a0) = 3;',
-        f'\n        TRANSITION(p{p0+3},a1) = 4;',
-        f'\n        TRANSITION(p{p0+3},a2) = 5;',
-        f'\n        TRANSITION(p{p0+3},a3) = 6;',
-        f'\n        TRANSITION(p{p0+3},a4) = 7;',
-        f'\n        TRANSITION(p{p0+4},a0) = 4;',
-        f'\n        TRANSITION(p{p0+4},a1) = 5;',
-        f'\n        TRANSITION(p{p0+4},a2) = 6;',
-        f'\n        TRANSITION(p{p0+4},a3) = 7;',
-        f'\n        TRANSITION(p{p0+5},a0) = 5;',
-        f'\n        TRANSITION(p{p0+5},a1) = 7;',
-        f'\n        TRANSITION(p{p0+6},a0) = 6;',
-        f'\n        TRANSITION(p{p0+6},a1) = 7;',
-        f'\n        TRANSITION(p{p0+7},a0) = 7;',
-        f'\n        TRANSITION(p{p0+7},a1) = 0;',
-        f'\n        TRANSITION(p{p0+7},a2) = 1;',
-        f'\n        TRANSITION(p{p0+7},a3) = 2;',
-        f'\n        TRANSITION(p{p0+7},a4) = 3;'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        PHASE-MIN(p{p0}) = {minor_min};'
-        f'\n        PHASE-MIN(p{p0+1}) = {minor_min};'
-        f'\n        PHASE-MIN(p{p0+2}) = {minor_min};'
-        f'\n        PHASE-MIN(p{p0+3}) = {major_min};'
-        f'\n        PHASE-MIN(p{p0+4}) = {minor_min};'
-        f'\n        PHASE-MIN(p{p0+5}) = {minor_min};'
-        f'\n        PHASE-MIN(p{p0+6}) = {minor_min};'
-        f'\n        PHASE-MIN(p{p0+7}) = {major_min};'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        PHASE-MAX(p{p0}) = {minor_max};'
-        f'\n        PHASE-MAX(p{p0+1}) = {minor_max};'
-        f'\n        PHASE-MAX(p{p0+2}) = {minor_max};'
-        f'\n        PHASE-MAX(p{p0+3}) = {major_max};'
-        f'\n        PHASE-MAX(p{p0+4}) = {minor_max};'
-        f'\n        PHASE-MAX(p{p0+5}) = {minor_max};'
-        f'\n        PHASE-MAX(p{p0+6}) = {minor_max};'
-        f'\n        PHASE-MAX(p{p0+7}) = {major_max};'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        PHASE-ALL-RED-DUR(p{p0}) = {minor_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+1}) = {minor_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+2}) = {minor_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+3}) = {major_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+4}) = {minor_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+5}) = {minor_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+6}) = {minor_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+7}) = {major_red};'))
-    nonfluents_str += f'\n        //DONE NEMA8 scheme for intersection {center},{north},{east},{south},{west}\n'
-
+        red_phases = ('@ALL-RED',
+                      '@ALL-RED2',
+                      '@ALL-RED3',
+                      '@ALL-RED4')
+        nonfluents_str += newline_indent_str
+        nonfluents_str += newline_indent_str.join( (f'GREEN({i},{j},{p});'
+                                                    for (i,j) in right_turn_pairs for p in red_phases) )
     return nonfluents_str
 
-def generate_FIXED4_phasing_data(center, north, east, south, west,
-                                 left_min, left_max, left_red,
-                                 through_min, through_max, through_red,
-                                 p0, right_on_red=True):
-    """ Generates the non-fluents for a four-leg FIXED4 intersection.
-
-        This is a fixed-order four-phase phasing scheme, with alternating
-        protected left turns and through movements.
-
-        center, north, east, south, west (string):
-            Intersection ids
-        left_min, left_max, left_red,
-        through_min, through_max, through_red (int):
-            Phase properties
-        p0 (int):
-            The index of the initial phase for the traffic light
-            Phases with indices p0, p0+1, p0+2, p0+3 will be used
-        right_on_red (bool):
-            Whether right turns are permitted on red
-    """
-    nonfluents_str = f'\n        // FIXED4 scheme for intersection {center},{north},{east},{south},{west}'
-    nonfluents_str += f'\n        NUM-ACTION-TOKENS({center}) = 2;'
-    nonfluents_str += '\n        '.join( ('',) +
-        tuple(f'PHASE-INDEX(p{p0+i}) = {i};'
-             for i in range(4) ))
-
-    nonfluents_str += '\n        '.join( ('',) +
-        tuple(f'PHASE-OF(p{p0+i},{center}) = true;'
-              for i in range(4) ))
-
-    nonfluents_str += ''.join(('',
-        f'\n        GREEN({north},{center},{east},p{p0}) = true;',
-        f'\n        GREEN({south},{center},{west},p{p0}) = true;',
-        f'\n        GREEN({north},{center},{south},p{p0+1}) = true;',
-        f'\n        GREEN({south},{center},{north},p{p0+1}) = true;',
-        f'\n        GREEN({west},{center},{north},p{p0+2}) = true;',
-        f'\n        GREEN({east},{center},{south},p{p0+2}) = true;',
-        f'\n        GREEN({east},{center},{west},p{p0+3}) = true;',
-        f'\n        GREEN({west},{center},{east},p{p0+3}) = true;'))
-
-    if right_on_red:
-        nonfluents_str += ''.join(('',
-            f'\n        GREEN({north},{center},{west},p{p0})=true; GREEN({north},{center},{west},p{p0+1})=true;',
-            f'\n        GREEN({north},{center},{west},p{p0+2})=true; GREEN({north},{center},{west},p{p0+3})=true;',
-
-            f'\n        GREEN({west},{center},{south},p{p0})=true; GREEN({west},{center},{south},p{p0+1})=true;',
-            f'\n        GREEN({west},{center},{south},p{p0+2})=true; GREEN({west},{center},{south},p{p0+3})=true;',
-
-            f'\n        GREEN({south},{center},{east},p{p0})=true; GREEN({south},{center},{east},p{p0+1})=true;',
-            f'\n        GREEN({south},{center},{east},p{p0+2})=true; GREEN({south},{center},{east},p{p0+3})=true;',
-
-            f'\n        GREEN({east},{center},{north},p{p0})=true; GREEN({east},{center},{north},p{p0+1})=true;',
-            f'\n        GREEN({east},{center},{north},p{p0+2})=true; GREEN({east},{center},{north},p{p0+3})=true;'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        TRANSITION(p{p0},a0) = 0;',
-        f'\n        TRANSITION(p{p0},a1) = 1;',
-        f'\n        TRANSITION(p{p0+1},a0) = 1;',
-        f'\n        TRANSITION(p{p0+1},a1) = 2;',
-        f'\n        TRANSITION(p{p0+2},a0) = 2;',
-        f'\n        TRANSITION(p{p0+2},a1) = 3;',
-        f'\n        TRANSITION(p{p0+3},a0) = 3;',
-        f'\n        TRANSITION(p{p0+3},a1) = 0;'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        PHASE-MIN(p{p0}) = {left_min};'
-        f'\n        PHASE-MIN(p{p0+1}) = {through_min};'
-        f'\n        PHASE-MIN(p{p0+2}) = {left_min};'
-        f'\n        PHASE-MIN(p{p0+3}) = {through_min};'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        PHASE-MAX(p{p0}) = {left_max};'
-        f'\n        PHASE-MAX(p{p0+1}) = {through_max};'
-        f'\n        PHASE-MAX(p{p0+2}) = {left_max};'
-        f'\n        PHASE-MAX(p{p0+3}) = {through_max};'))
-
-    nonfluents_str += ''.join(('',
-        f'\n        PHASE-ALL-RED-DUR(p{p0}) = {left_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+1}) = {through_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+2}) = {left_red};'
-        f'\n        PHASE-ALL-RED-DUR(p{p0+3}) = {through_red};'))
-    nonfluents_str += f'\n        //DONE FIXED4 scheme for intersection {center},{north},{east},{south},{west}\n'
-
+def generate_4leg_intersection_through_only(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
+                                            min, max, red):
+    """ Generates the non-fluents for a four-leg intersection,
+        with through movements only """
+    nonfluents_str = newline_indent_str*2 + f'//intersection {i}'
+    nonfluents_str += newline_indent_str + '//turns' + newline_indent_str
+    nonfluents_str += newline_indent_str.join((
+        f'TURN({Ein},{Nout});',
+        f'TURN({Ein},{Wout});',
+        f'TURN({Ein},{Sout});',
+        f'TURN({Nin},{Wout});',
+        f'TURN({Nin},{Sout});',
+        f'TURN({Nin},{Eout});',
+        f'TURN({Win},{Sout});',
+        f'TURN({Win},{Eout});',
+        f'TURN({Win},{Nout});',
+        f'TURN({Sin},{Eout});',
+        f'TURN({Sin},{Nout});',
+        f'TURN({Sin},{Wout});',
+         '//link-to',
+        f'LINK-TO({Ein},{i});',
+        f'LINK-TO({Nin},{i});',
+        f'LINK-TO({Win},{i});',
+        f'LINK-TO({Sin},{i});',
+         '//link-from',
+        f'LINK-FROM({i},{Eout});',
+        f'LINK-FROM({i},{Nout});',
+        f'LINK-FROM({i},{Wout});',
+        f'LINK-FROM({i},{Sout});',
+         '//phase properties',
+        f'PHASE-MIN({i}) = {min};',
+        f'PHASE-MAX({i}) = {max};',
+        f'PHASE-ALL-RED-DUR({i}) = {red};',
+         '//green turns',
+        f'GREEN({Ein},{Wout},@WEST-EAST-THROUGH);',
+        f'GREEN({Win},{Eout},@WEST-EAST-THROUGH);',
+        f'GREEN({Nin},{Sout},@NORTH-SOUTH-THROUGH);',
+        f'GREEN({Sin},{Nout},@NORTH-SOUTH-THROUGH);',
+    ))
     return nonfluents_str
 
+
+def generate_webster_scenario(d,
+                              dNSfrac,
+                              dEWfrac,
+                              betaL,
+                              betaT,
+                              link_lengths=250,
+                              min_green=6,
+                              max_green=60,
+                              all_red=4,
+                              mu=0.53,
+                              instance_name=None,
+                              horizon=1024,
+                              discount=1.0):
+    """Generates a single intersection instance for a Webster timing experiment"""
+    if instance_name is None:
+        instance_name = f'single_intersection_webster_experiment'
+
+    num_ts = int(np.ceil(link_lengths/13.6))+1
+    t_names = (f't{t}' for t in range(num_ts))
+    instance_str = '\n'.join((
+        f'// d={d}, dNS={dNSfrac:.2f}, dEW={dEWfrac:.2f}, bL={betaL:.3f}, bT={betaT:.3f}',
+        f'',
+        f'non-fluents {instance_name} {{',
+        f'    domain = BLX_model;',
+        f'',
+        f'    objects {{',
+        f'        intersection : {{i0}};',
+        f'        link         : {{l0, l1, l2, l3, l4, l5, l6, l7}};',
+        f'        time         : {{{", ".join(t_names)}}};',
+        f'    }};',
+        f'',
+        f'    //             | |',
+        f'    //             | |',
+        f'    //             | |',
+        f'    //            l2 l1',
+        f'    //             | |',
+        f'    //             v ^',
+        f'    //             | |',
+        f'    //             ____',
+        f'    // --- l3 -<- | i0 | -<- l0 ---',
+        f'    // --- l4 ->- |____| ->- l7 ---',
+        f'    //             | |',
+        f'    //             v ^',
+        f'    //             | |',
+        f'    //            l5 l6',
+        f'    //             | |',
+        f'    //             | |',
+        f'    //             | |',
+        f'',
+        f'    non-fluents {{',
+        f'        //cartesian coordinates',
+        f'        X(i0) = 0;    Y(i0) = 0;',
+        f'        SOURCE-X(l0) = {link_lengths};    SOURCE-Y(l0) = 0;',
+        f'        SOURCE-X(l2) = 0;    SOURCE-Y(l2) = {link_lengths};',
+        f'        SOURCE-X(l4) = -{link_lengths};   SOURCE-Y(l4) = 0;',
+        f'        SOURCE-X(l6) = 0;   SOURCE-Y(l6) = -{link_lengths};',
+        f'        SINK-X(l7) = {link_lengths};    SINK-Y(l7) = 0;',
+        f'        SINK-X(l1) = 0;    SINK-Y(l1) = {link_lengths};',
+        f'        SINK-X(l3) = -{link_lengths};   SINK-Y(l3) = 0;',
+        f'        SINK-X(l5) = 0;   SINK-Y(l5) = -{link_lengths};',
+        f'',
+        f'        // source links',
+        f'        SOURCE(l0);',
+        f'        SOURCE(l2);',
+        f'        SOURCE(l4);',
+        f'        SOURCE(l6);',
+        f'',
+        f'        // sink links',
+        f'        SINK(l1);',
+        f'        SINK(l3);',
+        f'        SINK(l5);',
+        f'        SINK(l7);',
+        f'',
+        f'        // arrival rate from each source',
+        f'        SOURCE-ARRIVAL-RATE(l0) = {d*dEWfrac/2};',
+        f'        SOURCE-ARRIVAL-RATE(l2) = {d*dNSfrac/2};',
+        f'        SOURCE-ARRIVAL-RATE(l4) = {d*dEWfrac/2};',
+        f'        SOURCE-ARRIVAL-RATE(l6) = {d*dNSfrac/2};',
+        f''
+        f'        // link lengths',
+        f'        Dl(l0) = {link_lengths};',
+        f'        Dl(l1) = {link_lengths};',
+        f'        Dl(l2) = {link_lengths};',
+        f'        Dl(l3) = {link_lengths};',
+        f'        Dl(l4) = {link_lengths};',
+        f'        Dl(l5) = {link_lengths};',
+        f'        Dl(l6) = {link_lengths};',
+        f'        Dl(l7) = {link_lengths};',
+        f'',
+        f'        // satflow rates',
+        f'        MU(l0,l3) = {2*mu};',
+        f'        MU(l2,l5) = {2*mu};',
+        f'        MU(l4,l7) = {2*mu};',
+        f'        MU(l6,l1) = {2*mu};',
+        f'        MU(l0,l5) = {mu};',
+        f'        MU(l2,l7) = {mu};',
+        f'        MU(l4,l1) = {mu};',
+        f'        MU(l6,l3) = {mu};',
+        f'',
+        f'        // turn probabilities',
+        f'        BETA(l0,l3) = {betaT};',
+        f'        BETA(l2,l5) = {betaT};',
+        f'        BETA(l4,l7) = {betaT};',
+        f'        BETA(l6,l1) = {betaT};',
+        f'        BETA(l0,l5) = {betaL};',
+        f'        BETA(l2,l7) = {betaL};',
+        f'        BETA(l4,l1) = {betaL};',
+        f'        BETA(l6,l3) = {betaL};',
+        f''))
+
+    instance_str += generate_4leg_intersection('i0', 'l0', 'l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7',
+                               min=min_green, max=max_green, red=all_red, right_on_red=True)
+
+
+    instance_str += '\n        '.join(('', '// time-delay properties',
+       f'TIME-HEAD(t0);',
+       f'TIME-TAIL(t{num_ts-1});') +
+        tuple(f'TIME-VAL(t{i}) = {i};' for i in range(num_ts)) +
+        tuple(f'NEXT(t{i},t{i+1});' for i in range(num_ts-1)))
+
+    instance_str += '\n'
+    instance_str += '\n'.join((
+        f'    }};',
+        f'}}',
+        f'',
+        f'instance {instance_name} {{',
+        f'    domain = BLX_model;',
+        f'    non-fluents = {instance_name};',
+        f'    max-nondef-actions = 1;',
+        f'    horizon = {horizon};',
+        f'    discount = {discount};',
+        f'}}' ))
+    return instance_str
+
+
+def generate_green_wave_scenario(N,
+                                 dominant_flow=0.7,
+                                 link_len=100,
+                                 mu=0.53,
+                                 min_green=24,
+                                 max_green=60,
+                                 all_red=4,
+                                 simstep=1,
+                                 through_only=True,
+                                 conflict_flow=0.,
+                                 instance_name=None,
+                                 horizon=1024,
+                                 discount=1.0):
+    """Creates an instance that has a corridor with N traffic lights
+    and a dominant flow in the West->East direction."""
+    if instance_name is None:
+        instance_name = f'green_wave_{N}_experiment'
+
+    # Time-delay objects
+    num_ts = int(np.ceil(link_len/(13.6*simstep)))+1
+    t_names = (f't{t}' for t in range(num_ts))
+    L_names = (f'l{i}' for i in range(6*N+2))
+    i_names = (f'i{i}' for i in range(N))
+
+    i_xcoords = {f'i{i}': link_len*(i+1) for i in range(N)}
+    i_ycoord = link_len
+    i_coords_str = indent_str
+    i_coords_str += newline_indent_str.join(f'X({k}) = {v};    Y({k}) = {i_ycoord};' for k,v in i_xcoords.items())
+
+    src_coords_str = newline_indent_str.join(('',
+        f'SOURCE-X(l1) = 0;    SOURCE-Y(l1) = {link_len};',
+        f'SOURCE-X(l{2*N}) = {link_len*(N+1)};    SOURCE-Y(l{2*N}) = {link_len};')
+        + tuple(
+            f'SOURCE-X(l{2*(N+n)}) = {link_len*n};    SOURCE-Y(l{2*(N+n)}) = {2*link_len};' for n in range(1,N+1)
+        )
+        + tuple(
+            f'SOURCE-X(l{2*(2*N+n)+1}) = {link_len*n};    SOURCE-Y(l{2*(2*N+n)+1}) = 0;' for n in range(1,N+1)
+        )
+    )
+
+    snk_coords_str = newline_indent_str.join(('',
+        f'SINK-X(l0) = 0;    SINK-Y(l0) = {link_len};',
+        f'SINK-X(l{2*N+1}) = {link_len*(N+1)};    SINK-Y(l{2*N+1}) = {link_len};')
+        + tuple(
+            f'SINK-X(l{2*(N+n)+1}) = {link_len*n};    SINK-Y(l{2*(N+n)+1}) = {2*link_len};' for n in range(1,N+1)
+        )
+        + tuple(
+            f'SINK-X(l{2*(2*N+n)}) = {link_len*n};    SINK-Y(l{2*(2*N+n)}) = 0;' for n in range(1,N+1)
+        )
+    )
+
+    src_ids = ('l1', f'l{2*N}') + tuple(f'l{2*(N+n)}' for n in range(1,N+1)) + tuple(f'l{2*(2*N+n)+1}' for n in range(1,N+1))
+    snk_ids = ('l0', f'l{2*N+1}') + tuple(f'l{2*(N+n)+1}' for n in range(1,N+1)) + tuple(f'l{2*(2*N+n)}' for n in range(1,N+1))
+
+    src_ids_str = 2*newline_indent_str + '// source links'
+    src_ids_str += newline_indent_str.join(('',)
+        + tuple(f'SOURCE({id});' for id in src_ids))
+
+    snk_ids_str = 2*newline_indent_str + '// sink links'
+    snk_ids_str += newline_indent_str.join(('',)
+        + tuple(f'SINK({id});' for id in snk_ids))
+
+    instance_str = '\n'.join((
+        f'non-fluents {instance_name} {{',
+        f'    domain = BLX_model;',
+        f'',
+        f'    objects {{',
+        f'        intersection : {{{", ".join(i_names)}}};',
+        f'        link         : {{{", ".join(L_names)}}};',
+        f'        time         : {{{", ".join(t_names)}}};',
+        f'    }};',
+        f'',
+        f'    //             | |                                          | |                     ',
+        f'    //             | |                                          | |                     ',
+        f'    //             | |                                          | |                     ',
+        f'    //    l(2*(N+1)) l(2*(N+1)+1)   ...                    l(4*N) l(4*N+1)              ',
+        f'    //             | |                                          | |                     ',
+        f'    //             v ^                                          v ^                     ',
+        f'    //             | |                                          | |                     ',
+        f'    //             ____                                       ________                  ',
+        f'    // --- l0 -<- | i0 | -<- l2 --- ... --- l(2*(N-1))   -<- | i(N-1) | -<- l(2*N)   ---',
+        f'    // --- l1 ->- |____| ->- l3 --- ... --- l(2*(N-1)+1) ->- |________| ->- l(2*N+1) ---',
+        f'    //             | |                                          | |                     ',
+        f'    //             v ^                                          v ^                     ',
+        f'    //             | |                                          | |                     ',
+        f'    //   l(2*(2N+1)) l(2*(2N+1)+1)  ...                    l(6*N) l(6*N+1)              ',
+        f'    //             | |                                          | |                     ',
+        f'    //             | |                                          | |                     ',
+        f'    //             | |                                          | |                     ',
+        f'',
+        f'    non-fluents {{',
+        f'        Ts = {simstep};',
+        f'',
+        f'        //cartesian coordinates',
+        f''))
+
+    instance_str += (i_coords_str
+                     + src_coords_str
+                     + snk_coords_str
+                     + src_ids_str
+                     + snk_ids_str)
+
+    if through_only:
+        # Only allow through movements (no left or right turns)
+
+        dominant_flow_str = 2*newline_indent_str + '// west-east arrivals (dominant flow)'
+        dominant_flow_str += newline_indent_str + f'SOURCE-ARRIVAL-RATE(l1) = {dominant_flow};'
+
+        other_flow_str = 2*newline_indent_str + '// other flows'
+        other_flow_str += newline_indent_str.join(('',)
+            + tuple(f'SOURCE-ARRIVAL-RATE({id}) = 0.0;' for id in src_ids[1:]))
+
+
+        link_lens_str = 2*newline_indent_str + '// link lengths'
+        link_lens_str += newline_indent_str.join(('',) + tuple(
+            f'Dl(l{i}) = {link_len};' for i in range(6*N+2)
+        ))
+
+        satflow_rates_str = 2*newline_indent_str + '// satflow rates'
+        satflow_rates_str += newline_indent_str.join(('',) + tuple(
+            f'MU(l{2*n+1},l{2*(n+1)+1}) = {2*mu};' for n in range(N)
+        ))
+
+        turn_probs_str = 2*newline_indent_str + '// turn probabilities'
+        turn_probs_str += newline_indent_str.join(('',)
+            + tuple(f'BETA(l{2*n+1},l{2*(N+n+1)+1}) = 0.0;' for n in range(N))
+            + tuple(f'BETA(l{2*n+1},l{2*(n+1)+1}) = 1.0;' for n in range(N))
+            + tuple(f'BETA(l{2*n+1},l{2*(2*N+n+1)}) = 0.0;' for n in range(N))
+        )
+
+        instance_str += (dominant_flow_str
+                         + other_flow_str
+                         + link_lens_str
+                         + satflow_rates_str
+                         + turn_probs_str)
+
+        for i in range(N):
+            Ein = f'l{2*(i+1)}'
+            Nout = f'l{2*(N+i+1)+1}'
+            Nin = f'l{2*(N+i+1)}'
+            Wout = f'l{2*i}'
+            Win = f'l{2*i+1}'
+            Sout = f'l{2*(2*N+i+1)}'
+            Sin = f'l{2*(2*N+i+1)+1}'
+            Eout = f'l{2*(i+1)+1}'
+            instance_str += generate_4leg_intersection_through_only(f'i{i}', Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
+                                        min=min_green, max=max_green, red=all_red)
+    else:
+        raise NotImplementedError
+
+    instance_str += '\n        '.join(('', '// time-delay properties',
+       f'TIME-HEAD(t0);',
+       f'TIME-TAIL(t{num_ts-1});') +
+        tuple(f'TIME-VAL(t{i}) = {i};' for i in range(num_ts)) +
+        tuple(f'NEXT(t{i},t{i+1});' for i in range(num_ts-1)))
+
+    instance_str += '\n'
+    instance_str += '\n'.join((
+        f'    }};',
+        f'}}',
+        f'',
+        f'instance {instance_name} {{',
+        f'    domain = BLX_model;',
+        f'    non-fluents = {instance_name};',
+        f'    max-nondef-actions = {N};',
+        f'    horizon = {horizon};',
+        f'    discount = {discount};',
+        f'}}' ))
+    return instance_str
 
 
 def generate_grid(nrows,
                   ncols,
-                  phasing_scheme='NEMA8',
-                  ew_link_len=(200,50),
+                  two_phase=False,
+                  ew_link_len=(200,50), #(a,b) parsed as Uniform(a-b,a+b)
                   ns_link_len=(200,50),
                   feeder_link_elongation_factor=1.5,
-                  V=13.8,
-                  inflow_rate_per_lane=(0.1,0.05),
+                  Vl=13.8,
+                  inflow_rate_per_lane=(0.08,0.02), # parsed as Uniform(a-b,a+b)
                   satflow_per_lane=0.53,
                   num_lanes=4,
                   high_left_prob=0,
-                  min_green=6,
+                  min_green=7,
                   max_green=60,
                   all_red=4,
+                  right_on_red=True,
                   instance_name=None,
                   horizon=200,
                   discount=1.0):
-    """ Generates a grid network.
+    """Generates a grid network.
 
-        The inflow rates are sampled from a uniform random distribution,
-        and so are the link lengths. The feeder links can be elongated
-        to fit more vehicles and provide more information to the boundary
-        lights.
+    The inflow rates are sampled from a uniform random distribution,
+    and so are the link lengths. The feeder links can be elongated
+    to fit more vehicles and provide more information to the boundary
+    lights.
 
-        Typically, through movements are assumed to get (2/4) of the lanes,
-        and left and right turns 1/4 each. The saturation flow rate for a
-        movement is obtained by multiplying the sat. flow rate per lane by
-        the assumed number of lanes.
+    Typically, through movements are assumed to get (2/4) of the lanes,
+    and left and right turns 1/4 each. The saturation flow rate for a
+    movement is obtained by multiplying the sat. flow rate per lane by
+    the assumed number of lanes.
 
-        There is a fixed probability for a left-turn to have higher demand than the
-        through movement (defaults to 0). In this case, the left turns are assumed
-        to have (2/4) of the lanes and the through movements (1/4) of the lanes.
+    There is a fixed probability for a left-turn to have higher demand than the
+    through movement (defaults to 0). In this case, the left turns are assumed
+    to have (2/4) of the lanes and the through movements (1/4) of the lanes.
     """
     # Sample link lengths uniformly
     # Optionally, make the feeder links longer to fit more vehicles
@@ -265,7 +473,7 @@ def generate_grid(nrows,
     ns_lens *= feeder_elongation_ns
     max_len = np.max(np.concatenate((ew_lens, ns_lens)))
 
-    # Derive the X and Y coordinates of the intersections
+    # Derive the X and Y coordinates of the intersections, sinks and sources
     Xs, Ys = np.zeros(ncols+2), np.zeros(nrows+2)
     Xs[1:] = np.cumsum(ew_lens)
     Ys[1:] = np.cumsum(ns_lens)
@@ -279,29 +487,17 @@ def generate_grid(nrows,
     coords = np.round(coords)
 
 
-    num_intersections = (nrows+2)*(ncols+2) - 4
-    num_bdry = 2*(nrows + ncols) #Intersections on the boundary (Sources/sinks)
-    num_tls = num_intersections - num_bdry
-    num_ts = int(np.ceil(max_len/V))+1
-
-    if phasing_scheme == 'NEMA8':
-        generate_phasing_fn = generate_NEMA8_phasing_data
-        phases_per_light = 8
-        num_actions = 5
-    elif phasing_scheme == 'FIXED4':
-        generate_phasing_fn = generate_FIXED4_phasing_data
-        phases_per_light = 4
-        num_actions = 2
-
-    num_phases = num_tls * phases_per_light
+    num_intersections = nrows*ncols
+    num_bdry = 2*(nrows + ncols)
+    N = num_intersections + num_bdry
+    num_ts = int(np.ceil(max_len/Vl))+2
 
 
-    bdry_names = tuple(f's{i}' for i in range(num_bdry))
-    tl_names = tuple(f'i{i}' for i in range(num_tls))
-    phase_names = tuple(f'p{i}' for i in range(num_phases))
+    intersection_names = tuple(f'i{i}' for i in range(num_intersections))
     t_names = tuple(f't{i}' for i in range(num_ts))
 
-    inames = np.array(['EMPTY' for _ in range(num_intersections+4)]).reshape((nrows+2,ncols+2))
+
+    inames = np.array(['EMPTY' for _ in range(N+4)]).reshape((nrows+2,ncols+2))
 
     for i in range(nrows+2):
         for j in range(ncols+2):
@@ -322,41 +518,61 @@ def generate_grid(nrows,
                     elif j==0:
                         inames[i,j] = f's{num_bdry - i}'
 
-    link_pairs = []
+
+    link_names = []
+    link_lengths = []
     left_turns, through_turns, right_turns = [], [], []
 
     for i in range(1,nrows+1):
         for j in range(1,ncols+1):
-            link_pairs.extend([
-                f'{inames[i,j]},{inames[i-1,j]}',
-                f'{inames[i-1,j]},{inames[i,j]}',
-                f'{inames[i,j]},{inames[i,j+1]}',
-                f'{inames[i,j+1]},{inames[i,j]}',
-                f'{inames[i,j]},{inames[i+1,j]}',
-                f'{inames[i+1,j]},{inames[i,j]}',
-                f'{inames[i,j]},{inames[i,j-1]}',
-                f'{inames[i,j-1]},{inames[i,j]}',
-            ])
+            link_names.extend([
+                f'l-{inames[i,j]}-{inames[i-1,j]}',
+                f'l-{inames[i,j]}-{inames[i,j+1]}',
+                f'l-{inames[i,j]}-{inames[i+1,j]}',
+                f'l-{inames[i,j]}-{inames[i,j-1]}'])
+            link_lengths.extend([
+                dist(coords[i-1,j], coords[i,j]),
+                dist(coords[i,j+1], coords[i,j]),
+                dist(coords[i+1,j], coords[i,j]),
+                dist(coords[i,j-1], coords[i,j])])
 
             left_turns.extend([
-                f'{inames[i,j-1]},{inames[i,j]},{inames[i-1,j]}',
-                f'{inames[i-1,j]},{inames[i,j]},{inames[i,j+1]}',
-                f'{inames[i,j+1]},{inames[i,j]},{inames[i+1,j]}',
-                f'{inames[i+1,j]},{inames[i,j]},{inames[i,j-1]}',
-            ])
+                f'l-{inames[i,j-1]}-{inames[i,j]},l-{inames[i,j]}-{inames[i-1,j]}',
+                f'l-{inames[i-1,j]}-{inames[i,j]},l-{inames[i,j]}-{inames[i,j+1]}',
+                f'l-{inames[i,j+1]}-{inames[i,j]},l-{inames[i,j]}-{inames[i+1,j]}',
+                f'l-{inames[i+1,j]}-{inames[i,j]},l-{inames[i,j]}-{inames[i,j-1]}'])
             through_turns.extend([
-                f'{inames[i,j-1]},{inames[i,j]},{inames[i,j+1]}',
-                f'{inames[i,j+1]},{inames[i,j]},{inames[i,j-1]}',
-                f'{inames[i-1,j]},{inames[i,j]},{inames[i+1,j]}',
-                f'{inames[i+1,j]},{inames[i,j]},{inames[i-1,j]}',
-            ])
+                f'l-{inames[i,j-1]}-{inames[i,j]},l-{inames[i,j]}-{inames[i,j+1]}',
+                f'l-{inames[i,j+1]}-{inames[i,j]},l-{inames[i,j]}-{inames[i,j-1]}',
+                f'l-{inames[i-1,j]}-{inames[i,j]},l-{inames[i,j]}-{inames[i+1,j]}',
+                f'l-{inames[i+1,j]}-{inames[i,j]},l-{inames[i,j]}-{inames[i-1,j]}'])
             right_turns.extend([
-                f'{inames[i,j-1]},{inames[i,j]},{inames[i+1,j]}',
-                f'{inames[i+1,j]},{inames[i,j]},{inames[i,j+1]}',
-                f'{inames[i,j+1]},{inames[i,j]},{inames[i-1,j]}',
-                f'{inames[i-1,j]},{inames[i,j]},{inames[i,j-1]}',
-            ])
+                f'l-{inames[i,j-1]}-{inames[i,j]},l-{inames[i,j]}-{inames[i+1,j]}',
+                f'l-{inames[i+1,j]}-{inames[i,j]},l-{inames[i,j]}-{inames[i,j+1]}',
+                f'l-{inames[i,j+1]}-{inames[i,j]},l-{inames[i,j]}-{inames[i-1,j]}',
+                f'l-{inames[i-1,j]}-{inames[i,j]},l-{inames[i,j]}-{inames[i,j-1]}'])
 
+    # Add missing source links
+    source_link_names = []
+    for j in range(1,ncols+1):
+        new_links = [
+            f'l-{inames[0,j]}-{inames[1,j]}',
+            f'l-{inames[nrows+1,j]}-{inames[nrows,j]}']
+        link_names.extend(new_links)
+        source_link_names.extend(new_links)
+        link_lengths.extend([
+            dist(coords[1,j], coords[0,j]),
+            dist(coords[nrows,j], coords[nrows+1,j]) ])
+
+    for i in range(1,nrows+1):
+        new_links = [
+            f'l-{inames[i,0]}-{inames[i,1]}',
+            f'l-{inames[i,ncols+1]}-{inames[i,ncols]}']
+        link_names.extend(new_links)
+        source_link_names.extend(new_links)
+        link_lengths.extend([
+            dist(coords[i,1], coords[i,0]),
+            dist(coords[i,ncols], coords[i,ncols+1]) ])
 
     # Optionally, make some left turns have heavier demand than the
     # through movements
@@ -370,123 +586,150 @@ def generate_grid(nrows,
         else:
             high_turn, low_turn = T, L
 
-        turn_probs[high_turn] = 0.5 - dp
-        turn_probs[low_turn] = 0.25 + dp
+        turn_probs[high_turn] = 0.7 - dp
+        turn_probs[low_turn] = 0.2 + dp
         turn_probs[R] = 1-turn_probs[high_turn]-turn_probs[low_turn]
         total_satflow = satflow_per_lane * num_lanes
         satflow_rates[high_turn] = 0.5 * total_satflow
-        satflow_rates[low_turn] = 0.25 * total_satflow
-        satflow_rates[R] = 0.25 * total_satflow
+        satflow_rates[low_turn] = 0.3 * total_satflow
+        satflow_rates[R] = 0.2 * total_satflow
 
     inflow_lb = (inflow_rate_per_lane[0]-inflow_rate_per_lane[1]) * num_lanes
     inflow_ub = (inflow_rate_per_lane[0]+inflow_rate_per_lane[1]) * num_lanes
     arrival_rates = np.round( np.random.uniform(inflow_lb, inflow_ub, num_bdry),
                               2)
 
-
     if instance_name is None:
-        instance_name = f'grid_{nrows}x{ncols}_{phasing_scheme}'
+        instance_name = f'grid_{nrows}x{ncols}'
+
 
     instance_str = '\n'.join((
-        f'non-fluents {instance_name}' + ' {',
-         '    domain = BLX_model;',
-         '',
-         '    objects {',
-        f'        intersection : {{{", ".join(tl_names + bdry_names)}}};',
-        f'        phase        : {{{", ".join(phase_names)}}};',
-         '        action-token : {a0, a1, a2, a3, a4};',
+        f'non-fluents {instance_name} {{',
+        f'    domain = BLX_model;',
+        f'',
+        f'    objects {{',
+        f'        intersection : {{{", ".join(intersection_names)}}};',
+        f'        link         : {{{", ".join(link_names)}}};',
         f'        time         : {{{", ".join(t_names)}}};',
-         '    };',
-         '',
-         '    non-fluents {',
-         '        //action token enumeration',
-         '        '))
-    instance_str += '\n        '.join((f'ACTION-TOKEN-INDEX(a{i}) = {i};' for i in range(num_actions)))
-    instance_str += '\n'
+        f'    }};',
+        f'',
+        f'    non-fluents {{'))
 
-    instance_str += '\n        '.join(('', '// cartesian coordinates', ''))
-    instance_str += '\n        '.join((f'X({inames[i,j]}) = {coords[i,j,0]};    Y({inames[i,j]}) = {coords[i,j,1]};'
-                                      for i in range(nrows+2) for j in range(ncols+2) if inames[i,j] != 'EMPTY'))
-    instance_str += '\n'
+    instance_str += newline_indent_str + '//sources'
+    instance_str += newline_indent_str.join(('',)
+        + tuple(f'SOURCE(l-{inames[i,0]}-{inames[i,1]});'
+                + newline_indent_str
+                + f'SOURCE(l-{inames[i,ncols+1]}-{inames[i,ncols]});'
+                for i in range(1, nrows+1))
+        + tuple(f'SOURCE(l-{inames[0,j]}-{inames[1,j]});'
+                + newline_indent_str
+                + f'SOURCE(l-{inames[nrows+1,j]}-{inames[nrows,j]});'
+                for j in range(1, ncols+1)))
 
-    instance_str += '\n        '.join(('', '// intersection indices') +
-                                      tuple(f'INTERSECTION-INDEX(i{i}) = {i};' for i in range(num_tls)) +
-                                      tuple(f'INTERSECTION-INDEX(s{i}) = {num_tls+i};' for i in range(num_bdry)))
-    instance_str += '\n'
+    instance_str += newline_indent_str + '//sinks'
+    instance_str += newline_indent_str.join(('',)
+        + tuple(f'SINK(l-{inames[i,1]}-{inames[i,0]});'
+                + newline_indent_str
+                + f'SINK(l-{inames[i,ncols]}-{inames[i,ncols+1]});'
+                for i in range(1, nrows+1))
+        + tuple(f'SINK(l-{inames[1,j]}-{inames[0,j]});'
+                + newline_indent_str
+                + f'SINK(l-{inames[nrows,j]}-{inames[nrows+1,j]});'
+                for j in range(1, ncols+1)))
 
 
-    instance_str += '\n        '.join(('', '// source intersections', ''))
-    instance_str += '\n        '.join((f'SOURCE(s{i}) = true;' for i in range(num_bdry)))
+    if Vl != 13.8:
+        instance_str += newline_indent_str + '//speeds'
+        instance_str += newline_indent_str.join(('',) + tuple(f'SPEED({link}) = {Vl};' for link in link_names))
 
-    instance_str += '\n        '.join(('', '// sink intersections', ''))
-    instance_str += '\n        '.join((f'SINK(s{i}) = true;' for i in range(num_bdry)))
+    if num_lanes != 4:
+        instance_str += newline_indent_str + '//number of lanes'
+        instance_str += newline_indent_str.join(('',) + tuple(f'Nl({link}) = {num_lanes};' for link in link_names))
 
-    instance_str += '\n        '.join(('', '// traffic lights', ''))
-    instance_str += '\n        '.join((f'TL(i{i}) = true;' for i in range(num_tls)))
-    instance_str += '\n'
+    instance_str += newline_indent_str + '//satflow rates'
+    instance_str += newline_indent_str.join(('',) + tuple(f'MU({k}) = {v};' for k,v in satflow_rates.items()))
 
-    instance_str += '\n        '.join(('', '// arrival rates', ''))
-    instance_str += '\n        '.join((f'ARRIVAL-RATE(s{i}) = {arrival_rates[i]};' for i in range(num_bdry)))
-    instance_str += '\n'
+    instance_str += newline_indent_str + '//turn probabilities'
+    instance_str += newline_indent_str.join(('',) + tuple(f'BETA({k}) = {v};' for k,v in turn_probs.items()))
 
-    instance_str += '\n        '.join(('', '// roads between intersections', ''))
-    instance_str += '\n        '.join((f'LINK({link_pair}) = true;' for link_pair in link_pairs))
-    instance_str += '\n'
+    instance_str += newline_indent_str + '//link lengths'
+    instance_str += newline_indent_str.join(('',) + tuple(f'Dl({k}) = {v};' for k,v in zip(link_names, link_lengths)))
 
-    if V != 13.8:
-        instance_str += '\n        '.join(('', '// speeds', ''))
-        instance_str += '\n        '.join((f'SPEED({link_pair}) = {V};' for link_pair in link_pairs))
-        instance_str += '\n'
+    instance_str += newline_indent_str + '//source arrival rates'
+    instance_str += newline_indent_str.join(('',) + tuple(f'SOURCE-ARRIVAL-RATE({k}) = {v};' for k,v in zip(source_link_names, arrival_rates)))
 
-    if num_lanes != 1:
-        instance_str += '\n        '.join(('', '// number of lanes', ''))
-        instance_str += '\n        '.join((f'Nl({link_pair}) = {num_lanes};' for link_pair in link_pairs))
-        instance_str += '\n'
-
-    instance_str += '\n        '.join(('', '// satflow rates', ''))
-    instance_str += '\n        '.join((f'MU({k}) = {v};' for k,v in satflow_rates.items()))
-    instance_str += '\n'
-
-    instance_str += '\n        '.join(('', '// turn probs', ''))
-    instance_str += '\n        '.join((f'BETA({k}) = {v};' for k,v in turn_probs.items()))
-    instance_str += '\n'
-
-    phase_counter = 0
     for i in range(1, nrows+1):
         for j in range(1, ncols+1):
-            instance_str += generate_phasing_fn(
-                                  inames[i,j],
-                                  inames[i-1,j],
-                                  inames[i,j+1],
-                                  inames[i+1,j],
-                                  inames[i,j-1],
-                                  min_green, max_green, 2,
-                                  min_green, max_green, all_red,
-                                  phase_counter, right_on_red=True)
-            phase_counter += phases_per_light
+            instance_str += generate_4leg_intersection(
+                                inames[i,j],
+                                f'l-{inames[i,j+1]}-{inames[i,j]}', #Ein
+                                f'l-{inames[i,j]}-{inames[i-1,j]}', #Nout
+                                f'l-{inames[i-1,j]}-{inames[i,j]}', #Nin
+                                f'l-{inames[i,j]}-{inames[i,j-1]}', #Wout
+                                f'l-{inames[i,j-1]}-{inames[i,j]}', #Win
+                                f'l-{inames[i,j]}-{inames[i+1,j]}', #Sout
+                                f'l-{inames[i+1,j]}-{inames[i,j]}', #Sin
+                                f'l-{inames[i,j]}-{inames[i,j+1]}', #Eout
+                                min=min_green,
+                                max=max_green,
+                                red=all_red,
+                                right_on_red=right_on_red)
 
 
     instance_str += '\n        '.join(('', '// time-delay properties',
-        'TIME-HEAD(t0) = true;',
-       f'TIME-TAIL(t{num_ts-1}) = true;') +
+       f'TIME-HEAD(t0);',
+       f'TIME-TAIL(t{num_ts-1});') +
         tuple(f'TIME-VAL(t{i}) = {i};' for i in range(num_ts)) +
-        tuple(f'NEXT(t{i},t{i+1}) = true;' for i in range(num_ts-1)))
+        tuple(f'NEXT(t{i},t{i+1});' for i in range(num_ts-1)))
+
+
+    instance_str += newline_indent_str + '//cartesian coordinates (for visualization)'
+    instance_str += newline_indent_str.join(('',) + tuple(
+        f'X({inames[i,j]}) = {coords[i,j,0]}; Y({inames[i,j]}) = {coords[i,j,1]};'
+        for i in range(1,nrows+1) for j in range(1,ncols+1) ))
+
+    instance_str += newline_indent_str + newline_indent_str.join((
+        f'SOURCE-X(l-{inames[i,0]}-{inames[i,1]}) = {coords[i,0,0]}; SOURCE-Y(l-{inames[i,0]}-{inames[i,1]}) = {coords[i,0,1]};'
+        + newline_indent_str
+        + f'SOURCE-X(l-{inames[i,ncols+1]}-{inames[i,ncols]}) = {coords[i,ncols+1,0]}; SOURCE-Y(l-{inames[i,ncols+1]}-{inames[i,ncols]}) = {coords[i,ncols+1,1]};'
+        + newline_indent_str
+        + f'SINK-X(l-{inames[i,1]}-{inames[i,0]}) = {coords[i,0,0]}; SINK-Y(l-{inames[i,1]}-{inames[i,0]}) = {coords[i,0,1]};'
+        + newline_indent_str
+        + f'SINK-X(l-{inames[i,ncols]}-{inames[i,ncols+1]}) = {coords[i,ncols+1,0]}; SINK-Y(l-{inames[i,ncols]}-{inames[i,ncols+1]}) = {coords[i,ncols+1,1]};'
+        for i in range(1,nrows+1) ))
+
+    instance_str += newline_indent_str + newline_indent_str.join((
+        f'SOURCE-X(l-{inames[0,j]}-{inames[1,j]}) = {coords[0,j,0]}; SOURCE-Y(l-{inames[0,j]}-{inames[1,j]}) = {coords[0,j,1]};'
+        + newline_indent_str
+        + f'SOURCE-X(l-{inames[nrows+1,j]}-{inames[nrows,j]}) = {coords[nrows+1,j,0]}; SOURCE-Y(l-{inames[nrows+1,j]}-{inames[nrows,j]}) = {coords[nrows+1,j,1]};'
+        + newline_indent_str
+        + f'SINK-X(l-{inames[1,j]}-{inames[0,j]}) = {coords[0,j,0]}; SINK-Y(l-{inames[1,j]}-{inames[0,j]}) = {coords[0,j,1]};'
+        + newline_indent_str
+        + f'SINK-X(l-{inames[nrows,j]}-{inames[nrows+1,j]}) = {coords[nrows+1,j,0]}; SINK-Y(l-{inames[nrows,j]}-{inames[nrows+1,j]}) = {coords[nrows+1,j,1]};'
+        for j in range(1,ncols+1) ))
 
 
     instance_str += '\n'
     instance_str += '\n'.join((
-         '    };',
-         '}',
-         '',
-        f'instance {instance_name}' + '{',
-         '    domain = BLX_model;',
+        f'    }};',
+        f'}}',
+        f'',
+        f'instance {instance_name} {{',
+        f'    domain = BLX_model;',
         f'    non-fluents = {instance_name};',
-         '    max-nondef-actions = pos-inf;',
+        f'    max-nondef-actions = {num_intersections};',
         f'    horizon = {horizon};',
         f'    discount = {discount};',
-         '}' ))
+        f'}}' ))
+
+    instance_str += '\n'
+    instance_str += '// Source link ids\n//'
+    source_link_indices = [f'{id}={link_names.index(id)}' for id in source_link_names]
+    instance_str += '\n//'.join(source_link_indices)
 
     return instance_str
+
+
 
 
 
@@ -496,23 +739,24 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Tool for automatically generating grid instances for the RDDL traffic domain')
     parser.add_argument('target_path', type=str, help='Path the generated rddl code will be saved to')
-    parser.add_argument('-r', '--rows', type=int, help='Number of rows in the grid', required=True)
-    parser.add_argument('-c', '--cols', type=int, help='Number of columns in the grid', required=True)
-    parser.add_argument('-f', '--force-overwrite', action='store_true', help='By default the generator will not overwrite existing files. With this flag on, it will')
-    parser.add_argument('-p', '--phasing-scheme', default='NEMA8', choices=['NEMA8', 'FIXED4'], help='The phasing scheme type to use. One of: NEMA8, FIXED4')
-    parser.add_argument('-l', '--high-left-prob', default=0, help='Probability of having heavier demand on through than left from an approach')
+    parser.add_argument('-r', '--rows', type=int, help='Number of rows in the network', required=True)
+    parser.add_argument('-c', '--cols', type=int, help='Number of columns in the network', required=True)
+    parser.add_argument('-f', '--force-overwrite', action='store_true', help='By default the generator will not overwrite existing files. With this argument, it will')
+    parser.add_argument('-L', '--high-left-prob', default=0, help='Probability of having heavier demand on through than left from an approach')
     parser.add_argument('-n', '--instance-name', help='Name of instance')
     args = parser.parse_args()
+
 
     args.high_left_prob = float(args.high_left_prob)
     assert(0 <= args.high_left_prob <= 1)
 
     if os.path.isfile(args.target_path) and not args.force_overwrite:
-        raise RuntimeError('[netgen.py] File with the requested path already exists. Pass a diffent path or add the -f flag to force overwrite')
+        raise RuntimeError('[netgen.py] File with the requested path already exists. Pass a diffent path or add the -f argument to force overwrite')
 
     with open(args.target_path, 'w') as file:
-        file.write(generate_grid(args.rows,
-                                 args.cols,
-                                 instance_name=args.instance_name,
-                                 phasing_scheme=args.phasing_scheme,
-                                 high_left_prob=args.high_left_prob))
+        network = generate_grid(
+            args.rows, args.cols,
+            instance_name=args.instance_name,
+            high_left_prob=args.high_left_prob)
+
+        file.write(network)
