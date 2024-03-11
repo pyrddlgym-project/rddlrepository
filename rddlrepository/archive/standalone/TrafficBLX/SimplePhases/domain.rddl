@@ -18,8 +18,8 @@
 //  chosen boolean for each intersection: whether or not to extend the current signal phase or
 //  switch to the next one in the fixed order.
 //
-//  Authors: Ayal Taitler (ataitler@gmail.com)
-//           Ilia Smirnov (iliathesmirnov@gmail.com)
+//  Authors: Ilia Smirnov (iliathesmirnov@gmail.com)
+//           Ayal Taitler (ataitler@gmail.com)
 //
 //  References:
 //      S. Lin, B. De Schutter, Y. Xi, and J. Hellendoorn, "A simplified macroscopic urban
@@ -105,7 +105,7 @@ domain BLX_model {
         // is there a sink at the link exit?
         SINK(link)                                             :  { non-fluent, bool, default = false };
 
-        // arrival rate at sources in veh/s - the mean for a uniform distribution
+        // arrival rate at sources in veh/s (the mean of the arrival distribution if the inflows are stochastic)
         SOURCE-ARRIVAL-RATE(link)                              :  { non-fluent, real, default = 0.3 };
 
         // saturation flow rate from a source in veh/s
