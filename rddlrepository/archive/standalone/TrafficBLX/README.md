@@ -11,12 +11,15 @@ generator to create a grid network and run the instance as a RDDLEnv using pyRDD
 ![Animation of the RDDL implementation](img/TrafficBLX_small.gif)
 
 ## BLX model
-The BLX model is a traffic flow model that strikes a good balance between simplicity and detail.
+The BLX model is a model of traffic flow. The model abstracts away the detailed motions of vehicles, but is
+still detailed enough to capture several different traffic modalities (undersaturated, saturated, and
+oversaturated flow). For some applications such as traffic signal control, the level of detail captured
+by the model may be sufficient for reaching good performance.
 
-The model propagates traffic flows along the links of a traffic network in discrete time-steps of equal
+The BLX model propagates traffic flows along the links of a traffic network in discrete time-steps of equal
 duration[^1].
 By a link, we mean piece of road connecting two intersections or connecting an intersection to the boundary of
-the traffic network. If we think of the traffic network as a directed graph, "link" is another name for
+the traffic network. If the traffic network is thought of as a directed graph, "link" is another name for
 a directed edge. Each link may have several incoming turns from other links, and several outgoing turns
 to other links. Each turn has some number of incoming lanes, which affects the saturation flow rate of the
 turn, i.e. the highest rate at which the turn can drain traffic (for simplicity we assume that the number
@@ -213,19 +216,59 @@ domain instance using the instance generator and run it as a pyRDDLGym
 environment.
 
 ### Generating a domain instance
+The script ``netgen.py`` contained in the same directory as this README may be helpful for generating
+example instances of the traffic domains (either with Simple or with NEMA phasing). The features of the
+instance generator are fairly limited, and the user may wish to build upon it, develop their own, or
+simply create the desired instance files by hand instead.
 
-#### Grid with Simple Phasing
-#### Grid with NEMA Phasing
+#### Basic functionality
+For basic functionality, run
+```
+python netgen.py -r <ROWS> -c <COLS> -p <'simple' or 'nema'> <path/to/new/instance/file>
+```
+where variables in ``<ANGLULAR BRACKETS>`` denote user input.
 
-Note: The features of the instance generator are limited. The user may wish to
-build upon it, develop their own generator, or simply write the desired
-instance files by hand.
+#### Example: 3x4 Grid with Simple Phasing
+We run
+```python
+python netgen.py -r 3 -c 4 -p simple SimplePhases/example_3x4_simple_grid_instance.rddl
+```
+Upon success, the message
+```
+[netgen.py] Successfully generated the network instance RDDL file to SimplePhases/example_3x4_simple_grid_instance.rddl
+```
+appears, and the instance file is created at the specified path.
+The generator creates the following 3x4 grid network:
+![Animation of the 3x4 Simple Network](img/simple_3x4.gif)
+
+There is certainly a lot of room for improvement over the random agent!
+
+#### Example: 2x3 Perturbed Grid with NEMA Phasing
+Running
+```python
+python netgen.py -r 2 -c 3 -p nema --off-grid ComplexPhases/example_2x3_nema_grid_instance.rddl
+```
+Creates the following 2x3 grid network with off-grid perturbations:
+
+#### Additional options
+- Passing the command-line argument ``-T <int>`` or ``--horizon <int>`` modifies the instance horizon from the default of 200.
+- Passing the command-line argument ``-L <prob>`` or ``--high-left-prob <prob>`` modifies the probability
+that an intersection has higher left-turn proportions than the through movement. By default, this probability
+is zero (so that all intersections have higher probability of through movement).
+- Passing the command-line argument ``--off-grid`` perturbs the intersections off-grid by a normal random vector,
+making the network a bit less symmetric.
+- Passing the command-line argument ``-f`` or ``--force-overwrite`` makes the generator overwrite an existing
+  file (the default behaviour is to quit if the target path already exists
+
+The demand and network geometry attributes may be modified by directly modifying the ``generate_grid`` function
+in the ``netgen.py`` script. Currently, specifying demand or geometry attributes from the command line is not supported.
+
 
 ### Running and interfacing with an instance as a RDDLEnv
-The instance file can now be used to create a pyRDDLGym environment following the standard
-steps. For example, the following runs a random agent to control the 2x2 grid network constructed
-in the previous subsection. The code is mostly borrowed from the examples in the pyRDDLGym
-documentation. It is assumed that pyRDDLGym is installed.
+The instance files can now be used to create a pyRDDLGym environment following the standard
+steps. For example, the following runs a random agent to control the 3x4 grid network with Simple
+phasing constructed in the previous subsection. The code is mostly borrowed from the examples in
+the pyRDDLGym documentation. It is assumed that pyRDDLGym is installed.
 
 ```python
 import pyRDDLGym
@@ -233,7 +276,7 @@ import pyRDDLGym.core.policy
 
 env = pyRDDLGym.make(
     domain='SimplePhases/domain.rddl',
-    instance='example_2x2_grid_instance.rddl')
+    instance='example_3x4_simple_grid_instance.rddl')
 
 agent = pyRDDLGym.core.policy.RandomAgent(
     action_space=env.action_space,
@@ -254,6 +297,10 @@ for step in range(env.horizon):
 print(f'Episode ended with cumulative reward {cmlt_reward}')
 env.close()
 ```
+Note: For complex phasing, the action space is nominally all integers, but it is typically clipped
+between 0 and a low positive value, so that almost all positive integers encode the same action. Therefore, to generate random
+actions it is better to do this manually using ``random.randit(0,5)``, for example
+
 
 [^1]: In principle the duration may be made to vary, as was done in the Queue Transmission Model (QTM),
 which is similar to BLX.
