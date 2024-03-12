@@ -11,10 +11,11 @@ generator to create a grid network and run the instance as a RDDLEnv using pyRDD
 ![Animation of the RDDL implementation](img/TrafficBLX_small.gif)
 
 ## BLX model
-The BLX model is a model of traffic flow. The model abstracts away the detailed motions of vehicles, but is
-still detailed enough to capture several different traffic modalities (undersaturated, saturated, and
-oversaturated flow). For some applications such as traffic signal control, the level of detail captured
-by the model may be sufficient for reaching good performance.
+The BLX model is a model of traffic flow. The model abstracts away the motions of individual vehicles, instead
+keeping track of flows moving at some constant propagation speed. Nevertheless, the model is 
+detailed enough to capture several different traffic modalities (undersaturated, saturated, and
+oversaturated flow). For some applications, such as traffic signal control, the level of detail captured
+by the model may be sufficient for reaching good performance (when combined with a good planning algorithm).
 
 The BLX model propagates traffic flows along the links of a traffic network in discrete time-steps of equal
 duration[^1].
@@ -200,15 +201,33 @@ The simple phasing scheme may also be represented in this way, as a directed cyc
 Because there are now in principle several possible transitions from each phase, the action
 space is no longer a boolean for each controlled intersection. In order to represent the possible
 transitions, we *fix an enumeration* of the phases, and *fix an enumeration* of the phase transitions
-for each phase. We also create ``action`` objects ``a0, a1, ..., a8``, enough to represent all
-possible phase transitions.
+for each phase. We also create ``action-token`` objects ``a0, a1, ..., an``, enough to represent all
+possible phase transitions (for NEMA, ``a0, a1, a2, a3, a4`` suffices). In practice, ``action-token``
+objects are used for "array-lookup" into the dynamically-sized arrays of permitted phase transitions
+from a given phase.
 
-For example,
+For example, we focus on one of the phases and its allowed transitions. Here, we gave arbitrary
+indices to the four phases for illustration, which is fine as long as the indices are some
+permutation of 0, ..., #phases.
 
-For each intersection, then, the ``advance`` action is now an integer (which gets clipped below and above).
-For example, if the action at one of the intersections ``3`` and the intersection is currently in phase ``p4``,
-we look up ``TRANSITION(p4, a3)``. Say the value of ``TRANSITION(p4, a3)`` is ``7``. The action is then
-interpreted as "transition from phase ``p4`` to phase ``p7``"
+![Illustration of transitions](img/transitions.png)
+
+There are four possible transitons from the phase ``p0``. The transition with index 0 and action token ``a0`` 
+is by convention always the one that takes the phase to itself (i.e. extends the phase by one time-step). 
+Transition with index 1 (corresponding to action token ``a1``) takes ``p0`` to ``p2``. This is represented
+by the non-fluent ``TRANSITION(p0,a1) = 2;``. Similarly, the transition with index 2 gos to ``a4`` and 
+transition with index 3 goes to ``a5``.
+
+For each intersection, then, the ``advance`` action is now an integer (which gets clipped below at 0 and above at
+the highest number of possible action tokens). For example, if the action at one of the intersections ``3`` and the
+intersection is currently in phase ``p4``, we look up ``TRANSITION(p4, a3)``. Say the value of ``TRANSITION(p4, a3)``
+is ``7``. The action is then interpreted as "transition from phase ``p4`` to phase ``p7``"
+
+We expect that this kind of action encoding may be quite tricky to learn! So we encourage the reader to always
+start with the SimplePhases version of the domain. Nevertheless, it may be of some interest to look at the
+ComplexPhases version at a later point, especially if one wants to compare performance to existing methods
+used in the field.
+
 
 ## Start-up guide
 In the final section, we run through the steps necessary to generate a
@@ -238,7 +257,7 @@ Upon success, the message
 [netgen.py] Successfully generated the network instance RDDL file to SimplePhases/example_3x4_simple_grid_instance.rddl
 ```
 appears, and the instance file is created at the specified path.
-The generator creates the following 3x4 grid network:
+The generator creates the following 3x4 grid network, here controlled by a random agent.
 ![Animation of the 3x4 Simple Network](img/simple_3x4.gif)
 
 There is certainly a lot of room for improvement over the random agent!
@@ -253,7 +272,7 @@ Upon success, the message
 [netgen.py] Successfully generated the network instance RDDL file to ComplexPhases/example_2x3_nema_grid_instance.rddl
 ```
 shoud appear, and the instance file created at the specified path.
-The generator creates the following 2x3 grid network with off-grid perturbations:
+The generator creates the following 2x3 grid network with off-grid perturbations (again controlled by a random agent)
 ![Animation of the 2x3 NEMA Network](img/nema_2x3.gif)
 
 #### Additional options
