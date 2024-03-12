@@ -1,6 +1,6 @@
 # RDDL implementation of the van den Berg - Lin - Xi (BLX) model
 The goal of this document is to describe the BLX traffic model, and to explain some of the details of
-its implementation in the RDDL language.
+its implementation in RDDL.
 
 The document is structured as follows. The first section contains a general description of the BLX model.
 The second section discusses some aspects of the RDDL implementation, including how vehicle flow propagation
