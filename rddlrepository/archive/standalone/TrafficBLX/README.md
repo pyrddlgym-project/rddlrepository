@@ -12,7 +12,7 @@ generator to create a grid network and run the instance as a RDDLEnv using pyRDD
 
 ## BLX model
 The BLX model is a model of traffic flow. The model abstracts away the motions of individual vehicles, instead
-keeping track of flows moving at some constant propagation speed. Nevertheless, the model is 
+keeping track of flows that move at some constant propagation speed. Nevertheless, the model is 
 detailed enough to capture several different traffic modalities (undersaturated, saturated, and
 oversaturated flow). For some applications, such as traffic signal control, the level of detail captured
 by the model may be sufficient for reaching good performance (when combined with a good planning algorithm).
@@ -28,7 +28,7 @@ of lanes does not change throughout the link). The number of lanes on the link i
 number of lanes over all of its outgoing turns.
 
 For each outgoing turn on a link, the model keeps track of:
- - The current queue length (number of stopped vehicles at the downstream end of the link)
+ - The current queue length (number of stopped vehicles waiting to make the turn)
  - The flows along the link (more precisely, the flow that is arriving to the queue
    in 0, 1, 2, 3, ... seconds)
 
@@ -47,7 +47,7 @@ In this way, BLX models three different traffic modalities. Respectively, they a
  - Saturated flow (as many vehicles as possible are cleared in the time-step)
  - Oversaturated flow (saturated flow cannot be reached because of limits on downstream capacity)
 
-The BLX model can be used for evaluating various control methodologies. The current RDDL
+The BLX model can be used for evaluating various control or planning methodologies. The current RDDL
 implementation controls the states of the traffic lights in the network in order to minimize
 the total travel time of the vehicles in the network. The actions available for each traffic
 light either advance the current green phase, or switch to another phase, subject to timing
@@ -135,7 +135,7 @@ flow-on-link'(?t) = (TIME-VAL(?t) == tau) * flow-into-link + (sum_{?tb : time} [
 If we compare the update rule for ``flow-on-link(?t)`` described in the previous subsection with the update rule used in the
 RDDL domain files, we see that there is an additional detail that is still missing. This is linear blending of incoming flows.
 
-To illusrtate, imagine that we are getting a 10 vehicle inflow into our link, and that the estimated propagation time to the end
+To illustrate, imagine that we are getting a 10 vehicle inflow into our link, and that the estimated propagation time to the end
 of the current queue is equal to 8.3 time-steps. Should we round up or round down 8.3 to find the time-index where
 the inflow is inserted into the ``flow-on-link(?t)`` "array"? Because at different times of the simulation the
 estimated propagation time could in principle take values 8.01, 8.49, 8.51, or 8.99 (for example), the floor, round, and ceiling
