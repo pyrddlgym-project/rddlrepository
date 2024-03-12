@@ -199,7 +199,7 @@ def generate_grid(nrows,
                   high_left_prob=0,
                   min_green_left=3,
                   min_green_through=7,
-                  max_green=60,
+                  max_green=80,
                   all_red=4,
                   right_on_red=True,
                   instance_name=None,
@@ -593,6 +593,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--phasing', type=str, help='The phasing type. Either "simple" or "nema"', required=True)
     parser.add_argument('-f', '--force-overwrite', action='store_true', help='By default the generator will not overwrite existing files. With this argument, it will')
     parser.add_argument('-L', '--high-left-prob', default=0, help='Probability of having heavier demand on through than left from an approach')
+    parser.add_argument('-T', '--horizon', type=int, default=200)
     parser.add_argument('--off-grid', action='store_true', help='Apply small perturbations to move the intersections off a perfect grid, making the network less symmetric')
     parser.add_argument('-n', '--instance-name', help='Name of instance')
     args = parser.parse_args()
@@ -609,8 +610,9 @@ if __name__ == '__main__':
             args.rows, args.cols,
             phasing_type=args.phasing,
             apply_off_grid_perturbation=args.off_grid,
-            instance_name=args.instance_name,
-            high_left_prob=args.high_left_prob)
+            high_left_prob=args.high_left_prob,
+            horizon=args.horizon,
+            instance_name=args.instance_name)
 
         file.write(network)
     print(f'[netgen.py] Successfully generated the network instance RDDL file to {args.target_path}')
