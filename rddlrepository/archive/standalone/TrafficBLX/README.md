@@ -208,7 +208,7 @@ from a given phase.
 
 For example, we focus on one of the phases and its allowed transitions. Here, we gave arbitrary
 indices to the four phases for illustration, which is fine as long as the indices are some
-permutation of 0, ..., #phases.
+permutation of 0, ..., (#phases-1).
 
 ![Illustration of transitions](img/transitions.png)
 
@@ -218,12 +218,12 @@ Transition with index 1 (corresponding to action token ``a1``) takes ``p0`` to `
 by the non-fluent ``TRANSITION(p0,a1) = 2;``. Similarly, the transition with index 2 gos to ``a4`` and 
 transition with index 3 goes to ``a5``.
 
-For each intersection, then, the ``advance`` action is now an integer (which gets clipped below at 0 and above at
+For each intersection, then, the action is an integer called ``set-phase`` (the integer gets clipped below at 0 and above at
 the highest number of possible action tokens). For example, if the action at one of the intersections ``3`` and the
 intersection is currently in phase ``p4``, we look up ``TRANSITION(p4, a3)``. Say the value of ``TRANSITION(p4, a3)``
 is ``7``. The action is then interpreted as "transition from phase ``p4`` to phase ``p7``"
 
-We expect that this kind of action encoding may be quite tricky to learn! So we encourage the reader to always
+We expect that this kind of action encoding may be quite tricky to work with! So we encourage the reader to always
 start with the SimplePhases version of the domain. Nevertheless, it may be of some interest to look at the
 ComplexPhases version at a later point, especially if one wants to compare performance to existing methods
 used in the field.
