@@ -93,9 +93,9 @@ domain BLX_model {
 
 
         // phase constraints and properties
-        PHASE-MIN(signal-phase)                                :  { non-fluent, real, default = 20.0 };
-        PHASE-MAX(signal-phase)                                :  { non-fluent, real, default = 60.0 };
-        PHASE-ALL-RED-DUR(signal-phase)                        :  { non-fluent, real, default = 3.0 };
+        PHASE-MIN(intersection, signal-phase)                  :  { non-fluent, real, default = 20.0 };
+        PHASE-MAX(intersection, signal-phase)                  :  { non-fluent, real, default = 60.0 };
+        PHASE-ALL-RED-DUR(intersection, signal-phase)          :  { non-fluent, real, default = 3.0 };
 
         // is turn green in phase?
         GREEN(link, link, signal-phase)                        :  { non-fluent, bool, default = false };
@@ -297,8 +297,8 @@ domain BLX_model {
         num-transitions-from-cur-ph(?i) = 
             (sum_{?p : signal-phase} [(PHASE-INDEX(?p) == signal(?i)) * (sum_{?a : action-token} [TRANSITION(?p,?a) > -1])]);
 
-        cur-ph-below-min(?i) = [ signal-t(?i) <  (sum_{?p : signal-phase} [(PHASE-INDEX(?p) == signal(?i)) * PHASE-MIN(?p)]) ];
-        cur-ph-at-max(?i) =    [ signal-t(?i) >= (sum_{?p : signal-phase} [(PHASE-INDEX(?p) == signal(?i)) * PHASE-MAX(?p)]) ];
+        cur-ph-below-min(?i) = [ signal-t(?i) <  (sum_{?p : signal-phase} [(PHASE-INDEX(?p) == signal(?i)) * PHASE-MIN(?i,?p)]) ];
+        cur-ph-at-max(?i) =    [ signal-t(?i) >= (sum_{?p : signal-phase} [(PHASE-INDEX(?p) == signal(?i)) * PHASE-MAX(?i,?p)]) ];
 
         extend(?i) =
             // true if any:
@@ -354,7 +354,7 @@ domain BLX_model {
         all-red'(?i) = if (extend(?i))
                            then max[all-red(?i) - Ts, 0.0]
                        else
-                           (sum_{?p: signal-phase} [(PHASE-INDEX(?p) == signal(?i)) * PHASE-ALL-RED-DUR(?p)]);
+                           (sum_{?p: signal-phase} [(PHASE-INDEX(?p) == signal(?i)) * PHASE-ALL-RED-DUR(?i,?p)]);
     };
 
     // total travel time: 

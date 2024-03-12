@@ -213,9 +213,11 @@ domain instance using the instance generator and run it as a pyRDDLGym
 environment.
 
 ### Generating a domain instance
-words..
 
-Note: The instance generator has limited features. The user may wish to
+#### Grid with Simple Phasing
+#### Grid with NEMA Phasing
+
+Note: The features of the instance generator are limited. The user may wish to
 build upon it, develop their own generator, or simply write the desired
 instance files by hand.
 

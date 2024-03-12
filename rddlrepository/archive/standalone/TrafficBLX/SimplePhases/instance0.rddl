@@ -100,6 +100,26 @@ non-fluents isolated_intersection {
         GREEN(l4,l5,@ALL-RED); GREEN(l4,l5,@WEST-EAST-LEFT); GREEN(l4,l5,@ALL-RED2); GREEN(l4,l5,@WEST-EAST-THROUGH); GREEN(l4,l5,@ALL-RED3); GREEN(l4,l5,@NORTH-SOUTH-LEFT); GREEN(l4,l5,@ALL-RED4); GREEN(l4,l5,@NORTH-SOUTH-THROUGH);
         GREEN(l6,l7,@ALL-RED); GREEN(l6,l7,@WEST-EAST-LEFT); GREEN(l6,l7,@ALL-RED2); GREEN(l6,l7,@WEST-EAST-THROUGH); GREEN(l6,l7,@ALL-RED3); GREEN(l6,l7,@NORTH-SOUTH-LEFT); GREEN(l6,l7,@ALL-RED4); GREEN(l6,l7,@NORTH-SOUTH-THROUGH);
 
+
+        PHASE-MIN(i0, @WEST-EAST-LEFT) = 3;
+        PHASE-MIN(i0, @WEST-EAST-THROUGH) = 7;
+        PHASE-MIN(i0, @NORTH-SOUTH-LEFT) = 3;
+        PHASE-MIN(i0, @NORTH-SOUTH-THROUGH) = 7;
+        PHASE-MIN(i0, @ALL-RED) = 4;
+        PHASE-MIN(i0, @ALL-RED2) = 4;
+        PHASE-MIN(i0, @ALL-RED3) = 4;
+        PHASE-MIN(i0, @ALL-RED4) = 4;
+
+        PHASE-MAX(i0, @WEST-EAST-LEFT) = 80;
+        PHASE-MAX(i0, @WEST-EAST-THROUGH) = 80;
+        PHASE-MAX(i0, @NORTH-SOUTH-LEFT) = 80;
+        PHASE-MAX(i0, @NORTH-SOUTH-THROUGH) = 80;
+        PHASE-MAX(i0, @ALL-RED) = 4;
+        PHASE-MAX(i0, @ALL-RED2) = 4;
+        PHASE-MAX(i0, @ALL-RED3) = 4;
+        PHASE-MAX(i0, @ALL-RED4) = 4;
+        
+
         // time delay properties
         TIME-HEAD(t0)           = true;
         TIME-TAIL(t20)          = true;

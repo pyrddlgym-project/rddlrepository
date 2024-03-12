@@ -113,6 +113,15 @@ non-fluents isolated_intersection {
         GREEN(l2,l5,p7); GREEN(l6,l1,p7);
 
         // right turns are always permitted
+        GREEN(l0,l1,p0); GREEN(l0,l1,p1); GREEN(l0,l1,p2); GREEN(l0,l1,p3);
+        GREEN(l0,l1,p4); GREEN(l0,l1,p5); GREEN(l0,l1,p6); GREEN(l0,l1,p7);
+        GREEN(l2,l3,p0); GREEN(l2,l3,p1); GREEN(l2,l3,p2); GREEN(l2,l3,p3);
+        GREEN(l2,l3,p4); GREEN(l2,l3,p5); GREEN(l2,l3,p6); GREEN(l2,l3,p7);
+        GREEN(l4,l5,p0); GREEN(l4,l5,p1); GREEN(l4,l5,p2); GREEN(l4,l5,p3);
+        GREEN(l4,l5,p4); GREEN(l4,l5,p5); GREEN(l4,l5,p6); GREEN(l4,l5,p7);
+        GREEN(l6,l7,p0); GREEN(l6,l7,p1); GREEN(l6,l7,p2); GREEN(l6,l7,p3);
+        GREEN(l6,l7,p4); GREEN(l6,l7,p5); GREEN(l6,l7,p6); GREEN(l6,l7,p7);
+
 
         // phase transitions
         TRANSITION(p0, a0) = 0;
