@@ -244,11 +244,17 @@ The generator creates the following 3x4 grid network:
 There is certainly a lot of room for improvement over the random agent!
 
 #### Example: 2x3 Perturbed Grid with NEMA Phasing
-Running
+We run
 ```python
 python netgen.py -r 2 -c 3 -p nema --off-grid ComplexPhases/example_2x3_nema_grid_instance.rddl
 ```
-Creates the following 2x3 grid network with off-grid perturbations:
+Upon success, the message
+```
+[netgen.py] Successfully generated the network instance RDDL file to ComplexPhases/example_2x3_nema_grid_instance.rddl
+```
+shoud appear, and the instance file created at the specified path.
+The generator creates the following 2x3 grid network with off-grid perturbations:
+![Animation of the 2x3 NEMA Network](img/nema_2x3.gif)
 
 #### Additional options
 - Passing the command-line argument ``-T <int>`` or ``--horizon <int>`` modifies the instance horizon from the default of 200.
