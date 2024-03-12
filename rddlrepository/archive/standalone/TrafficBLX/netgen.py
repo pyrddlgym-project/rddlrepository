@@ -6,12 +6,13 @@ from itertools import product
 indent_str = ' ' * 8
 newline_indent_str = '\n' + indent_str
 
-def dist(p0, p1): return np.linalg.norm(p1-p0)
+def dist(p0, p1):
+    return np.linalg.norm(p1-p0)
 
 
-def generate_4leg_intersection(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
-                               min, max, red, right_on_red=True):
-    """Generates the non-fluents for a four-leg intersection,
+def generate_simple_4leg_intersection(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
+                                      min_left, min_through, max, red, right_on_red=True):
+    """Generates the non-fluents for a four-phase four-leg intersection,
     with left, through, and right movements"""
 
     nonfluents_str = newline_indent_str*2 + f'//intersection {i}'
@@ -29,20 +30,37 @@ def generate_4leg_intersection(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
         f'TURN({Sin},{Eout});',
         f'TURN({Sin},{Nout});',
         f'TURN({Sin},{Wout});',
+         '',
          '//link-to',
         f'LINK-TO({Ein},{i});',
         f'LINK-TO({Nin},{i});',
         f'LINK-TO({Win},{i});',
         f'LINK-TO({Sin},{i});',
+         '',
          '//link-from',
         f'LINK-FROM({i},{Eout});',
         f'LINK-FROM({i},{Nout});',
         f'LINK-FROM({i},{Wout});',
         f'LINK-FROM({i},{Sout});',
-         '//phase properties',
-        f'PHASE-MIN({i}) = {min};',
-        f'PHASE-MAX({i}) = {max};',
-        f'PHASE-ALL-RED-DUR({i}) = {red};',
+         '',
+         '//timing constraints',
+        f'PHASE-MIN({i},@WEST-EAST-LEFT) = {min_left};',
+        f'PHASE-MIN({i},@WEST-EAST-THROUGH) = {min_through};',
+        f'PHASE-MIN({i},@NORTH-SOUTH-LEFT) = {min_left};',
+        f'PHASE-MIN({i},@NORTH-SOUTH-THROUGH) = {min_through};',
+        f'PHASE-MAX({i},@WEST-EAST-LEFT) = {max};',
+        f'PHASE-MAX({i},@WEST-EAST-THROUGH) = {max};',
+        f'PHASE-MAX({i},@NORTH-SOUTH-LEFT) = {max};',
+        f'PHASE-MAX({i},@NORTH-SOUTH-THROUGH) = {max};',
+         '',
+        f'PHASE-MIN({i},@ALL-RED) = {red};'
+        f'PHASE-MIN({i},@ALL-RED2) = {red};'
+        f'PHASE-MIN({i},@ALL-RED3) = {red};'
+        f'PHASE-MIN({i},@ALL-RED4) = {red};'
+        f'PHASE-MAX({i},@ALL-RED) = {red};'
+        f'PHASE-MAX({i},@ALL-RED2) = {red};'
+        f'PHASE-MAX({i},@ALL-RED3) = {red};'
+        f'PHASE-MAX({i},@ALL-RED4) = {red};'
          '//green turns',
         f'GREEN({Ein},{Sout},@WEST-EAST-LEFT);',
         f'GREEN({Win},{Nout},@WEST-EAST-LEFT);',
@@ -51,7 +69,8 @@ def generate_4leg_intersection(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
         f'GREEN({Nin},{Eout},@NORTH-SOUTH-LEFT);',
         f'GREEN({Sin},{Wout},@NORTH-SOUTH-LEFT);',
         f'GREEN({Nin},{Sout},@NORTH-SOUTH-THROUGH);',
-        f'GREEN({Sin},{Nout},@NORTH-SOUTH-THROUGH);'))
+        f'GREEN({Sin},{Nout},@NORTH-SOUTH-THROUGH);'
+    ))
 
     # Add right turns on green
     right_turn_pairs = ((Ein,Nout),
@@ -78,10 +97,12 @@ def generate_4leg_intersection(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
                                                     for (i,j) in right_turn_pairs for p in red_phases) )
     return nonfluents_str
 
-def generate_4leg_intersection_through_only(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
-                                            min, max, red):
-    """ Generates the non-fluents for a four-leg intersection,
-        with through movements only """
+
+def generate_nema_4leg_intersection(i, Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
+                                    min_left, min_through, max, red):
+    """Generates the non-fluents for a NEMA four-leg intersection,
+    with left, through, and right movements"""
+
     nonfluents_str = newline_indent_str*2 + f'//intersection {i}'
     nonfluents_str += newline_indent_str + '//turns' + newline_indent_str
     nonfluents_str += newline_indent_str.join((
@@ -97,347 +118,87 @@ def generate_4leg_intersection_through_only(i, Ein, Nout, Nin, Wout, Win, Sout, 
         f'TURN({Sin},{Eout});',
         f'TURN({Sin},{Nout});',
         f'TURN({Sin},{Wout});',
+         '',
          '//link-to',
         f'LINK-TO({Ein},{i});',
         f'LINK-TO({Nin},{i});',
         f'LINK-TO({Win},{i});',
         f'LINK-TO({Sin},{i});',
+         '',
          '//link-from',
         f'LINK-FROM({i},{Eout});',
         f'LINK-FROM({i},{Nout});',
         f'LINK-FROM({i},{Wout});',
         f'LINK-FROM({i},{Sout});',
-         '//phase properties',
-        f'PHASE-MIN({i}) = {min};',
-        f'PHASE-MAX({i}) = {max};',
-        f'PHASE-ALL-RED-DUR({i}) = {red};',
+         '',
+         '//timing constraints',
+        f'PHASE-MIN({i},p0) = {min_left};',
+        f'PHASE-MIN({i},p1) = {min_left};',
+        f'PHASE-MIN({i},p2) = {min_left};',
+        f'PHASE-MIN({i},p3) = {min_through};',
+        f'PHASE-MIN({i},p4) = {min_left};',
+        f'PHASE-MIN({i},p5) = {min_left};',
+        f'PHASE-MIN({i},p6) = {min_left};',
+        f'PHASE-MIN({i},p7) = {min_through};',
+         '',
+        f'PHASE-MAX({i},p0) = {max};',
+        f'PHASE-MAX({i},p1) = {max};',
+        f'PHASE-MAX({i},p2) = {max};',
+        f'PHASE-MAX({i},p3) = {max};',
+        f'PHASE-MAX({i},p4) = {max};',
+        f'PHASE-MAX({i},p5) = {max};',
+        f'PHASE-MAX({i},p6) = {max};',
+        f'PHASE-MAX({i},p7) = {max};',
+         '',
+        f'PHASE-ALL-RED-DUR({i},p0) = {red};',
+        f'PHASE-ALL-RED-DUR({i},p1) = {red};',
+        f'PHASE-ALL-RED-DUR({i},p2) = {red};',
+        f'PHASE-ALL-RED-DUR({i},p3) = {red};',
+        f'PHASE-ALL-RED-DUR({i},p4) = {red};',
+        f'PHASE-ALL-RED-DUR({i},p5) = {red};',
+        f'PHASE-ALL-RED-DUR({i},p6) = {red};',
+        f'PHASE-ALL-RED-DUR({i},p7) = {red};',
+         '',
          '//green turns',
-        f'GREEN({Ein},{Wout},@WEST-EAST-THROUGH);',
-        f'GREEN({Win},{Eout},@WEST-EAST-THROUGH);',
-        f'GREEN({Nin},{Sout},@NORTH-SOUTH-THROUGH);',
-        f'GREEN({Sin},{Nout},@NORTH-SOUTH-THROUGH);',
+        f'GREEN({Ein},{Sout},p0); GREEN({Win},{Nout},p0);',
+        f'GREEN({Ein},{Sout},p1); GREEN({Ein},{Wout},p1);',
+        f'GREEN({Win},{Nout},p2); GREEN({Win},{Eout},p2);',
+        f'GREEN({Ein},{Wout},p3); GREEN({Win},{Eout},p3);',
+        f'GREEN({Nin},{Eout},p4); GREEN({Sin},{Wout},p4);',
+        f'GREEN({Sin},{Wout},p5); GREEN({Sin},{Nout},p5);',
+        f'GREEN({Nin},{Eout},p6); GREEN({Nin},{Sout},p6);',
+        f'GREEN({Nin},{Sout},p7); GREEN({Sin},{Nout},p7);'
     ))
+
+    # Add right turns on green
+    right_turn_pairs = ((Ein,Nout),
+                        (Nin,Wout),
+                        (Win,Sout),
+                        (Sin,Eout))
+    phases = ('p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7')
+
+    nonfluents_str += newline_indent_str
+    nonfluents_str += newline_indent_str.join( (f'GREEN({i},{j},{p});'
+                                                for (i,j) in right_turn_pairs for p in phases) )
+
     return nonfluents_str
 
-
-def generate_webster_scenario(d,
-                              dNSfrac,
-                              dEWfrac,
-                              betaL,
-                              betaT,
-                              link_lengths=250,
-                              min_green=6,
-                              max_green=60,
-                              all_red=4,
-                              mu=0.53,
-                              instance_name=None,
-                              horizon=1024,
-                              discount=1.0):
-    """Generates a single intersection instance for a Webster timing experiment"""
-    if instance_name is None:
-        instance_name = f'single_intersection_webster_experiment'
-
-    num_ts = int(np.ceil(link_lengths/13.6))+1
-    t_names = (f't{t}' for t in range(num_ts))
-    instance_str = '\n'.join((
-        f'// d={d}, dNS={dNSfrac:.2f}, dEW={dEWfrac:.2f}, bL={betaL:.3f}, bT={betaT:.3f}',
-        f'',
-        f'non-fluents {instance_name} {{',
-        f'    domain = BLX_model;',
-        f'',
-        f'    objects {{',
-        f'        intersection : {{i0}};',
-        f'        link         : {{l0, l1, l2, l3, l4, l5, l6, l7}};',
-        f'        time         : {{{", ".join(t_names)}}};',
-        f'    }};',
-        f'',
-        f'    //             | |',
-        f'    //             | |',
-        f'    //             | |',
-        f'    //            l2 l1',
-        f'    //             | |',
-        f'    //             v ^',
-        f'    //             | |',
-        f'    //             ____',
-        f'    // --- l3 -<- | i0 | -<- l0 ---',
-        f'    // --- l4 ->- |____| ->- l7 ---',
-        f'    //             | |',
-        f'    //             v ^',
-        f'    //             | |',
-        f'    //            l5 l6',
-        f'    //             | |',
-        f'    //             | |',
-        f'    //             | |',
-        f'',
-        f'    non-fluents {{',
-        f'        //cartesian coordinates',
-        f'        X(i0) = 0;    Y(i0) = 0;',
-        f'        SOURCE-X(l0) = {link_lengths};    SOURCE-Y(l0) = 0;',
-        f'        SOURCE-X(l2) = 0;    SOURCE-Y(l2) = {link_lengths};',
-        f'        SOURCE-X(l4) = -{link_lengths};   SOURCE-Y(l4) = 0;',
-        f'        SOURCE-X(l6) = 0;   SOURCE-Y(l6) = -{link_lengths};',
-        f'        SINK-X(l7) = {link_lengths};    SINK-Y(l7) = 0;',
-        f'        SINK-X(l1) = 0;    SINK-Y(l1) = {link_lengths};',
-        f'        SINK-X(l3) = -{link_lengths};   SINK-Y(l3) = 0;',
-        f'        SINK-X(l5) = 0;   SINK-Y(l5) = -{link_lengths};',
-        f'',
-        f'        // source links',
-        f'        SOURCE(l0);',
-        f'        SOURCE(l2);',
-        f'        SOURCE(l4);',
-        f'        SOURCE(l6);',
-        f'',
-        f'        // sink links',
-        f'        SINK(l1);',
-        f'        SINK(l3);',
-        f'        SINK(l5);',
-        f'        SINK(l7);',
-        f'',
-        f'        // arrival rate from each source',
-        f'        SOURCE-ARRIVAL-RATE(l0) = {d*dEWfrac/2};',
-        f'        SOURCE-ARRIVAL-RATE(l2) = {d*dNSfrac/2};',
-        f'        SOURCE-ARRIVAL-RATE(l4) = {d*dEWfrac/2};',
-        f'        SOURCE-ARRIVAL-RATE(l6) = {d*dNSfrac/2};',
-        f''
-        f'        // link lengths',
-        f'        Dl(l0) = {link_lengths};',
-        f'        Dl(l1) = {link_lengths};',
-        f'        Dl(l2) = {link_lengths};',
-        f'        Dl(l3) = {link_lengths};',
-        f'        Dl(l4) = {link_lengths};',
-        f'        Dl(l5) = {link_lengths};',
-        f'        Dl(l6) = {link_lengths};',
-        f'        Dl(l7) = {link_lengths};',
-        f'',
-        f'        // satflow rates',
-        f'        MU(l0,l3) = {2*mu};',
-        f'        MU(l2,l5) = {2*mu};',
-        f'        MU(l4,l7) = {2*mu};',
-        f'        MU(l6,l1) = {2*mu};',
-        f'        MU(l0,l5) = {mu};',
-        f'        MU(l2,l7) = {mu};',
-        f'        MU(l4,l1) = {mu};',
-        f'        MU(l6,l3) = {mu};',
-        f'',
-        f'        // turn probabilities',
-        f'        BETA(l0,l3) = {betaT};',
-        f'        BETA(l2,l5) = {betaT};',
-        f'        BETA(l4,l7) = {betaT};',
-        f'        BETA(l6,l1) = {betaT};',
-        f'        BETA(l0,l5) = {betaL};',
-        f'        BETA(l2,l7) = {betaL};',
-        f'        BETA(l4,l1) = {betaL};',
-        f'        BETA(l6,l3) = {betaL};',
-        f''))
-
-    instance_str += generate_4leg_intersection('i0', 'l0', 'l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7',
-                               min=min_green, max=max_green, red=all_red, right_on_red=True)
-
-
-    instance_str += '\n        '.join(('', '// time-delay properties',
-       f'TIME-HEAD(t0);',
-       f'TIME-TAIL(t{num_ts-1});') +
-        tuple(f'TIME-VAL(t{i}) = {i};' for i in range(num_ts)) +
-        tuple(f'NEXT(t{i},t{i+1});' for i in range(num_ts-1)))
-
-    instance_str += '\n'
-    instance_str += '\n'.join((
-        f'    }};',
-        f'}}',
-        f'',
-        f'instance {instance_name} {{',
-        f'    domain = BLX_model;',
-        f'    non-fluents = {instance_name};',
-        f'    max-nondef-actions = 1;',
-        f'    horizon = {horizon};',
-        f'    discount = {discount};',
-        f'}}' ))
-    return instance_str
-
-
-def generate_green_wave_scenario(N,
-                                 dominant_flow=0.7,
-                                 link_len=100,
-                                 mu=0.53,
-                                 min_green=24,
-                                 max_green=60,
-                                 all_red=4,
-                                 simstep=1,
-                                 through_only=True,
-                                 conflict_flow=0.,
-                                 instance_name=None,
-                                 horizon=1024,
-                                 discount=1.0):
-    """Creates an instance that has a corridor with N traffic lights
-    and a dominant flow in the West->East direction."""
-    if instance_name is None:
-        instance_name = f'green_wave_{N}_experiment'
-
-    # Time-delay objects
-    num_ts = int(np.ceil(link_len/(13.6*simstep)))+1
-    t_names = (f't{t}' for t in range(num_ts))
-    L_names = (f'l{i}' for i in range(6*N+2))
-    i_names = (f'i{i}' for i in range(N))
-
-    i_xcoords = {f'i{i}': link_len*(i+1) for i in range(N)}
-    i_ycoord = link_len
-    i_coords_str = indent_str
-    i_coords_str += newline_indent_str.join(f'X({k}) = {v};    Y({k}) = {i_ycoord};' for k,v in i_xcoords.items())
-
-    src_coords_str = newline_indent_str.join(('',
-        f'SOURCE-X(l1) = 0;    SOURCE-Y(l1) = {link_len};',
-        f'SOURCE-X(l{2*N}) = {link_len*(N+1)};    SOURCE-Y(l{2*N}) = {link_len};')
-        + tuple(
-            f'SOURCE-X(l{2*(N+n)}) = {link_len*n};    SOURCE-Y(l{2*(N+n)}) = {2*link_len};' for n in range(1,N+1)
-        )
-        + tuple(
-            f'SOURCE-X(l{2*(2*N+n)+1}) = {link_len*n};    SOURCE-Y(l{2*(2*N+n)+1}) = 0;' for n in range(1,N+1)
-        )
-    )
-
-    snk_coords_str = newline_indent_str.join(('',
-        f'SINK-X(l0) = 0;    SINK-Y(l0) = {link_len};',
-        f'SINK-X(l{2*N+1}) = {link_len*(N+1)};    SINK-Y(l{2*N+1}) = {link_len};')
-        + tuple(
-            f'SINK-X(l{2*(N+n)+1}) = {link_len*n};    SINK-Y(l{2*(N+n)+1}) = {2*link_len};' for n in range(1,N+1)
-        )
-        + tuple(
-            f'SINK-X(l{2*(2*N+n)}) = {link_len*n};    SINK-Y(l{2*(2*N+n)}) = 0;' for n in range(1,N+1)
-        )
-    )
-
-    src_ids = ('l1', f'l{2*N}') + tuple(f'l{2*(N+n)}' for n in range(1,N+1)) + tuple(f'l{2*(2*N+n)+1}' for n in range(1,N+1))
-    snk_ids = ('l0', f'l{2*N+1}') + tuple(f'l{2*(N+n)+1}' for n in range(1,N+1)) + tuple(f'l{2*(2*N+n)}' for n in range(1,N+1))
-
-    src_ids_str = 2*newline_indent_str + '// source links'
-    src_ids_str += newline_indent_str.join(('',)
-        + tuple(f'SOURCE({id});' for id in src_ids))
-
-    snk_ids_str = 2*newline_indent_str + '// sink links'
-    snk_ids_str += newline_indent_str.join(('',)
-        + tuple(f'SINK({id});' for id in snk_ids))
-
-    instance_str = '\n'.join((
-        f'non-fluents {instance_name} {{',
-        f'    domain = BLX_model;',
-        f'',
-        f'    objects {{',
-        f'        intersection : {{{", ".join(i_names)}}};',
-        f'        link         : {{{", ".join(L_names)}}};',
-        f'        time         : {{{", ".join(t_names)}}};',
-        f'    }};',
-        f'',
-        f'    //             | |                                          | |                     ',
-        f'    //             | |                                          | |                     ',
-        f'    //             | |                                          | |                     ',
-        f'    //    l(2*(N+1)) l(2*(N+1)+1)   ...                    l(4*N) l(4*N+1)              ',
-        f'    //             | |                                          | |                     ',
-        f'    //             v ^                                          v ^                     ',
-        f'    //             | |                                          | |                     ',
-        f'    //             ____                                       ________                  ',
-        f'    // --- l0 -<- | i0 | -<- l2 --- ... --- l(2*(N-1))   -<- | i(N-1) | -<- l(2*N)   ---',
-        f'    // --- l1 ->- |____| ->- l3 --- ... --- l(2*(N-1)+1) ->- |________| ->- l(2*N+1) ---',
-        f'    //             | |                                          | |                     ',
-        f'    //             v ^                                          v ^                     ',
-        f'    //             | |                                          | |                     ',
-        f'    //   l(2*(2N+1)) l(2*(2N+1)+1)  ...                    l(6*N) l(6*N+1)              ',
-        f'    //             | |                                          | |                     ',
-        f'    //             | |                                          | |                     ',
-        f'    //             | |                                          | |                     ',
-        f'',
-        f'    non-fluents {{',
-        f'        Ts = {simstep};',
-        f'',
-        f'        //cartesian coordinates',
-        f''))
-
-    instance_str += (i_coords_str
-                     + src_coords_str
-                     + snk_coords_str
-                     + src_ids_str
-                     + snk_ids_str)
-
-    if through_only:
-        # Only allow through movements (no left or right turns)
-
-        dominant_flow_str = 2*newline_indent_str + '// west-east arrivals (dominant flow)'
-        dominant_flow_str += newline_indent_str + f'SOURCE-ARRIVAL-RATE(l1) = {dominant_flow};'
-
-        other_flow_str = 2*newline_indent_str + '// other flows'
-        other_flow_str += newline_indent_str.join(('',)
-            + tuple(f'SOURCE-ARRIVAL-RATE({id}) = 0.0;' for id in src_ids[1:]))
-
-
-        link_lens_str = 2*newline_indent_str + '// link lengths'
-        link_lens_str += newline_indent_str.join(('',) + tuple(
-            f'Dl(l{i}) = {link_len};' for i in range(6*N+2)
-        ))
-
-        satflow_rates_str = 2*newline_indent_str + '// satflow rates'
-        satflow_rates_str += newline_indent_str.join(('',) + tuple(
-            f'MU(l{2*n+1},l{2*(n+1)+1}) = {2*mu};' for n in range(N)
-        ))
-
-        turn_probs_str = 2*newline_indent_str + '// turn probabilities'
-        turn_probs_str += newline_indent_str.join(('',)
-            + tuple(f'BETA(l{2*n+1},l{2*(N+n+1)+1}) = 0.0;' for n in range(N))
-            + tuple(f'BETA(l{2*n+1},l{2*(n+1)+1}) = 1.0;' for n in range(N))
-            + tuple(f'BETA(l{2*n+1},l{2*(2*N+n+1)}) = 0.0;' for n in range(N))
-        )
-
-        instance_str += (dominant_flow_str
-                         + other_flow_str
-                         + link_lens_str
-                         + satflow_rates_str
-                         + turn_probs_str)
-
-        for i in range(N):
-            Ein = f'l{2*(i+1)}'
-            Nout = f'l{2*(N+i+1)+1}'
-            Nin = f'l{2*(N+i+1)}'
-            Wout = f'l{2*i}'
-            Win = f'l{2*i+1}'
-            Sout = f'l{2*(2*N+i+1)}'
-            Sin = f'l{2*(2*N+i+1)+1}'
-            Eout = f'l{2*(i+1)+1}'
-            instance_str += generate_4leg_intersection_through_only(f'i{i}', Ein, Nout, Nin, Wout, Win, Sout, Sin, Eout,
-                                        min=min_green, max=max_green, red=all_red)
-    else:
-        raise NotImplementedError
-
-    instance_str += '\n        '.join(('', '// time-delay properties',
-       f'TIME-HEAD(t0);',
-       f'TIME-TAIL(t{num_ts-1});') +
-        tuple(f'TIME-VAL(t{i}) = {i};' for i in range(num_ts)) +
-        tuple(f'NEXT(t{i},t{i+1});' for i in range(num_ts-1)))
-
-    instance_str += '\n'
-    instance_str += '\n'.join((
-        f'    }};',
-        f'}}',
-        f'',
-        f'instance {instance_name} {{',
-        f'    domain = BLX_model;',
-        f'    non-fluents = {instance_name};',
-        f'    max-nondef-actions = {N};',
-        f'    horizon = {horizon};',
-        f'    discount = {discount};',
-        f'}}' ))
-    return instance_str
 
 
 def generate_grid(nrows,
                   ncols,
-                  two_phase=False,
+                  phasing_type,
                   ew_link_len=(200,50), #(a,b) parsed as Uniform(a-b,a+b)
                   ns_link_len=(200,50),
+                  apply_off_grid_perturbation=False,
                   feeder_link_elongation_factor=1.5,
                   Vl=13.8,
                   inflow_rate_per_lane=(0.08,0.02), # parsed as Uniform(a-b,a+b)
                   satflow_per_lane=0.53,
                   num_lanes=4,
                   high_left_prob=0,
-                  min_green=7,
+                  min_green_left=3,
+                  min_green_through=7,
                   max_green=60,
                   all_red=4,
                   right_on_red=True,
@@ -460,6 +221,9 @@ def generate_grid(nrows,
     through movement (defaults to 0). In this case, the left turns are assumed
     to have (2/4) of the lanes and the through movements (1/4) of the lanes.
     """
+    assert phasing_type in {'simple', 'nema'}, \
+        '[netgen.generate_grid] Only "simple" and "nema" phasing types currently supported'
+
     # Sample link lengths uniformly
     # Optionally, make the feeder links longer to fit more vehicles
     feeder_elongation_ew, feeder_elongation_ns = np.ones(ncols+1), np.ones(nrows+1)
@@ -484,6 +248,8 @@ def generate_grid(nrows,
     coords = np.concatenate((Xs[:,:,np.newaxis],
                              Ys[:,:,np.newaxis]),
                              axis=2)
+    if apply_off_grid_perturbation:
+        coords = coords + np.sqrt(50) * np.random.normal(size=coords.shape)
     coords = np.round(coords)
 
 
@@ -609,11 +375,42 @@ def generate_grid(nrows,
         f'',
         f'    objects {{',
         f'        intersection : {{{", ".join(intersection_names)}}};',
-        f'        link         : {{{", ".join(link_names)}}};',
+        f'        link         : {{{", ".join(link_names)}}};'))
+
+    if phasing_type == 'nema':
+        instance_str += '\n'.join((
+            '',
+            f'        signal-phase : {{p0, p1, p2, p3, p4, p5, p6, p7}};',
+            f'        action-token : {{a0, a1, a2, a3, a4}};'))
+
+    instance_str += '\n'.join((
+        '',
         f'        time         : {{{", ".join(t_names)}}};',
         f'    }};',
         f'',
         f'    non-fluents {{'))
+
+    if phasing_type == 'nema':
+        instance_str += newline_indent_str.join(('',) + tuple(
+            f'INTERSECTION-INDEX({i}) = {ni};' for ni, i in enumerate(intersection_names)))
+        instance_str += newline_indent_str.join((
+            '',
+            '',
+            'ACTION-TOKEN-INDEX(a0) = 0;',
+            'ACTION-TOKEN-INDEX(a1) = 1;',
+            'ACTION-TOKEN-INDEX(a2) = 2;',
+            'ACTION-TOKEN-INDEX(a3) = 3;',
+            'ACTION-TOKEN-INDEX(a4) = 4;',
+            ''
+            'PHASE-INDEX(p0) = 0;',
+            'PHASE-INDEX(p1) = 1;',
+            'PHASE-INDEX(p2) = 2;',
+            'PHASE-INDEX(p3) = 3;',
+            'PHASE-INDEX(p4) = 4;',
+            'PHASE-INDEX(p5) = 5;',
+            'PHASE-INDEX(p6) = 6;',
+            'PHASE-INDEX(p7) = 7;',
+            ''))
 
     instance_str += newline_indent_str + '//sources'
     instance_str += newline_indent_str.join(('',)
@@ -660,21 +457,73 @@ def generate_grid(nrows,
 
     for i in range(1, nrows+1):
         for j in range(1, ncols+1):
-            instance_str += generate_4leg_intersection(
-                                inames[i,j],
-                                f'l-{inames[i,j+1]}-{inames[i,j]}', #Ein
-                                f'l-{inames[i,j]}-{inames[i-1,j]}', #Nout
-                                f'l-{inames[i-1,j]}-{inames[i,j]}', #Nin
-                                f'l-{inames[i,j]}-{inames[i,j-1]}', #Wout
-                                f'l-{inames[i,j-1]}-{inames[i,j]}', #Win
-                                f'l-{inames[i,j]}-{inames[i+1,j]}', #Sout
-                                f'l-{inames[i+1,j]}-{inames[i,j]}', #Sin
-                                f'l-{inames[i,j]}-{inames[i,j+1]}', #Eout
-                                min=min_green,
-                                max=max_green,
-                                red=all_red,
-                                right_on_red=right_on_red)
+            if phasing_type == 'simple':
+                instance_str += generate_simple_4leg_intersection(
+                                    inames[i,j],
+                                    f'l-{inames[i,j+1]}-{inames[i,j]}', #Ein
+                                    f'l-{inames[i,j]}-{inames[i-1,j]}', #Nout
+                                    f'l-{inames[i-1,j]}-{inames[i,j]}', #Nin
+                                    f'l-{inames[i,j]}-{inames[i,j-1]}', #Wout
+                                    f'l-{inames[i,j-1]}-{inames[i,j]}', #Win
+                                    f'l-{inames[i,j]}-{inames[i+1,j]}', #Sout
+                                    f'l-{inames[i+1,j]}-{inames[i,j]}', #Sin
+                                    f'l-{inames[i,j]}-{inames[i,j+1]}', #Eout
+                                    min_left=min_green_left,
+                                    min_through=min_green_through,
+                                    max=max_green,
+                                    red=all_red,
+                                    right_on_red=right_on_red)
+            elif phasing_type == 'nema':
+                instance_str += generate_nema_4leg_intersection(
+                                    inames[i,j],
+                                    f'l-{inames[i,j+1]}-{inames[i,j]}', #Ein
+                                    f'l-{inames[i,j]}-{inames[i-1,j]}', #Nout
+                                    f'l-{inames[i-1,j]}-{inames[i,j]}', #Nin
+                                    f'l-{inames[i,j]}-{inames[i,j-1]}', #Wout
+                                    f'l-{inames[i,j-1]}-{inames[i,j]}', #Win
+                                    f'l-{inames[i,j]}-{inames[i+1,j]}', #Sout
+                                    f'l-{inames[i+1,j]}-{inames[i,j]}', #Sin
+                                    f'l-{inames[i,j]}-{inames[i,j+1]}', #Eout
+                                    min_left=min_green_left,
+                                    min_through=min_green_through,
+                                    max=max_green,
+                                    red=all_red)
 
+    if phasing_type == 'nema':
+        instance_str += '\n        '.join(('', '//phase transitions',
+            'TRANSITION(p0, a0) = 0;',
+            'TRANSITION(p0, a1) = 1;',
+            'TRANSITION(p0, a2) = 2;',
+            'TRANSITION(p0, a3) = 3;',
+            '',
+            'TRANSITION(p1, a0) = 1;',
+            'TRANSITION(p1, a1) = 3;',
+            '',
+            'TRANSITION(p2, a0) = 2;',
+            'TRANSITION(p2, a1) = 3;',
+            '',
+            'TRANSITION(p3, a0) = 3;',
+            'TRANSITION(p3, a1) = 4;',
+            'TRANSITION(p3, a2) = 5;',
+            'TRANSITION(p3, a3) = 6;',
+            'TRANSITION(p3, a4) = 7;',
+            '',
+            'TRANSITION(p4, a0) = 4;',
+            'TRANSITION(p4, a1) = 5;',
+            'TRANSITION(p4, a2) = 6;',
+            'TRANSITION(p4, a3) = 7;',
+            '',
+            'TRANSITION(p5, a0) = 5;',
+            'TRANSITION(p5, a1) = 7;',
+            '',
+            'TRANSITION(p6, a0) = 6;',
+            'TRANSITION(p6, a1) = 7;',
+            '',
+            'TRANSITION(p7, a0) = 7;',
+            'TRANSITION(p7, a1) = 0;',
+            'TRANSITION(p7, a2) = 1;',
+            'TRANSITION(p7, a3) = 2;',
+            'TRANSITION(p7, a4) = 3;'))
 
     instance_str += '\n        '.join(('', '// time-delay properties',
        f'TIME-HEAD(t0);',
@@ -741,8 +590,10 @@ if __name__ == '__main__':
     parser.add_argument('target_path', type=str, help='Path the generated rddl code will be saved to')
     parser.add_argument('-r', '--rows', type=int, help='Number of rows in the network', required=True)
     parser.add_argument('-c', '--cols', type=int, help='Number of columns in the network', required=True)
+    parser.add_argument('-p', '--phasing', type=str, help='The phasing type. Either "simple" or "nema"', required=True)
     parser.add_argument('-f', '--force-overwrite', action='store_true', help='By default the generator will not overwrite existing files. With this argument, it will')
     parser.add_argument('-L', '--high-left-prob', default=0, help='Probability of having heavier demand on through than left from an approach')
+    parser.add_argument('--off-grid', action='store_true', help='Apply small perturbations to move the intersections off a perfect grid, making the network less symmetric')
     parser.add_argument('-n', '--instance-name', help='Name of instance')
     args = parser.parse_args()
 
@@ -756,7 +607,10 @@ if __name__ == '__main__':
     with open(args.target_path, 'w') as file:
         network = generate_grid(
             args.rows, args.cols,
+            phasing_type=args.phasing,
+            apply_off_grid_perturbation=args.off_grid,
             instance_name=args.instance_name,
             high_left_prob=args.high_left_prob)
 
         file.write(network)
+    print(f'[netgen.py] Successfully generated the network instance RDDL file to {args.target_path}')
