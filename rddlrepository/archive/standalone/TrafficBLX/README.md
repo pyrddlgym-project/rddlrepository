@@ -215,8 +215,8 @@ permutation of 0, ..., (#phases-1).
 There are four possible transitons from the phase ``p0``. The transition with index 0 and action token ``a0`` 
 is by convention always the one that takes the phase to itself (i.e. extends the phase by one time-step). 
 Transition with index 1 (corresponding to action token ``a1``) takes ``p0`` to ``p2``. This is represented
-by the non-fluent ``TRANSITION(p0,a1) = 2;``. Similarly, the transition with index 2 gos to ``a4`` and 
-transition with index 3 goes to ``a5``.
+by the non-fluent ``TRANSITION(p0,a1) = 2;``. Similarly, the transition with index 2 goes to ``p4`` and 
+transition with index 3 goes to ``p5``.
 
 For each intersection, then, the action is an integer called ``set-phase`` (the integer gets clipped below at 0 and above at
 the highest number of possible action tokens). For example, if the action at one of the intersections ``3`` and the
