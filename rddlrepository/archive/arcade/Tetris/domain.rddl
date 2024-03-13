@@ -1,0 +1,180 @@
+////////////////////////////////////////////////////////////////////
+// The classic game of Tetris, implemented more or less according to
+// its original design.
+// 
+// Author:
+//    Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+
+domain tetris {
+        
+    types {
+		board-x : object;   // board x coordinate
+		board-y : object;   // board y coordinate
+		shape-x : object;   // shape x coordinate
+		shape-y : object;   // shape y coordinate
+		shape-type : object;   // shape types
+		shape-rot : { @0, @90, @180, @270 };   // rotation of shape
+    };
+            
+    pvariables {
+		
+		///////////////////
+		// NON-FLUENTS
+		///////////////////
+		
+		PROB-SHAPE(shape-type) : { non-fluent, real, default = 1.0 };
+		
+		// which cells of each shape and rotation are filled
+		SHAPES(shape-type, shape-rot, shape-x, shape-y) : { non-fluent, bool, default = false };
+		
+		// height/width (natural ordering) over board rows/columns
+		WIDTH(board-x) : { non-fluent, int, default = 0 };
+		HEIGHT(board-y) : { non-fluent, int, default = 0 };
+		
+		// offset of shape position
+		OFFSET-X(shape-x) : { non-fluent, int, default = 0 };
+		OFFSET-Y(shape-y) : { non-fluent, int, default = 0 };
+		
+		// penalty for losing the game
+		GAME-OVER-SCORE : { non-fluent, real, default = -1000 };
+		
+		// scores for clearing 1, 2, 3, 4... rows
+		CLEARED-1 : { non-fluent, real, default = 40.0 };
+		CLEARED-2 : { non-fluent, real, default = 100.0 };
+		CLEARED-3 : { non-fluent, real, default = 300.0 };
+		CLEARED-4 : { non-fluent, real, default = 1200.0 };
+		
+		///////////////////
+		// ACTION-FLUENTS
+		///////////////////
+		
+		// rotation of current shape
+		rotate : { action-fluent, shape-rot, default = @0 };
+		
+		// placement of current shape
+		place(board-x) : { action-fluent, bool, default = false };
+		
+		///////////////////
+		// INTERM-FLUENTS
+		///////////////////	
+		
+		shape(shape-x, shape-y) : { interm-fluent, bool };
+		stb-x(shape-x, board-x) : { interm-fluent, bool };
+		stb-y(board-y, shape-y, board-y) : { interm-fluent, bool };
+		
+		max-height : { interm-fluent, int };
+		valid(board-y) : { interm-fluent, bool };
+		shape-final-y(board-y) : { interm-fluent, bool };
+		
+		filled-before-clear(board-x, board-y) : { interm-fluent, bool };
+		cleared(board-y) : { interm-fluent, bool };
+		cleared-below(board-y) : { interm-fluent, int };
+		total-cleared : { interm-fluent, int };
+		new-pos(board-y, board-y) : { interm-fluent, bool };
+		shape-rand(shape-type) : { interm-fluent, real };
+
+		///////////////////
+		// STATE-FLUENTS
+		///////////////////
+		
+		// filled status of each cell on the board
+		filled(board-x, board-y) : { state-fluent, bool, default = false };
+		
+		// the current sampled shape type
+		current-shape-type(shape-type) : { state-fluent, bool, default = false };
+		
+		// whether the game terminates due to overflow of the board
+		game-over : { state-fluent, bool, default = false };
+    };
+        
+    cpfs {	
+		
+		//////////////////////////////////////////////////////////////////////////
+		// center the coordinate system at the shape horizontal placement location
+		// compute the change of coordinate from shape local to the board position
+		//////////////////////////////////////////////////////////////////////////
+		
+		shape(?i, ?j) = exists_{?s: shape-type}[current-shape-type(?s) ^ SHAPES(?s, rotate, ?i, ?j)];
+		
+		stb-x(?i, ?x2) = exists_{?x: board-x}[place(?x) ^ ((WIDTH(?x) + OFFSET-X(?i)) == WIDTH(?x2))];
+		stb-y(?y, ?j, ?y2) = (HEIGHT(?y) + OFFSET-Y(?j)) == HEIGHT(?y2);
+		
+		//////////////////////////////////////////////////////////////////////////
+		// determine the valid vertical placements of the shape
+		// determine the final shape vertical position
+		//////////////////////////////////////////////////////////////////////////
+		
+		max-height = max_{?y: board-y} HEIGHT(?y);
+		
+		valid(?y) = forall_{?i: shape-x, ?j: shape-y}[~(shape(?i, ?j) 
+			^ (exists_{?x2: board-x, ?y2: board-y}[
+				stb-x(?i, ?x2) ^ stb-y(?y, ?j, ?y2) ^ filled(?x2, ?y2)]))];
+		
+		shape-final-y(?y) = valid(?y) ^ (HEIGHT(?y) == (min_{?y2: board-y}[
+			if(valid(?y2)) then HEIGHT(?y2) else 1 + max-height]));
+		
+		//////////////////////////////////////////////////////////////////////////
+		// determine the board configuration after the shape is fixed in place
+		// but before the cleared rows are cleared
+		//////////////////////////////////////////////////////////////////////////
+		
+		filled-before-clear(?x, ?y) = filled(?x, ?y) | (exists_{?i: shape-x, ?j: shape-y}[
+			shape(?i, ?j) ^ stb-x(?i, ?x) 
+			^ (exists_{?y2: board-y}[shape-final-y(?y2) ^ stb-y(?y2, ?j, ?y)])]);
+		
+		//////////////////////////////////////////////////////////////////////////
+		// now determine the cleared rows
+		// compute the new board configuration after clearing the completed rows
+		//////////////////////////////////////////////////////////////////////////
+		
+		cleared(?y) = forall_{?x: board-x} filled-before-clear(?x, ?y);
+		cleared-below(?y) = sum_{?y2: board-y}[cleared(?y2) * (HEIGHT(?y2) <= HEIGHT(?y))];
+		total-cleared = sum_{?y: board-y} cleared(?y);
+		
+		new-pos(?y, ?y2) = ((HEIGHT(?y2) - HEIGHT(?y)) == cleared-below(?y2)) ^ ~cleared(?y2);	
+		
+		filled'(?x, ?y) = if(game-over) then filled(?x, ?y) 
+				  else (exists_{?y2: board-y}[new-pos(?y, ?y2) ^ filled-before-clear(?x, ?y2)]);
+		
+		//////////////////////////////////////////////////////////////////////////
+		// state updates: 
+		// sample a new shape check 
+		// termination of the game
+		//////////////////////////////////////////////////////////////////////////
+		
+		shape-rand(?s) = Bernoulli(PROB-SHAPE(?s) / (sum_{?s2: shape-type} PROB-SHAPE(?s2)));
+		current-shape-type'(?s) = (?s == (argmax_{?s2: shape-type} shape-rand(?s2)));
+									
+		game-over' = game-over | ~(exists_{?y: board-y} valid(?y)) 
+					| (exists_{?x: board-x, ?y: board-y}[
+						(HEIGHT(?y) == max-height) ^ filled(?x, ?y)]);
+    };
+    
+	// award points based on the number of rows cleared
+    reward = if (game-over) then -GAME-OVER-SCORE 
+				else if(total-cleared == 0) then 0
+				else if(total-cleared == 1) then CLEARED-1
+				else if(total-cleared == 2) then CLEARED-2
+				else if(total-cleared == 3) then CLEARED-3
+				else CLEARED-4;
+	
+	state-invariants {
+
+		// a shape must be sampled
+		(sum_{?s: shape-type} current-shape-type(?s)) == 1;
+	};
+	
+	action-preconditions {
+		
+		// must pick a placement
+		(sum_{?x: board-x} place(?x)) == 1;
+	};
+	
+	termination {
+		game-over;
+	};
+}
+
+

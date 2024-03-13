@@ -1,0 +1,136 @@
+////////////////////////////////////////////////////////////////////
+// In the game of Sokoban, a person pushes boxes in a warehouse to
+// designated storage areas. The goal is to move all the boxes to
+// one of these areas. A difficult aspect of the problem is the 
+// presence of rapid dead ends, i.e. pushing a box into a corner
+// means the task will never be completed as pulling the box is not
+// permitted.
+// 
+// Author:
+//    Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+
+domain sokoban {
+        
+    types {
+		x-pos : object;
+		y-pos : object;
+		dir : { @l, @u, @r, @d, @none };
+    };
+            
+    pvariables {
+
+		WALL(x-pos, y-pos) : { non-fluent, bool, default = false };
+		STORAGE(x-pos, y-pos) : { non-fluent, bool, default = false };
+		IX(x-pos) : { non-fluent, int, default = 0 };
+		IY(y-pos) : { non-fluent, int, default = 0 };
+
+		COMPLETION : { non-fluent, real, default = 10.0 };
+		STEP-PENALTY : { non-fluent, real, default = 0.1 };
+		BONUS-STORED : { non-fluent, real, default = 1.0 };
+
+		box(x-pos, y-pos) : { state-fluent, bool, default = false };
+		man(x-pos, y-pos)	: { state-fluent, bool, default = false };
+		// change-box-count : { state-fluent, int, default = 0 };
+		
+		left(x-pos, x-pos) : { interm-fluent, bool };
+		right(x-pos, x-pos) : { interm-fluent, bool };
+		above(y-pos, y-pos) :  { interm-fluent, bool };
+		below(y-pos, y-pos) :  { interm-fluent, bool };
+		
+		box-removed(x-pos, y-pos) : { interm-fluent, bool };
+		box-added(x-pos, y-pos) : { interm-fluent, bool };
+
+		man-removed(x-pos, y-pos) : { interm-fluent, bool };
+		man-added(x-pos, y-pos) : { interm-fluent, bool };
+
+		move : { action-fluent, dir, default = @none };
+    };
+        
+    cpfs {
+
+		// get the adjacent cells
+		left(?x1, ?x2) = IX(?x1) == IX(?x2) - 1;
+		right(?x1, ?x2) = IX(?x1) == IX(?x2) + 1;
+		above(?y1, ?y2) = IY(?y1) == IY(?y2) + 1;
+		below(?y1, ?y2) = IY(?y1) == IY(?y2) - 1;
+		
+		// box can be removed from cell if man on one side and empty cell on other
+		box-removed(?x, ?y) = switch(move){
+			case @l: (exists_{?x2: x-pos, ?x3: x-pos} right(?x2, ?x) ^ left(?x3, ?x) ^ man(?x2, ?y) ^ ~box(?x3, ?y) ^ ~WALL(?x3, ?y)),
+			case @r: (exists_{?x2: x-pos, ?x3: x-pos} left(?x2, ?x) ^ right(?x3, ?x) ^ man(?x2, ?y) ^ ~box(?x3, ?y)	^ ~WALL(?x3, ?y)),
+			case @u: (exists_{?y2: y-pos, ?y3: y-pos} below(?y2, ?y) ^ above(?y3, ?y) ^ man(?x, ?y2) ^ ~box(?x, ?y3) ^ ~WALL(?x, ?y3)),
+			case @d: (exists_{?y2: y-pos, ?y3: y-pos} above(?y2, ?y) ^ below(?y3, ?y) ^ man(?x, ?y2) ^ ~box(?x, ?y3) ^ ~WALL(?x, ?y3)),
+			case @none: false
+			 };
+
+		// box can be added to cell if man two cells away and box one cell away
+		box-added(?x, ?y) = ~WALL(?x, ?y) ^ (switch(move){
+			case @l: (exists_{?x2: x-pos, ?x3: x-pos} right(?x2, ?x) ^ right(?x3, ?x2) ^ box(?x2, ?y) ^ man(?x3, ?y)),
+			case @r: (exists_{?x2: x-pos, ?x3: x-pos} left(?x2, ?x) ^ left(?x3, ?x2) ^ box(?x2, ?y) ^ man(?x3, ?y)),
+			case @u: (exists_{?y2: y-pos, ?y3: y-pos} below(?y2, ?y) ^ below(?y3, ?y2) ^ box(?x, ?y2) ^ man(?x, ?y3)),
+			case @d: (exists_{?y2: y-pos, ?y3: y-pos} above(?y2, ?y) ^ above(?y3, ?y2) ^ box(?x, ?y2) ^ man(?x, ?y3)),
+			case @none: false
+			 });
+
+		// if box already on cell then check it is not removed
+		// if no box on cell then check if box can be added
+		box'(?x, ?y) = if(box(?x, ?y)) then ~box-removed(?x, ?y) else box-added(?x, ?y);
+		
+		// man can be removed from cell if empty cell or movable box on destination cell
+		man-removed(?x, ?y) = switch(move){
+					case @l: (exists_{?x2: x-pos} left(?x2, ?x) ^ ~WALL(?x2, ?y) ^ (~box(?x2, ?y) | box-removed(?x2, ?y))),
+					case @r: (exists_{?x2: x-pos} right(?x2, ?x) ^ ~WALL(?x2, ?y) ^ (~box(?x2, ?y) | box-removed(?x2, ?y))),
+					case @u: (exists_{?y2: y-pos} below(?y, ?y2) ^ ~WALL(?x, ?y2) ^ (~box(?x, ?y2) | box-removed(?x, ?y2))),
+					case @d: (exists_{?y2: y-pos} above(?y, ?y2) ^ ~WALL(?x, ?y2) ^ (~box(?x, ?y2) | box-removed(?x, ?y2))),
+					case @none: false
+				};
+
+		// man can be added to cell if man one cell away
+		man-added(?x, ?y) = ~WALL(?x, ?y) ^ (switch(move){
+					case @l: (exists_{?x2: x-pos} right(?x2, ?x) ^ man(?x2, ?y)),
+					case @r: (exists_{?x2: x-pos} left(?x2, ?x) ^ man(?x2, ?y)),
+					case @u: (exists_{?y2: y-pos} below(?y2, ?y) ^ man(?x, ?y2)),
+					case @d: (exists_{?y2: y-pos} above(?y2, ?y) ^ man(?x, ?y2)),
+					case @none: false
+				});
+
+		// if a box already on cell then check it can be removed
+		// if man already on cell then check man is not removed
+		// if nothing on cell then check man can be added
+		man'(?x, ?y) = if(box(?x, ?y)) then box-removed(?x, ?y) 
+				else if (man(?x, ?y)) then ~man-removed(?x, ?y)
+				else man-added(?x, ?y);
+		
+		// change-box-count' = sum_{?x: x-pos, ?y: y-pos} box'(?x, ?y) - box(?x, ?y);
+    };
+    
+    // reward consists of large payment if all boxes stored
+    // a small bonus proportional to change in number of stored boxes
+    // a small penalty at each decision step to encourage faster solution
+    reward = if(forall_{?x: x-pos, ?y: y-pos} STORAGE(?x, ?y) | ~box(?x, ?y)) then COMPLETION
+		else -sgn[(sum_{?x: x-pos, ?y: y-pos} (box'(?x, ?y) - box(?x, ?y)) * STORAGE(?x, ?y))] * BONUS-STORED - STEP-PENALTY;
+
+
+    state-invariants {
+
+		// enough storage units
+		(sum_{?x: x-pos, ?y: y-pos} STORAGE(?x, ?y)) >= (sum_{?x: x-pos, ?y: y-pos} box(?x, ?y));
+
+		// man occupies one cell
+		(sum_{?x: x-pos, ?y: y-pos} man(?x, ?y)) == 1;
+		
+		// for testing valid box logic
+		// change-box-count == 0;
+    };
+}
+
+
+
+
+
+
+
+
+

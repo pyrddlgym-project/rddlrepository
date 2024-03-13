@@ -1,0 +1,41 @@
+non-fluents nf_hanoi_4 {
+
+    domain = tower_of_hanoi;
+    
+    objects {
+		rod : { r1, r2, r3 };
+		disk : { d1, d2, d3, d4 };
+    };
+    
+    non-fluents {
+		SIZE(d1) = 1;
+		SIZE(d2) = 2;
+		SIZE(d3) = 3;
+		SIZE(d4) = 4;
+		TARGET(r3);
+    };
+}
+
+instance hanoi_inst_4 {
+
+    domain = tower_of_hanoi;
+
+    non-fluents = nf_hanoi_4;
+    
+    init-state {
+		disk-on-rod(d1, r1);
+		disk-on-rod(d2, r1);
+		disk-on-rod(d3, r1);
+		disk-on-rod(d4, r1);
+		disk-order(d1) = 3;
+		disk-order(d2) = 2;
+		disk-order(d3) = 1;
+		disk-order(d4) = 0;
+    };
+
+    max-nondef-actions = 1;
+    horizon = 20;
+    discount = 1.0;
+}
+
+

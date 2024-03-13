@@ -1,0 +1,69 @@
+////////////////////////////////////////////////////////////////////
+// A continuous state continuous action nonlinear navigation problem
+// with regions that cause the agent to slow down and should be
+// avoided.
+//
+// References:
+//	  Wu, Ga, Buser Say, and Scott Sanner. 
+//	  "Scalable planning with tensorflow for hybrid 
+//    nonlinear domains." Advances in Neural Information 
+//    Processing Systems 30 (2017).
+// 
+// Authors:
+//    Ga Wu,
+//    Buser Say,
+//    Scott Sanner
+//
+////////////////////////////////////////////////////////////////////
+domain Navigation {
+        
+    types {
+		obstacle : object;
+    };
+            
+    pvariables {
+		GOAL-X : { non-fluent, real, default = 8.0 };
+		GOAL-Y : { non-fluent, real, default = 8.0 };
+		CENTER-X(obstacle) : { non-fluent, real, default = 5.0 };
+		CENTER-Y(obstacle) : { non-fluent, real, default = 5.0 };
+		MIN-X : { non-fluent, real, default = 0.0 };
+		MAX-X : { non-fluent, real, default = 10.0 };
+		MIN-Y : { non-fluent, real, default = 0.0 };
+		MAX-Y : { non-fluent, real, default = 10.0 };
+
+		push-x : { action-fluent, real, default = 0.0 };
+		push-y : { action-fluent, real, default = 0.0 };
+
+		dist-to-center(obstacle) : { interm-fluent, real };
+		lambda(obstacle) : { interm-fluent, real };
+		slowdown : { interm-fluent, real };
+
+		x : { state-fluent, real, default = 0.0 };
+		y : { state-fluent, real, default = 0.0 };	
+    };
+        
+    cpfs {
+		dist-to-center(?o) = hypot[x - CENTER-X(?o), y - CENTER-Y(?o)];
+		lambda(?o) = 2.0 / (1.0 + exp[-2.0 * dist-to-center(?o)]) - 0.99;
+		slowdown = min_{?o : obstacle} lambda(?o);
+
+		x' = max[MIN-X, min[MAX-X, x + slowdown * push-x]];
+		y' = max[MIN-Y, min[MAX-Y, y + slowdown * push-y]];
+    };
+                
+    reward = -(abs[x - GOAL-X] + abs[y - GOAL-Y]); 
+
+    state-invariants {
+		x >= MIN-X;
+		x <= MAX-X;
+		y >= MIN-Y;
+		y <= MAX-Y;
+    };
+
+    action-preconditions {
+		push-x >= -0.2;
+		push-x <= 0.2;
+		push-y >= -0.2;
+		push-y <= 0.2;
+    };
+}
