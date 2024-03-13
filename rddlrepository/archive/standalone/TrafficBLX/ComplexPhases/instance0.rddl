@@ -1,0 +1,215 @@
+non-fluents isolated_intersection {
+    domain = BLX_model;
+
+    objects {
+        intersection : {i0};
+        link         : {l0, l1, l2, l3, l4, l5, l6, l7};
+        signal-phase : {p0, p1, p2, p3, p4, p5, p6, p7};
+        action-token : {a0, a1, a2, a3, a4, a5};
+        time         : {t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20};
+    };
+
+    //             | |
+    //             | |
+    //             | |
+    //            l2 l1
+    //             | |
+    //             v ^
+    //             | |
+    //             ____
+    // --- l3 -<- | i0 | -<- l0 ---
+    // --- l4 ->- |____| ->- l7 ---
+    //             | |
+    //             v ^
+    //             | |
+    //            l5 l6
+    //             | |
+    //             | |
+    //             | |
+
+    non-fluents {
+
+        INTERSECTION-INDEX(i0) = 0;
+
+        ACTION-TOKEN-INDEX(a0) = 0;
+        ACTION-TOKEN-INDEX(a1) = 1;
+        ACTION-TOKEN-INDEX(a2) = 2;
+        ACTION-TOKEN-INDEX(a3) = 3;
+        ACTION-TOKEN-INDEX(a4) = 4;
+
+        PHASE-INDEX(p0) = 0;
+        PHASE-INDEX(p1) = 1;
+        PHASE-INDEX(p2) = 2;
+        PHASE-INDEX(p3) = 3;
+        PHASE-INDEX(p4) = 4;
+        PHASE-INDEX(p5) = 5;
+        PHASE-INDEX(p6) = 6;
+        PHASE-INDEX(p7) = 7;
+
+        // cartesian coordinates
+        X(i0) = 0;    Y(i0) = 0;
+        SOURCE-X(l0) = 150;    SOURCE-Y(l0) = 0;
+        SOURCE-X(l2) = 100;    SOURCE-Y(l2) = 100;
+        SOURCE-X(l4) = -150;   SOURCE-Y(l4) = 0;
+        SOURCE-X(l6) = -100;   SOURCE-Y(l6) = -100;
+        SINK-X(l7) = 150;    SINK-Y(l7) = 0;
+        SINK-X(l1) = 100;    SINK-Y(l1) = 100;
+        SINK-X(l3) = -150;   SINK-Y(l3) = 0;
+        SINK-X(l5) = -100;   SINK-Y(l5) = -100;
+
+        // turns
+        TURN(l0,l1);
+        TURN(l0,l3);
+        TURN(l0,l5);
+        TURN(l2,l3);
+        TURN(l2,l5);
+        TURN(l2,l7);
+        TURN(l4,l5);
+        TURN(l4,l7);
+        TURN(l4,l1);
+        TURN(l6,l7);
+        TURN(l6,l1);
+        TURN(l6,l3);
+
+        // link-to
+        LINK-TO(l0,i0);
+        LINK-TO(l2,i0);
+        LINK-TO(l4,i0);
+        LINK-TO(l6,i0);
+
+        // link-from
+        LINK-FROM(i0,l1);
+        LINK-FROM(i0,l3);
+        LINK-FROM(i0,l5);
+        LINK-FROM(i0,l7);
+
+        // source links
+        SOURCE(l0);
+        SOURCE(l2);
+        SOURCE(l4);
+        SOURCE(l6);
+
+        // sink links
+        SINK(l1);
+        SINK(l3);
+        SINK(l5);
+        SINK(l7);
+
+        // arrival rate from each source
+        SOURCE-ARRIVAL-RATE(l0) = 0.3;
+        SOURCE-ARRIVAL-RATE(l2) = 0.3;
+        SOURCE-ARRIVAL-RATE(l4) = 0.3;
+        SOURCE-ARRIVAL-RATE(l6) = 0.3;
+
+        // NEMA scheme
+        // green turns
+        GREEN(l0,l5,p0); GREEN(l4,l1,p0);
+        GREEN(l0,l3,p1); GREEN(l0,l5,p1);
+        GREEN(l4,l1,p2); GREEN(l4,l7,p2);
+        GREEN(l0,l3,p3); GREEN(l4,l7,p3);
+        GREEN(l2,l7,p4); GREEN(l6,l3,p4);
+        GREEN(l6,l1,p5); GREEN(l6,l3,p5);
+        GREEN(l2,l5,p6); GREEN(l2,l7,p6);
+        GREEN(l2,l5,p7); GREEN(l6,l1,p7);
+
+        // right turns are always permitted
+        GREEN(l0,l1,p0); GREEN(l0,l1,p1); GREEN(l0,l1,p2); GREEN(l0,l1,p3);
+        GREEN(l0,l1,p4); GREEN(l0,l1,p5); GREEN(l0,l1,p6); GREEN(l0,l1,p7);
+        GREEN(l2,l3,p0); GREEN(l2,l3,p1); GREEN(l2,l3,p2); GREEN(l2,l3,p3);
+        GREEN(l2,l3,p4); GREEN(l2,l3,p5); GREEN(l2,l3,p6); GREEN(l2,l3,p7);
+        GREEN(l4,l5,p0); GREEN(l4,l5,p1); GREEN(l4,l5,p2); GREEN(l4,l5,p3);
+        GREEN(l4,l5,p4); GREEN(l4,l5,p5); GREEN(l4,l5,p6); GREEN(l4,l5,p7);
+        GREEN(l6,l7,p0); GREEN(l6,l7,p1); GREEN(l6,l7,p2); GREEN(l6,l7,p3);
+        GREEN(l6,l7,p4); GREEN(l6,l7,p5); GREEN(l6,l7,p6); GREEN(l6,l7,p7);
+
+
+        // phase transitions
+        TRANSITION(p0, a0) = 0;
+        TRANSITION(p0, a1) = 1;
+        TRANSITION(p0, a2) = 2;
+        TRANSITION(p0, a3) = 3;
+
+        TRANSITION(p1, a0) = 1;
+        TRANSITION(p1, a1) = 3;
+
+        TRANSITION(p2, a0) = 2;
+        TRANSITION(p2, a1) = 3;
+
+        TRANSITION(p3, a0) = 3;
+        TRANSITION(p3, a1) = 4;
+        TRANSITION(p3, a2) = 5;
+        TRANSITION(p3, a3) = 6;
+        TRANSITION(p3, a4) = 7;
+
+        TRANSITION(p4, a0) = 4;
+        TRANSITION(p4, a1) = 5;
+        TRANSITION(p4, a2) = 6;
+        TRANSITION(p4, a3) = 7;
+
+        TRANSITION(p5, a0) = 5;
+        TRANSITION(p5, a1) = 7;
+
+        TRANSITION(p6, a0) = 6;
+        TRANSITION(p6, a1) = 7;
+
+        TRANSITION(p7, a0) = 7;
+        TRANSITION(p7, a1) = 0;
+        TRANSITION(p7, a2) = 1;
+        TRANSITION(p7, a3) = 2;
+        TRANSITION(p7, a4) = 3;
+
+
+        // time delay properties
+        TIME-HEAD(t0)           = true;
+        TIME-TAIL(t20)          = true;
+        TIME-VAL(t0)            = 0;
+        TIME-VAL(t1)            = 1;
+        TIME-VAL(t2)            = 2;
+        TIME-VAL(t3)            = 3;
+        TIME-VAL(t4)            = 4;
+        TIME-VAL(t5)            = 5;
+        TIME-VAL(t6)            = 6;
+        TIME-VAL(t7)            = 7;
+        TIME-VAL(t8)            = 8;
+        TIME-VAL(t9)            = 9;
+        TIME-VAL(t10)           = 10;
+        TIME-VAL(t11)           = 11;
+        TIME-VAL(t12)           = 12;
+        TIME-VAL(t13)           = 13;
+        TIME-VAL(t14)           = 14;
+        TIME-VAL(t15)           = 15;
+        TIME-VAL(t16)           = 16;
+        TIME-VAL(t17)           = 17;
+        TIME-VAL(t18)           = 18;
+        TIME-VAL(t19)           = 19;
+        TIME-VAL(t20)           = 20;
+        NEXT(t0,t1);
+        NEXT(t1,t2);
+        NEXT(t2,t3);
+        NEXT(t3,t4);
+        NEXT(t4,t5);
+        NEXT(t5,t6);
+        NEXT(t6,t7);
+        NEXT(t7,t8);
+        NEXT(t8,t9);
+        NEXT(t9,t10);
+        NEXT(t10,t11);
+        NEXT(t11,t12);
+        NEXT(t12,t13);
+        NEXT(t13,t14);
+        NEXT(t14,t15);
+        NEXT(t15,t16);
+        NEXT(t16,t17);
+        NEXT(t17,t18);
+        NEXT(t18,t19);
+        NEXT(t19,t20);
+    };
+}
+
+instance isolated_intersection_inst_0 {
+    domain = BLX_model;
+    non-fluents = isolated_intersection;
+    max-nondef-actions = pos-inf;
+    horizon = 200;
+    discount = 1.0;
+}

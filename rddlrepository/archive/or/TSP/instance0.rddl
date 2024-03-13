@@ -1,0 +1,35 @@
+non-fluents nf_tsp {
+
+    domain = travelling_salesman;
+    
+    objects {
+	node : { a, b, c };
+    };
+    
+    non-fluents {
+	ORIGIN(a);
+	COST(a, b) = 7;
+	COST(b, a) = 4;
+	COST(a, c) = 2;
+	COST(c, a) = 2;
+	COST(b, c) = 3;
+	COST(c, b) = 3;
+    };
+}
+
+instance tsp_inst {
+
+    domain = travelling_salesman;
+
+    non-fluents = nf_tsp;
+    
+    init-state {
+	current(a);
+	visited(a);
+    };
+
+    max-nondef-actions = 1;
+    horizon = 40;
+    discount = 1.0;
+}
+

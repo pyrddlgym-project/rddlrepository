@@ -1,0 +1,87 @@
+// ////////////////////////////////////////////////////////////////////
+// Balance a bicycle as long as possible.
+// 
+// References:
+//		rlpy package
+//
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain Bicycle {
+          
+    pvariables {
+
+		PI : { non-fluent, real, default = 3.14159265 };
+		NOISE : { non-fluent, real, default = 0.02 };
+		H : { non-fluent, real, default = 0.94 };
+		L : { non-fluent, real, default = 1.11 };
+		C : { non-fluent, real, default = 0.66 };
+		DT : { non-fluent, real, default = 0.01 };
+		MC : { non-fluent, real, default = 15.0 };
+		MP : { non-fluent, real, default = 60.0 };
+		MD : { non-fluent, real, default = 1.7 };
+		DCM : { non-fluent, real, default = 0.3 };
+		G : { non-fluent, real, default = 9.82 };
+		V : { non-fluent, real, default = 2.777777 };
+		R : { non-fluent, real, default = 0.34 };
+
+		omega : { state-fluent, real, default = 0.0 };
+		domega : { state-fluent, real, default = 0.0 };
+		theta : { state-fluent, real, default = 0.0 };
+		dtheta : { state-fluent, real, default = 0.0 };
+		psi : { state-fluent, real, default = 0.0 };
+
+		noise : { interm-fluent, real };
+		phi : { interm-fluent, real };
+		theta-temp : { interm-fluent, real };
+		psi-temp : { interm-fluent, real };
+		invr-f : { interm-fluent, real };
+		invr-b : { interm-fluent, real };
+		invr-cm : { interm-fluent, real };
+		
+		torque : { action-fluent, real, default = 0.0 };
+		disp : { action-fluent, real, default = 0.0 };
+    };
+        
+    cpfs {
+		noise = Uniform(-NOISE, NOISE);
+		phi = omega + atan[disp + noise] / H;
+		invr-f = abs[sin[theta]] / L;
+		invr-b = abs[tan[theta]] / L;
+		invr-cm = if(theta == 0) then 0.0 else 1.0 / sqrt[pow[L - C, 2] + pow[invr-b, -2]];
+		
+		omega' = omega + DT * domega;	
+		domega' = domega + DT * ((MC + MP) * H * G * sin[phi] - cos[phi] * 
+			(MD * pow[R, 2] * (V / R) * dtheta + sgn[theta] * pow[V, 2] * 
+				(MD * R * (invr-f + invr-b) + (MC + MP) * H * invr-cm))) 
+					/ ((13.0 / 3.0) * MC * pow[H, 2] + MP * pow[H + DCM, 2]);	
+					
+		theta-temp = theta + DT * dtheta;
+		theta' = if(abs[theta-temp] <= 80.0 / 180 * PI) then theta-temp 
+					else sgn[theta-temp] * 80.0 / 180 * PI;
+		dtheta' = if(abs[theta-temp] <= 80.0 / 180 * PI) 
+			then dtheta + DT * (torque - 1.5 * MD * pow[R, 2] * (V / R) * domega) / (0.5 * MD * pow[R, 2])
+			else 0.0;
+			
+		psi-temp = fmod[psi + DT * sgn[theta] * V * invr-b, 2 * PI];
+		psi' = if(psi-temp > PI) then psi-temp - 2 * PI else psi-temp;
+    };
+                
+    reward = if ((omega < -PI * 12.0 / 180) | (omega > PI * 12.0 / 180)) then 0.0 else 1.0;        
+
+    termination {
+		(omega < -PI * 12.0 / 180) | (omega > PI * 12.0 / 180);
+    };
+
+    action-preconditions {
+		torque >= -2.0 ^ torque <= 2.0;
+		disp >= -0.02 ^ disp <= 0.02;
+    };
+}
+
+
+
+
+

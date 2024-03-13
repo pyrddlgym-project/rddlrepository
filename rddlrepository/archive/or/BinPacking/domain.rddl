@@ -1,0 +1,73 @@
+// ////////////////////////////////////////////////////////////////////
+// A set of bins must be filled with items while ensuring the total
+// weight of each bin is not greater than some limit. Items of random
+// weight are presented sequentially one at a time, and the 
+// goal is to add it to a designated bin.
+// 
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain bin_packing {
+        
+    types {
+		item : object;
+		bin : object;
+    };
+            
+    pvariables {
+		ITEM-SIZE(item) : { non-fluent, int, default = 1 };
+		ITEM-PROB(item) : { non-fluent, real, default = 0.0 };
+		CAPACITY(bin) : { non-fluent, int, default = 40 };
+		
+		total-size(bin) : { state-fluent, int, default = 0 };
+		current-size : { state-fluent, int, default = 0 };
+
+		real-place(bin) : { interm-fluent, bool };
+		item-rand(item) : { interm-fluent, bool };
+
+		place(bin) : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {
+	
+		// if a bin can hold the item, keep placement
+		// if it cannot, then the placement is into the bin with the least total size
+		real-place(?b) = if(exists_{?b2: bin}[place(?b2) ^ (total-size(?b2) + current-size <= CAPACITY(?b))]) then
+					(place(?b) ^ (total-size(?b) + current-size <= CAPACITY(?b)))
+				 else
+					(?b == argmin_{?b2: bin} total-size(?b2));
+		
+		// place the new item into the bin
+		total-size'(?b) = if(real-place(?b)) then (total-size(?b) + current-size) else total-size(?b);
+		
+		// sample the next item
+		item-rand(?i) = Bernoulli(ITEM-PROB(?i));
+		current-size' = sum_{?i: item}[ITEM-SIZE(?i) * (?i == argmax_{?i2: item} item-rand(?i2))];
+    };
+                
+    // reward is minimum of the number of bins used
+    reward = -sum_{?b: bin}[total-size(?b) > 0];
+		
+	state-invariants {
+		
+		// valid total bin size
+		forall_{?b: bin}[total-size(?b) >= 0];
+		forall_{?b: bin}[total-size(?b) <= CAPACITY(?b)];
+		
+		// valid current size
+		current-size >= 0;
+		exists_{?i: item}[current-size == ITEM-SIZE(?i)];
+		
+		// there must be enough capacity
+		exists_{?b: bin}[total-size(?b) + current-size <= CAPACITY(?b)];
+	};
+	
+	action-preconditions {
+		
+		// must be placed somewhere
+		(sum_{?b: bin} place(?b)) == 1;
+	};
+}
+

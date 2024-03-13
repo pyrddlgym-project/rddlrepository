@@ -1,0 +1,18 @@
+non-fluents nf_bicycle {
+
+    domain = bicycle;
+}
+
+instance bicycle_inst {
+
+    domain = bicycle;
+
+    non-fluents = nf_bicycle;
+    
+    max-nondef-actions = pos-inf;
+    horizon = 300;
+    discount = 1.0;
+}
+
+
+

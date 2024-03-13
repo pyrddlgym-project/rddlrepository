@@ -1,0 +1,18 @@
+non-fluents nf_blackjack {
+
+    domain = blackjack;
+}
+
+instance blackjack_inst {
+
+    domain = blackjack;
+
+    non-fluents = nf_blackjack;
+    
+    max-nondef-actions = pos-inf;
+    horizon = 40;
+    discount = 1.0;
+}
+
+
+

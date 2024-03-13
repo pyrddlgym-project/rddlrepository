@@ -1,0 +1,112 @@
+////////////////////////////////////////////////////////////////////
+// In the classic game of blackjack (or 21), cards are randomly drawn
+// from a deck (with replacement) and added to the player's hand.
+// The player decides whether to continue drawing or stop. Upon
+// stopping, the player receives a score equal to the total value
+// of all cards in the player's hand, or zero if the value exceeds 21.
+// 
+// Author:
+//    Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+
+domain blackjack {
+        
+    types {
+		card : { @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @J, @Q, @K, @A };
+		stage : { @p1, @p2, @d1, @d2, @pn, @dn, @done };
+    };
+            
+    pvariables {
+		PROB(card) : { non-fluent, real, default = 0.07142857142 };
+
+		current-card : { interm-fluent, card };
+		current-value : { interm-fluent, int };
+		
+		current-stage : { state-fluent, stage, default = @p1 };
+		player-value : { state-fluent, int, default = 0 };
+		dealer-value : { state-fluent, int, default = 0 };
+	
+		hit : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {
+
+		// sample the next card from an infinite sized deck
+		current-card = Discrete_{?c: card}(PROB(?c));
+		
+		current-value = switch(current-card){
+			case @1: 1,
+			case @2: 2,
+			case @3: 3,
+			case @4: 4,
+			case @5: 5,
+			case @6: 6,
+			case @7: 7,
+			case @8: 8,
+			case @9: 9,
+			case @10: 10,
+			case @J: 10,
+			case @Q: 10,
+			case @K: 10,
+			case @A: 11
+		};
+		
+		// update the player value
+		player-value' = if(current-stage == @p1 | current-stage == @p2 | current-stage == @pn) then
+							(if((current-card == @A) ^ (player-value + current-value > 21)) then 
+								player-value + 1
+							 else 
+								player-value + current-value)
+						else 
+							player-value;
+					
+		// update the dealer value		
+		dealer-value' = if(current-stage == @d1 | current-stage == @d2 | current-stage == @dn) then
+							(if((current-card == @A) ^ (dealer-value + current-value > 21)) then
+								dealer-value + 1
+							 else
+								dealer-value + current-value)
+						else
+							dealer-value;
+
+		// advance the stage of the game
+		current-stage' = switch(current-stage){
+			case @p1: @p2,
+			case @p2: @d1,
+			case @d1: @d2,
+			case @d2: (if(hit) then 
+							@pn 
+					   else if(dealer-value' < 17) then 
+							@dn 
+					   else 
+							@done),
+			case @pn: (if(player-value' > 21) then 
+							@done 
+					   else if(hit) then 
+							@pn 
+					   else if(dealer-value' < 17) then 
+							@dn 
+					   else @done),
+			case @dn: (if(dealer-value' < 17) then 
+							@dn 
+					   else 
+							@done),
+			case @done: @done
+		};
+	
+    };
+
+    termination {
+		current-stage == @done;
+    };
+                
+    reward = if((current-stage ~= @done) ^ (current-stage' == @done) 
+				^ (player-value' <= 21) ^ (dealer-value' > 21 | player-value' > dealer-value')) then
+				1	
+			else 
+				0;
+}
+
+
+

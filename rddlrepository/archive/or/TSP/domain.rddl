@@ -1,0 +1,63 @@
+// ////////////////////////////////////////////////////////////////////
+// The travelling salesman problem involves finding a least cost route
+// that visits each city exactly once. In this slightly relaxed version
+// the reward includes a fuel cost of traversing from one city to another
+// and a bonus if all the cities have previously been visited (including
+// if they were visited more than once). Due to the structure of the
+// reward, an optimal policy should visit each city exactly once.
+// 
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain travelling_salesman {
+        
+    types {
+		node : object;
+    };
+            
+    pvariables {
+		COST(node, node) : { non-fluent, real, default = 0.0 };
+		ORIGIN(node) : { non-fluent, bool, default = false };
+
+		current(node) : { state-fluent, bool, default = false };
+		visited(node) : { state-fluent, bool, default = false };
+
+		move(node) : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {
+		current'(?n) = move(?n);
+		visited'(?n) = visited(?n) | move(?n);
+    };
+                
+    reward = -(sum_{?n: node, ?n2: node}[COST(?n, ?n2) * current(?n) * current'(?n2)]); 
+
+	termination {
+		(forall_{?n: node} visited(?n)) ^ (forall_{?n: node}[current(?n) <=> ORIGIN(?n)]);
+	};
+	
+    state-invariants { 
+		
+		// one origin
+		(sum_{?n: node} ORIGIN(?n)) == 1;
+		
+		// current node exists
+		(sum_{?n: node} current(?n)) == 1;
+		
+		// origin is visited
+		forall_{?n: node}[ORIGIN(?n) => visited(?n)];
+    }; 
+	
+	action-preconditions {
+		
+		// move somewhere
+		(sum_{?n: node} move(?n)) == 1;
+		
+		// all nodes are visited and move back to origin or move to unvisited node
+		(exists_{?n: node}[~visited(?n)]) ^ (forall_{?n: node}[move(?n) => ~visited(?n)])
+			| (forall_{?n: node}[move(?n) <=> ORIGIN(?n)]);
+	};
+}
+
