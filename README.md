@@ -141,7 +141,7 @@ problem_info.register_instance("MyInstance", instance_content)
 
 ## Domains Included
 
-A listing of all domains currently supported in the main branch of rddlrepository can be found [here](https://github.com/pyrddlgym-project/rddlrepository/blob/main/domains.pdf).
+A downloadable PDF file listing all domains currently supported in rddlrepository can be found [here](https://github.com/pyrddlgym-project/rddlrepository/blob/main/domains.pdf).
 
 <p align="center">
 <img src="domains.png" width="100%" margin=1/>
