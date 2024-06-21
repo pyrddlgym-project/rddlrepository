@@ -46,17 +46,16 @@ class RDDLRepoManager:
     # ==========================================================================
     
     @staticmethod
-    def _print_columns(values, cols=3):
+    def _print_columns(values, cols=3, prefix=''):
         width = 1 + max(len(v) for v in values)
-        result = ''
+        result = prefix
         for (count, item) in enumerate(values, 1):
             result += item.ljust(width)
-            if count % cols == 0:
-                result += '\n'
+            if count % cols == 0 and count != len(values):
+                result += '\n' + prefix         
         return result
         
     def list_problems(self) -> List[str]:
-        problem_list = []
         if len(self.archiver_dict) == 0:
             raise RDDLRepoManifestEmptyError(
                 'Repository manifest is empty: please re-run with rebuild=True.')        
@@ -80,16 +79,14 @@ class RDDLRepoManager:
     def get_problem(self, name: str) -> ProblemInfo:
         info = self.archiver_dict.get(name, None)
         if info is None:
-            standalone, ippc = [], []
-            for key in self.archiver_dict.keys():
-                if 'ippc' in key or 'IPPC' in key:
-                    ippc.append(key)
-                else:
-                    standalone.append(key)
-            valid_keys = standalone + ippc
+            message = ''
+            for context in self.list_contexts():
+                message += context + ':'
+                valid_keys = self.list_problems_by_context(context)
+                message += '\n' +  self._print_columns(valid_keys, prefix='\t') + '\n'
             raise RDDLRepoDomainNotExistError(
                 f'Domain <{name}> does not exist in the repository, '
-                f'must be one of:\n' + self._print_columns(valid_keys) + '\n')        
+                f'must be one of:\n{message}')        
         return ProblemInfo(info)            
     
     # ==========================================================================
