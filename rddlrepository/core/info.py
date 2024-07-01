@@ -1,7 +1,7 @@
 import os.path
 import sys
 import importlib.util
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from .error import (
     RDDLRepoInstanceNotExistError,
@@ -17,7 +17,7 @@ DOMAIN_NAME = 'domain.rddl'
 
 class ProblemInfo:
 
-    def __init__(self, problem_data: Dict) -> None:
+    def __init__(self, problem_data: Dict[str, Any]) -> None:
         self.name = problem_data['name']
         self.desc = problem_data['description']
         self.loc = problem_data['location']

@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 import importlib
 import csv
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from .error import (
     RDDLRepoDomainNotExistError,
@@ -25,7 +25,7 @@ INFO_NAME = '__init__.py'
 
 class RDDLRepoManager:
 
-    def __init__(self, rebuild=False) -> None:
+    def __init__(self, rebuild: bool=False) -> None:
         self.archiver_dict = {}
         self.archive_by_context = {}
         
@@ -217,7 +217,7 @@ class RDDLRepoManager:
         print(f'Context <{context}> was successfully registered in rddlrepository.')
     
     def register_domain(self, name: str, context: str, rddl: str,
-                        desc: str=None, viz: str='', refresh: bool=True) -> None:
+                        desc: Optional[str]=None, viz: str='', refresh: bool=True) -> None:
         domains = self.list_problems_by_context(context)
         if name in domains:
             raise RDDLRepoProblemDuplicationError(
