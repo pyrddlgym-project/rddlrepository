@@ -45,7 +45,7 @@ domain Navigation {
     cpfs {
 		dist-to-center(?o) = hypot[x - CENTER-X(?o), y - CENTER-Y(?o)];
 		lambda(?o) = 2.0 / (1.0 + exp[-2.0 * dist-to-center(?o)]) - 0.99;
-		slowdown = minimum_{?o : obstacle} [ lambda(?o) ];
+		slowdown = min_{?o : obstacle} [ lambda(?o) ];
 
 		x' = max[MIN-X, min[MAX-X, x + slowdown * push-x]];
 		y' = max[MIN-Y, min[MAX-Y, y + slowdown * push-y]];
