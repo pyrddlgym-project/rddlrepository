@@ -1,0 +1,29 @@
+non-fluents option_2_nf {
+
+	domain = american_max_option;
+
+	objects {
+		asset : {stock1, stock2};
+	};
+
+	non-fluents {
+		MEAN(stock1) = 0.1;
+		MEAN(stock2) = 0.3;
+		VAR(stock1) = 0.05;
+		VAR(stock2) = 0.3;
+		RHO(stock1, stock2) = 0.5;
+		RHO(stock2, stock1) = 0.5;
+		STRIKE = 11.0;
+	};
+ }
+ 
+instance option_2 {
+	
+	domain = american_max_option;
+	
+	non-fluents = option_2_nf;
+	
+	max-nondef-actions = pos-inf;
+	horizon = 62;
+	discount = 0.995;
+}
