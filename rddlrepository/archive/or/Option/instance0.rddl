@@ -19,5 +19,5 @@ instance option_1 {
 	
 	max-nondef-actions = pos-inf;
 	horizon = 62;
-	discount = 0.98;
+	discount = 0.995;
 }
