@@ -1,0 +1,108 @@
+// ////////////////////////////////////////////////////////////////////
+// Exercise an American max option on a basket of correlated stocks.
+// 
+// References:
+//		Broadie, Mark, and Jerome Detemple. "The valuation of American options 
+//      on multiple assets." Mathematical Finance 7.3 (1997): 241-286.
+//
+// Author(s):
+// 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+// ////////////////////////////////////////////////////////////////////
+
+domain american_max_option {
+
+	types {
+		asset : object;
+	};
+
+	pvariables {
+		
+		/////////////////
+		// NON-FLUENTS
+		/////////////////
+		
+		// mean return of each asset per annum
+		MEAN(asset)        : { non-fluent, real, default = 0.05 };
+		
+		// variance of return of each asset per annum
+		VAR(asset)         : { non-fluent, real, default = 0.02 };
+		
+		// correlation of return of two assets
+		RHO(asset, asset)  : { non-fluent, real, default = 1.0 };
+		
+		// decision time step in years
+		DELTA              : { non-fluent, real, default = 0.004 };
+		
+		// maturity horizon in years
+		MATURITY           : { non-fluent, real, default = 0.24 };
+
+		// strike price
+		STRIKE             : { non-fluent, real, default = 1.0 };
+
+		/////////////////
+		// INTERM-FLUENTS
+		/////////////////
+		
+		// covariance of return of each asset per annum
+		cov(asset, asset)        : { interm-fluent, real };
+		cov-factor(asset, asset) : { interm-fluent, real };
+		
+		// standard Brownian
+		wiener(asset)            : { interm-fluent, real };
+
+		/////////////////
+		// STATE-FLUENTS
+		/////////////////
+		
+		// state is the current price of the stocks
+		price(asset) : { state-fluent, real, default = 1.0 };
+		
+		// time stamp is important because it can affect the decision
+		time         : { state-fluent, real, default = 0.0 };
+
+		// whether option has already been exercised
+		exercised    : { state-fluent, bool, default = false };
+
+		/////////////////
+		// ACTION-FLUENTS
+		/////////////////
+		
+		// time stamp is important because it can affect the decision
+		exercise     : { action-fluent, bool, default = false };
+	};
+ 
+	cpfs {
+	
+		// covariance matrix
+		cov(?a1, ?a2) = RHO(?a1, ?a2) * sqrt[VAR(?a1) * VAR(?a2)];
+		cov-factor(?a1, ?a2) = cholesky[row=?a2, col=?a1][cov(?a1, ?a2)];
+
+		// compute the new prices
+		wiener(?a) = Normal(0.0, 1.0);
+		price'(?a) = price(?a) * exp[
+		    (MEAN(?a) - 0.5 * VAR(?a)) * DELTA + 
+		    (sum_{?a1 : asset}[cov-factor(?a, ?a1) * wiener(?a1)]) * sqrt[DELTA]];
+	
+		// time moves forward
+		time' = time + DELTA;
+
+		// exercised
+		exercised' = exercised | exercise | (time >= MATURITY);
+	};
+	
+	// reward is the payoff on the option at the time of exercise
+	
+	reward = if (exercised' ^ ~exercised) 
+			then max[0.0, (max_{?a : asset}[price(a)]) - STRIKE] else 0.0;
+ 
+	state-invariants {
+		forall_{?a : asset} [VAR(?a) >= 0];
+		forall_{?a : asset, ?a2 : asset} [RHO(?a, ?a2) >= -1 ^ RHO(?a, ?a2) <= 1];
+		DELTA >= 0;
+		MATURITY >= 0;
+		STRIKE >= 0;
+		forall_{?a : asset} [price(?a) >= 0];
+		time >= 0;
+	};
+}

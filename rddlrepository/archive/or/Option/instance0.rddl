@@ -1,0 +1,23 @@
+non-fluents option_1_nf {
+
+	domain = american_max_option;
+
+	objects {
+		asset : {stock1};
+	};
+
+	non-fluents {
+		STRIKE = 1.008;
+	}
+ }
+ 
+instance option_1 {
+	
+	domain = american_max_option;
+	
+	non-fluents = option_1_nf;
+	
+	max-nondef-actions = pos-inf;
+	horizon = 62;
+	discount = 0.98;
+}
