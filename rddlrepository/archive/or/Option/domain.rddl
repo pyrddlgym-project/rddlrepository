@@ -23,10 +23,10 @@ domain american_max_option {
 		/////////////////
 		
 		// mean return of each asset per annum
-		MEAN(asset)        : { non-fluent, real, default = 0.05 };
+		MEAN(asset)        : { non-fluent, real, default = 0.25 };
 		
 		// variance of return of each asset per annum
-		VAR(asset)         : { non-fluent, real, default = 0.02 };
+		VAR(asset)         : { non-fluent, real, default = 0.15 };
 		
 		// correlation of return of two assets
 		RHO(asset, asset)  : { non-fluent, real, default = 1.0 };
@@ -38,7 +38,7 @@ domain american_max_option {
 		MATURITY           : { non-fluent, real, default = 0.24 };
 
 		// strike price
-		STRIKE             : { non-fluent, real, default = 1.0 };
+		STRIKE             : { non-fluent, real, default = 10.0 };
 
 		/////////////////
 		// INTERM-FLUENTS
@@ -56,7 +56,7 @@ domain american_max_option {
 		/////////////////
 		
 		// state is the current price of the stocks
-		price(asset) : { state-fluent, real, default = 1.0 };
+		price(asset) : { state-fluent, real, default = 10.0 };
 		
 		// time stamp is important because it can affect the decision
 		time         : { state-fluent, real, default = 0.0 };
@@ -94,7 +94,7 @@ domain american_max_option {
 	// reward is the payoff on the option at the time of exercise
 	
 	reward = if (exercised' ^ ~exercised) 
-			then max[0.0, (max_{?a : asset}[price(a)]) - STRIKE] else 0.0;
+			then max[0.0, (max_{?a : asset}[price(?a)]) - STRIKE] else 0.0;
  
 	state-invariants {
 		forall_{?a : asset} [VAR(?a) >= 0];
