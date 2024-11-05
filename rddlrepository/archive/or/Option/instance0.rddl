@@ -7,8 +7,8 @@ non-fluents option_1_nf {
 	};
 
 	non-fluents {
-		STRIKE = 1.008;
-	}
+		STRIKE = 11.0;
+	};
  }
  
 instance option_1 {
