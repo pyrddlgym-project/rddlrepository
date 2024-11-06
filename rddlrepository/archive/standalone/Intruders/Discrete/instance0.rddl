@@ -1,0 +1,78 @@
+non-fluents nf_Intruders {
+
+    domain = Intruders_discrete;
+    
+    objects {
+        x-pos : {x1, x2, x3, x4};
+        y-pos : {y1, y2, y3, y4};
+        intruder : {i1, i2, i3};
+        camera : {c1, c2};
+    };
+
+    non-fluents {
+        TARGET-X(@hold, x1, x1);
+        TARGET-X(@hold, x2, x2);
+        TARGET-X(@hold, x3, x3);
+        TARGET-X(@hold, x4, x4);
+        TARGET-Y(@hold, y1, y1);
+        TARGET-Y(@hold, y2, y2);
+        TARGET-Y(@hold, y3, y3);
+        TARGET-Y(@hold, y4, y4);
+        TARGET-X(@left, x1, x1);
+        TARGET-X(@left, x2, x1);
+        TARGET-X(@left, x3, x2);
+        TARGET-X(@left, x4, x3);
+        TARGET-Y(@left, y1, y1);
+        TARGET-Y(@left, y2, y2);
+        TARGET-Y(@left, y3, y3);
+        TARGET-Y(@left, y4, y4);
+        TARGET-X(@right, x1, x2);
+        TARGET-X(@right, x2, x3);
+        TARGET-X(@right, x3, x4);
+        TARGET-X(@right, x4, x4);
+        TARGET-Y(@right, y1, y1);
+        TARGET-Y(@right, y2, y2);
+        TARGET-Y(@right, y3, y3);
+        TARGET-Y(@right, y4, y4);
+        TARGET-X(@up, x1, x1);
+        TARGET-X(@up, x2, x2);
+        TARGET-X(@up, x3, x3);
+        TARGET-X(@up, x4, x4);
+        TARGET-Y(@up, y1, y1);
+        TARGET-Y(@up, y2, y1);
+        TARGET-Y(@up, y3, y2);
+        TARGET-Y(@up, y4, y3);
+        TARGET-X(@down, x1, x1);
+        TARGET-X(@down, x2, x2);
+        TARGET-X(@down, x3, x3);
+        TARGET-X(@down, x4, x4);
+        TARGET-Y(@down, y1, y2);
+        TARGET-Y(@down, y2, y3);
+        TARGET-Y(@down, y3, y4);
+        TARGET-Y(@down, y4, y4);
+
+        IS-DANGER-ZONE(x2, y3);
+        IS-DANGER-ZONE(x3, y3);
+        IS-DANGER-ZONE(x4, y3);
+    };
+}
+
+instance Intruders_inst {
+
+    domain = Intruders_discrete;
+
+    non-fluents = nf_Intruders;
+    
+    init-state {
+        intruder-at(i1, x1, y1);
+        intruder-at(i2, x3, y1);
+        intruder-at(i3, x4, y1);
+
+        camera-at(c1, x1, y4);
+        camera-at(c2, x4, y4);
+    };
+
+    max-nondef-actions = pos-inf;
+    horizon = 100;
+    discount = 1.0;
+}
