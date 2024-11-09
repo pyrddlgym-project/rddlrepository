@@ -1,0 +1,36 @@
+non-fluents nf_zombies_inst_3 {
+	domain = zombies;
+	objects {
+		name : {a, b, c, d, e};
+	};
+	non-fluents {
+	    X_MAX = 10;
+		Y_MAX = 1;
+	};
+}
+
+instance zombies_inst_3 {
+	domain = zombies;
+	non-fluents = nf_zombies_inst_3;
+	init-state {
+		zombie(a);
+        x_loc(a) = 1;
+        y_loc(a) = 0.5;
+
+        x_loc(b) = 2;
+        y_loc(b) = 0.5;
+
+        x_loc(c) = 2;
+        y_loc(c) = 0.5;
+
+        x_loc(d) = 2;
+        y_loc(d) = 0.5;
+
+        x_loc(e) = 2;
+        y_loc(e) = 0.5;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon  = 40;
+	discount = 1.0;
+}
