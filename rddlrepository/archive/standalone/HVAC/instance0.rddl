@@ -1,0 +1,34 @@
+non-fluents nf_hvac_vav_fix_3rooms {
+    domain = hvac_vav_fix;
+
+    objects{
+        space : { r1, r2, r3 }; //Three rooms, one hallway, and the outside world
+    };
+
+    non-fluents {
+        //Define rooms
+        IS_ROOM(r1) = true;
+        IS_ROOM(r2) = true;
+        IS_ROOM(r3) = true;
+        
+        //Define the adjacency
+        ADJ(r1, r2) = true;
+        ADJ(r1, r3) = true;
+        ADJ(r2, r3) = true;
+        
+        ADJ_OUTSIDE(r1) = true;
+        ADJ_OUTSIDE(r2) = true;
+        ADJ_HALL(r1) = true;
+        ADJ_HALL(r3) = true;
+    };
+}
+
+instance inst_hvac_vav_fix_3rooms {
+    domain = hvac_vav_fix;
+    non-fluents = nf_hvac_vav_fix_3rooms;
+    init-state{
+        temp(r1) = 10.0;
+    };
+    horizon = 40;
+    discount = 0.9;
+}
