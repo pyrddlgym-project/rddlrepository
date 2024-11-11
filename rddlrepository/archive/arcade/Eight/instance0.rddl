@@ -1,0 +1,42 @@
+non-fluents nf_eight {
+
+    domain = eight;
+
+    objects {
+        x-pos : { x1, x2 };
+        y-pos : { y1, y2 };
+        square : { s1, s2, s3 };
+    };
+
+    non-fluents {
+        NEIGHBOR(x1, y1, x2, y1);
+        NEIGHBOR(x1, y2, x2, y2);
+        NEIGHBOR(x2, y1, x1, y1);
+        NEIGHBOR(x2, y2, x1, y2);        
+        NEIGHBOR(x1, y1, x1, y2);
+        NEIGHBOR(x2, y1, x2, y2);
+        NEIGHBOR(x1, y2, x1, y1);
+        NEIGHBOR(x2, y2, x2, y1);
+
+        TARGET(s1, x1, y1);
+        TARGET(s2, x2, y1);
+        TARGET(s3, x1, y2);
+    };
+}
+
+instance eight_inst {
+
+    domain = eight;
+
+    non-fluents = nf_eight;
+    
+    init-state {
+        at(s1, x2, y1);
+        at(s2, x1, y2);
+        at(s3, x1, y1);
+    };
+
+    max-nondef-actions = 1;
+    horizon = 40;
+    discount = 1.0;
+}
