@@ -8,12 +8,15 @@ non-fluents nf_tsp {
     
     non-fluents {
 	ORIGIN(a);
+	COST(a, a) = 10;
 	COST(a, b) = 7;
 	COST(b, a) = 4;
+	COST(b, b) = 10;
 	COST(a, c) = 2;
 	COST(c, a) = 2;
 	COST(b, c) = 3;
 	COST(c, b) = 3;
+	COST(c, c) = 10;
     };
 }
 

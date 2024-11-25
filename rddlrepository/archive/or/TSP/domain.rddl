@@ -35,7 +35,7 @@ domain travelling_salesman {
     reward = -(sum_{?n: node, ?n2: node}[COST(?n, ?n2) * current(?n) * current'(?n2)]); 
 
 	termination {
-		(forall_{?n: node} visited(?n)) ^ (forall_{?n: node}[current(?n) <=> ORIGIN(?n)]);
+		forall_{?n: node}[visited(?n) ^ (ORIGIN(?n) => current(?n))];
 	};
 	
     state-invariants { 

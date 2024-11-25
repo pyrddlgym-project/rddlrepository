@@ -1,0 +1,90 @@
+domain zombies {
+
+	types {
+		name : object;
+	};
+
+	pvariables {
+
+		// Action costs and penalties
+		COST_MOVE : {non-fluent, real, default = -1 };
+        COST_ZOMBIFIED : {non-fluent, real, default = -100 };
+        COST_STUN : {non-fluent, real, default = -20 };
+        PENALTY_HUMAN_STUN : {non-fluent, real, default = -50 };
+
+		// Limits of the field [0, X_MAX] and [0, Y-MAX]
+		X_MAX : { non-fluent, real, default = 1.0 };
+		Y_MAX : { non-fluent, real, default = 1.0 };
+
+		// State fluents
+		x_loc(name) : { state-fluent, real, default = 0.0 };
+		y_loc(name) : { state-fluent, real, default = 0.0 };
+        stunned(name) : { state-fluent, bool, default = false };
+		dist_move(name) : { state-fluent, real, default = 0.0 }; // update move distance
+
+		zombie(name) : { state-fluent, bool, default = false }; // zombie or human
+        x_zombie_speed(name) : { state-fluent, real, default = 0.0 }; // zombie random movement, x axis
+        y_zombie_speed(name) : { state-fluent, real, default = 0.0 }; // zombie random movement, y axis
+
+		// Action fluents
+		x_move(name) : { action-fluent, real, default = 0.0 }; // move a human, x axis
+		y_move(name) : { action-fluent, real, default = 0.0 }; // move a human, y axis
+        stun(name) : { action-fluent, bool, default = false }; // prevent zombie from moving
+
+	};
+
+	cpfs {
+        x_zombie_speed'(?a) = Normal(0, 1);
+        y_zombie_speed'(?a) = Normal(0, 1);
+
+        // separate so we can graph the changes
+        stunned'(?a) = stun(?a);
+
+		x_loc'(?a) = 
+			if ( zombie(?a) ) then 
+                if (~stunned(?a)) then max[0, min[X_MAX, x_loc(?a) + x_zombie_speed(?a)]]
+                else x_loc(?a)
+			else
+                max[0, min[X_MAX, x_loc(?a) + x_move(?a)]];
+
+		y_loc'(?a) = 
+			if ( zombie(?a) ) then 
+                if (~stunned(?a)) then max[0, min[Y_MAX, y_loc(?a) + y_zombie_speed(?a)]]
+                else y_loc(?a)
+			else
+                max[0, min[Y_MAX, y_loc(?a) + y_move(?a)]];
+
+    // square of Euclidean distance
+    dist_move'(?a) = 
+        if ( zombie(?a) ) then 0
+        else x_move(?a) * x_move(?a) + y_move(?a) * y_move(?a);
+
+    // check infection
+    zombie'(?a) = 
+    	if ( zombie(?a) ) then true
+    	else if ( exists_{?b: name} ( 
+                zombie(?b) ^ 
+                (~stunned(?b)) ^
+                (x_loc(?b) - x_loc(?a) < 1) ^ 
+                (x_loc(?b) - x_loc(?a) > -1) ^ 
+                (y_loc(?b) - y_loc(?a) < 1) ^ 
+                (y_loc(?b) - y_loc(?a) > -1))
+            ) // check if there is a zombie nearby
+    		then ~(Bernoulli(1 / (1 + sum_{?b: name} ( 
+                zombie(?b) ^ 
+                (x_loc(?b) - x_loc(?a) < 1) ^ 
+                (x_loc(?b) - x_loc(?a) > -1) ^ 
+                (y_loc(?b) - y_loc(?a) < 1) ^ 
+                (y_loc(?b) - y_loc(?a) > -1))) 
+            )) // probability grows with the number of zombies
+    	else false;
+
+	};
+
+	reward =
+ 	    [sum_{?a: name} [ COST_MOVE * dist_move(?a) ]]
+      + [sum_{?a: name} [ zombie(?a) * COST_STUN * stun(?a) ]]  
+      + [sum_{?a: name} [ (~zombie(?a)) * PENALTY_HUMAN_STUN * stun(?a) ]] 
+      + [sum_{?a: name} [ COST_ZOMBIFIED * zombie(?a) ]];
+
+}

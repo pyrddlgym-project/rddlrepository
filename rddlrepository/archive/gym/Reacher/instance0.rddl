@@ -1,0 +1,40 @@
+non-fluents reacher_2_nf {
+    domain = reacher;
+
+    objects {
+    	segment : { s1, s2 };
+    };
+
+    non-fluents {
+    	TARGET-X = 0.7;
+    	TARGET-Y = 0.7;
+    	LENGTH(s1) = 0.6;
+    	LENGTH(s2) = 0.6;
+    	POS(s1) = 1;
+    	POS(s2) = 2;
+    	TARGET-SEGMENT(s2);
+    };
+}
+
+instance inst_reacher_2 {
+
+	domain = reacher;
+
+	non-fluents = reacher_2_nf;
+
+	init-state {
+		theta(s1) = 0.0;
+		theta(s2) = 0.0;
+		theta-dot(s1) = 0.0;
+		theta-dot(s2) = 0.0;
+		tip-x(s1) = 0.6;
+		tip-y(s1) = 0.0;
+		tip-x(s2) = 1.2;
+		tip-y(s2) = 0.0;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon  = 120;
+	discount = 1.0;
+}
+

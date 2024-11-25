@@ -1,0 +1,55 @@
+////////////////////////////////////////////////////////////////////
+// Squares are moved to adjacent empty cells until they are arranged
+// in specific target positions.
+// 
+// Author:
+//    Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+
+domain eight {
+        
+    types {
+		x-pos : object;
+		y-pos : object;
+		square : object;
+    };
+            
+    pvariables {
+		NEIGHBOR(x-pos, y-pos, x-pos, y-pos) : { non-fluent, bool, default = false };
+		TARGET(square, x-pos, y-pos) : { non-fluent, bool, default = false };
+
+		vacant(x-pos, y-pos) : { interm-fluent, bool };
+		empty-neighbor(x-pos, y-pos) : { interm-fluent, bool };
+
+		at(square, x-pos, y-pos) : { state-fluent, bool, default = false };
+
+		activate(x-pos, y-pos) : { action-fluent, bool, default = false };
+    };
+        
+    cpfs {
+
+    	vacant(?x, ?y) = forall_{?s : square}[~at(?s, ?x, ?y)];
+
+    	empty-neighbor(?x, ?y) = exists_{?x2 : x-pos, ?y2 : y-pos}[NEIGHBOR(?x2, ?y2, ?x, ?y) ^ vacant(?x2, ?y2)];
+
+		at'(?s, ?x, ?y) = (vacant(?x, ?y) ^ (exists_{?x2 : x-pos, ?y2 : y-pos}[
+								NEIGHBOR(?x2, ?y2, ?x, ?y) ^ at(?s, ?x2, ?y2) ^ activate(?x2, ?y2)])) 
+							| (at(?s, ?x, ?y) ^ ~(activate(?x, ?y) ^ empty-neighbor(?x, ?y)));
+    };
+
+    reward = (forall_{?s : square, ?x : x-pos, ?y : y-pos}[TARGET(?s, ?x, ?y) => at(?s, ?x, ?y)]);
+
+    state-invariants {
+
+    	// each square is located in a single cell
+    	forall_{?s : square}[(sum_{?x : x-pos, ?y : y-pos} at(?s, ?x, ?y)) == 1];
+
+    	// single vacant cell
+    	(sum_{?x : x-pos, ?y : y-pos}[forall_{?s : square}[~at(?s, ?x, ?y)]]) == 1;
+
+    	// single target per square
+    	forall_{?s : square}[(sum_{?x : x-pos, ?y : y-pos} TARGET(?s, ?x, ?y)) == 1];
+    };
+}
+

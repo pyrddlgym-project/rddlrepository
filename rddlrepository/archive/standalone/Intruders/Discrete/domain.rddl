@@ -1,0 +1,59 @@
+////////////////////////////////////////////////////////////////////
+// A discrete intruder detection problem on a grid. In this problem,
+// a set of cameras can be moved between cells. Intruders also
+// move randomly in the grid, and the goal is to place cameras at
+// certain locations in a danger zone to catch the intruders.
+//
+// References:
+//	  Original concept from rlpy by A. Geramifard and K. Ure.
+// 
+// Authors:
+//    Michael Gimelfarb
+//
+////////////////////////////////////////////////////////////////////
+domain Intruders_discrete {
+        
+    types {
+    	x-pos : object;		
+		y-pos : object;
+		intruder : object;
+		camera : object;
+		direction : { @left, @right, @up, @down, @hold };
+    };
+            
+    pvariables {
+
+    	// non-fluents
+    	TARGET-X(direction, x-pos, x-pos) : { non-fluent, bool, default = false };
+    	TARGET-Y(direction, y-pos, y-pos) : { non-fluent, bool, default = false };
+		IS-DANGER-ZONE(x-pos, y-pos) : { non-fluent, bool, default = false };
+
+		// state-fluents
+		move-intruder(intruder) : { interm-fluent, direction };
+		intruder-at(intruder, x-pos, y-pos) : { state-fluent, bool, default = false };
+		camera-at(camera, x-pos, y-pos) : { state-fluent, bool, default = false };
+
+		// action
+		move-camera(camera) : { action-fluent, direction, default = @hold };
+    };
+        
+    cpfs {
+		
+		// intruder moves randomly to an adjacent cell, allowing overlap
+		move-intruder(?i) = Discrete_{?d : direction}(0.2);
+		intruder-at'(?i, ?x, ?y) = exists_{?x0 : x-pos, ?y0 : y-pos, ?d : direction} [
+			intruder-at(?i, ?x0, ?y0) ^ (move-intruder(?i) == ?d) ^ TARGET-X(?d, ?x0, ?x) ^ TARGET-Y(?d, ?y0, ?y)];
+
+		// camera moves to an adjacent cell according to specified direction, allowing overlap
+		camera-at'(?c, ?x, ?y) = exists_{?x0 : x-pos, ?y0 : y-pos, ?d : direction} [
+			camera-at(?c, ?x0, ?y0) ^ (move-camera(?c) == ?d) ^ TARGET-X(?d, ?x0, ?x) ^ TARGET-Y(?d, ?y0, ?y)];
+    };
+                
+    reward = -(sum_{?i : intruder, ?x : x-pos, ?y : y-pos} [
+    	IS-DANGER-ZONE(?x, ?y) ^ intruder-at(?i, ?x, ?y) ^ (forall_{?c : camera}[~camera-at(?c, ?x, ?y)])]);
+
+    state-invariants {
+    	forall_{?i : intruder}[(sum_{?x : x-pos, ?y : y-pos}[intruder-at(?i, ?x, ?y)]) == 1];
+    	forall_{?c : camera}[(sum_{?x : x-pos, ?y : y-pos}[camera-at(?c, ?x, ?y)]) == 1];
+    };
+}
