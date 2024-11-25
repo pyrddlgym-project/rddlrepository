@@ -8,6 +8,9 @@ non-fluents nf_knapsack {
     };
 
     non-fluents {
+    	ID(i1) = 1;
+    	ID(i2) = 2;
+    	ID(i3) = 3;
 		ITEM-PROB(i1) = 0.2;
 		ITEM-PROB(i2) = 0.5;
 		ITEM-PROB(i3) = 0.3;

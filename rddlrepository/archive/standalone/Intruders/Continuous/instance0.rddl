@@ -1,0 +1,46 @@
+non-fluents nf_Intruders {
+
+    domain = Intruders_continuous;
+    
+    objects {
+        intruder : {i1, i2, i3, i4};
+        camera : {c1, c2, c3};
+        zone : {z1};
+    };
+
+    non-fluents {
+        DANGER-L(z1) = 0.2;
+        DANGER-R(z1) = 0.8;
+        DANGER-T(z1) = 0.7;
+        DANGER-B(z1) = 0.3;
+    };
+}
+
+instance Intruders_inst {
+
+    domain = Intruders_continuous;
+
+    non-fluents = nf_Intruders;
+    
+    init-state {
+        intruder-x(i1) = 0.15;
+        intruder-y(i1) = 0.2;
+        intruder-x(i2) = 0.15;
+        intruder-y(i2) = 0.8;
+        intruder-x(i3) = 0.85;
+        intruder-y(i3) = 0.2;
+        intruder-x(i4) = 0.85;
+        intruder-y(i4) = 0.8;
+
+        camera-x(c1) = 0.3;
+        camera-y(c1) = 0.3;
+        camera-x(c2) = 0.7;
+        camera-y(c2) = 0.7;
+        camera-x(c3) = 0.5;
+        camera-y(c3) = 0.5;
+    };
+
+    max-nondef-actions = pos-inf;
+    horizon = 200;
+    discount = 1.0;
+}

@@ -1,0 +1,58 @@
+////////////////////////////////////////////////////////////////////
+// The reacher domain involves controlling a set of connected joints
+// so that the tip of the outermost joint is as close to a target
+// position as possible. The first segment is connected to the origin.
+//
+// Author(s): 
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain reacher {
+
+    requirements = {
+        reward-deterministic
+    };
+
+    types {
+        segment: object;
+    };
+
+    pvariables {
+	
+		// non-fluents
+		TORQUE-MAX      : { non-fluent, real, default = 1.0 };       // maximum torque
+		TARGET-X        : { non-fluent, real, default = 0.0 };       // target x position
+		TARGET-Y        : { non-fluent, real, default = 0.0 };       // target y position
+		LENGTH(segment) : { non-fluent, real, default = 1.0 };       // length of the pendulum
+		POS(segment)    : { non-fluent, int, default = 0 };          // position of segment
+		TARGET-SEGMENT(segment) : { non-fluent, bool, default = false };      // segment tip used to calculate target position
+
+		// states
+		theta(segment)     : { state-fluent, real, default = 0.0 };      // segment angle
+		theta-dot(segment) : { state-fluent, real, default = 0.0 };      // segment angular velocity
+		tip-x(segment)     : { state-fluent, real, default = 0.0 };      // tip x position of the segment
+		tip-y(segment)     : { state-fluent, real, default = 0.0 };      // tip y position of the segment
+		
+       	// actions
+		torque(segment) : { action-fluent, real, default = 0.0 };    // torque on each segment
+    };
+
+    cpfs {
+
+    	// update angles
+		theta'(?s) = theta(?s) + theta-dot(?s);
+		theta-dot'(?s) = theta-dot(?s) + torque(?s);	
+
+		// update tip positions
+		tip-x'(?s) = sum_{?s2 : segment}[(POS(?s2) <= POS(?s)) * LENGTH(?s2) * cos[theta(?s2)]];
+		tip-y'(?s) = sum_{?s2 : segment}[(POS(?s2) <= POS(?s)) * LENGTH(?s2) * sin[theta(?s2)]];
+    };
+
+    reward = -(sum_{?s : segment}[TARGET-SEGMENT(?s) * (pow[tip-x'(?s) - TARGET-X, 2] + pow[tip-y'(?s) - TARGET-Y, 2])]);
+
+    action-preconditions {
+        forall_{?s : segment}[torque(?s) >= -TORQUE-MAX];
+		forall_{?s : segment}[torque(?s) <= TORQUE-MAX];
+    };
+
+}

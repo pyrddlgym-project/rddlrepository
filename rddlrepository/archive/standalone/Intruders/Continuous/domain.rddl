@@ -1,0 +1,97 @@
+////////////////////////////////////////////////////////////////////
+// A continuous intruder detection problem. In this problem,
+// a set of cameras can be pushed on a 2D space. Intruders also
+// move according to random walks, and the goal is to place cameras at
+// certain locations in a danger zone to catch the intruders.
+//
+// References:
+// 
+// Authors:
+//    Michael Gimelfarb
+//
+////////////////////////////////////////////////////////////////////
+domain Intruders_continuous {
+        
+    types {
+    	intruder : object;
+		camera : object;
+		zone : object;
+    };
+            
+    pvariables {
+
+    	// domain bounds
+    	DANGER-L(zone) : { non-fluent, real, default = 0.3 };  // left edge of zone
+		DANGER-R(zone) : { non-fluent, real, default = 0.7 };  // right edge of zone
+		DANGER-T(zone) : { non-fluent, real, default = 0.3 };  // top edge of zone
+		DANGER-B(zone) : { non-fluent, real, default = 0.7 };  // bottom edge of zone
+ 		DT : { non-fluent, real, default = 0.1 };		// how much time passes between epochs	
+
+ 		// properties of the camera systems
+		CAMERA-RADIUS(camera) : { non-fluent, real, default = 0.1 };
+		CAMERA-MASS(camera) : { non-fluent, real, default = 0.9 };
+		CAMERA-MAX-F(camera) : { non-fluent, real, default = 0.1 };
+
+        // properties of the intruders
+		INTRUDER-MASS(intruder) : { non-fluent, real, default = 1.0 };
+		INTRUDER-MAX-F(intruder) : { non-fluent, real, default = 0.1 };
+
+		// position and velocity of intruders
+		intruder-x(intruder) : { state-fluent, real, default = 0.0 };
+		intruder-y(intruder) : { state-fluent, real, default = 0.0 };
+		intruder-vx(intruder) : { state-fluent, real, default = 0.0 };
+		intruder-vy(intruder) : { state-fluent, real, default = 0.0 };
+		intruder-fx(intruder) : { interm-fluent, real };
+		intruder-fy(intruder) : { interm-fluent, real };
+		intruder-ax(intruder) : { interm-fluent, real };
+		intruder-ay(intruder) : { interm-fluent, real };
+
+		// position and velocity of the camera systems
+		camera-x(camera) : { state-fluent, real, default = 0.0 };
+		camera-y(camera) : { state-fluent, real, default = 0.0 };
+		camera-vx(camera) : { state-fluent, real, default = 0.0 };
+		camera-vy(camera) : { state-fluent, real, default = 0.0 };
+		camera-ax(camera) : { interm-fluent, real };
+		camera-ay(camera) : { interm-fluent, real };
+
+		// action
+		camera-fx(camera) : { action-fluent, real, default = 0.0 };
+		camera-fy(camera) : { action-fluent, real, default = 0.0 };
+    };
+        
+    cpfs {
+		
+		// update position of intruders
+		intruder-fx(?i) = INTRUDER-MAX-F(?i) * Uniform(-1.0, 1.0);
+		intruder-fy(?i) = INTRUDER-MAX-F(?i) * Uniform(-1.0, 1.0);
+		intruder-ax(?i) = intruder-fx(?i) / INTRUDER-MASS(?i);
+		intruder-ay(?i) = intruder-fy(?i) / INTRUDER-MASS(?i);
+		intruder-x'(?i) = intruder-x(?i) + intruder-vx(?i) * DT + intruder-ax(?i) * pow[DT, 2] / 2;
+		intruder-y'(?i) = intruder-y(?i) + intruder-vy(?i) * DT + intruder-ay(?i) * pow[DT, 2] / 2;
+		intruder-vx'(?i) = intruder-vx(?i) + intruder-ax(?i) * DT;
+		intruder-vy'(?i) = intruder-vy(?i) + intruder-ay(?i) * DT;
+
+		// update position of cameras
+		camera-ax(?c) = camera-fx(?c) / CAMERA-MASS(?c);
+		camera-ay(?c) = camera-fy(?c) / CAMERA-MASS(?c);
+		camera-x'(?c) = camera-x(?c) + camera-vx(?c) * DT + camera-ax(?c) * pow[DT, 2] / 2;
+		camera-y'(?c) = camera-y(?c) + camera-vy(?c) * DT + camera-ay(?c) * pow[DT, 2] / 2;
+		camera-vx'(?c) = camera-vx(?c) + camera-ax(?c) * DT;
+		camera-vy'(?c) = camera-vy(?c) + camera-ay(?c) * DT;
+    };
+                
+    reward = -(sum_{?i : intruder, ?z : zone}[
+    	(intruder-x(?i) >= DANGER-L(?z)) ^ (intruder-x(?i) <= DANGER-R(?z)) ^ 
+    	(intruder-y(?i) >= DANGER-B(?z)) ^ (intruder-y(?i) <= DANGER-T(?z)) ^ 
+    	(forall_{?c : camera}[
+    		pow[camera-x(?c) - intruder-x(?i), 2] + 
+    		pow[camera-y(?c) - intruder-y(?i), 2] > pow[CAMERA-RADIUS(?c), 2]])
+    ]);
+
+    action-preconditions {
+    	forall_{?c : camera}[camera-fx(?c) >= -CAMERA-MAX-F(?c)];
+    	forall_{?c : camera}[camera-fx(?c) <= CAMERA-MAX-F(?c)];
+    	forall_{?c : camera}[camera-fy(?c) >= -CAMERA-MAX-F(?c)];
+    	forall_{?c : camera}[camera-fy(?c) <= CAMERA-MAX-F(?c)];
+    };
+}

@@ -27,6 +27,8 @@ domain pendulum {
 		// states
 		theta      : { state-fluent, real, default = 3.14159265 };   // pole angle
 		theta-dot  : { state-fluent, real, default = 0.0 };       // pole angular velocity
+		x : { state-fluent, real, default = 0.0 };
+		y : { state-fluent, real, default = 0.0 };
 		
        	// actions
 		torque : { action-fluent, real, default = 0.0 };   // torque
@@ -37,9 +39,11 @@ domain pendulum {
 			theta-dot + (1.5 * GRAVITY / LENGTH * sin[theta] + 3.0 / (MASS * pow[LENGTH, 2]) * torque) * DT,
 			SPEED-MAX], -SPEED-MAX];
 		theta' = theta + theta-dot' * DT;
+		x' = cos[theta'];
+		y' = sin[theta'];
     };
 
-    reward = -(pow[fmod[theta + PI, 2 * PI] - PI, 2] + 0.001 * pow[theta-dot, 2] + 0.0001 * pow[torque, 2]);
+    reward = -(pow[fmod[theta + PI, 2 * PI] - PI, 2] + 0.1 * pow[theta-dot, 2] + 0.001 * pow[torque, 2]);
 	
     state-invariants {
 		theta-dot >= -SPEED-MAX;
