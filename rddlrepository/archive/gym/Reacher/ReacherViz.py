@@ -41,7 +41,7 @@ class ReacherVisualizer(BaseViz):
         # draw the segments
         x, y = 0, 0
         for x2, y2 in zip(xpos, ypos):
-            angle = np.atan2(y2 - y, x2 - x)
+            angle = np.arctan2(y2 - y, x2 - x)
             l = np.sqrt((x2 - x) ** 2 + (y2 - y) ** 2)
             rod_length = l * scale
             rod_width = 0.05 * scale
