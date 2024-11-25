@@ -18,7 +18,7 @@ domain mountain_car {
 
     	// physics constants
 		GRAVITY-MAG : { non-fluent, real, default = 0.0025 };       // force of gravity acting down
-		FORCE-MAG 	: { non-fluent, real, default = 0.001 };		// force applied to the side of the cart
+		FORCE-MAG 	: { non-fluent, real, default = 0.0015 };		// force applied to the side of the cart
 
 		// valley shape
 		DEPTH : { non-fluent, real, default = 0.45 };				// depth of the valley
@@ -27,7 +27,7 @@ domain mountain_car {
 		MIN-POS  : { non-fluent, real, default = -1.2 };        		// min position of cart
 		MAX-POS  : { non-fluent, real, default = 0.6 };			 	// max position of cart
 		MAX-VEL  : { non-fluent, real, default = 0.07 };				// max velocity of cart
-		GOAL-MIN : { non-fluent, real, default = 0.5 };				// desired x position of cart
+		GOAL-MIN : { non-fluent, real, default = 0.45 };				// desired x position of cart
 		VEL-MIN  : { non-fluent, real, default = 0.0 };				// desired velocity of the cart
 		
 		// states
@@ -41,15 +41,12 @@ domain mountain_car {
     cpfs {
 	
 		// update position and velocity of the cart
-		vel' = [max[min[vel + (action - 1) * FORCE-MAG + cos[3 * pos] * (-GRAVITY-MAG) * (3 * DEPTH), 
-					MAX-VEL], -MAX-VEL]];
+		vel' = max[min[vel + action * FORCE-MAG + cos[3 * pos] * (-GRAVITY-MAG) * (3 * DEPTH),  MAX-VEL], -MAX-VEL];
 		pos' = max[min[pos + vel', MAX-POS], MIN-POS];
     };
 
     // R = 1 as long as the pole is upright and the cart is not out of bounds
-    reward = if((pos' >= GOAL-MIN) ^ (vel' >= VEL-MIN))
-				then 1.0
-				else 0.0;
+    reward = (if((pos' >= GOAL-MIN) ^ (vel' >= VEL-MIN)) then 100.0 else 0.0) - 0.1 * pow[action, 2];
 	
 	termination {
 		(pos >= GOAL-MIN) ^ (vel >= VEL-MIN);
@@ -69,8 +66,8 @@ domain mountain_car {
     };
 
     action-preconditions {
-        action >= 0;
-        action <= 2;
+        action >= -1;
+        action <= 1;
     };
 
 }
