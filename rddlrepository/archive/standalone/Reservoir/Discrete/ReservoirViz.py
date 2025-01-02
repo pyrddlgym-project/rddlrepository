@@ -225,8 +225,9 @@ class ReservoirVisualizer(BaseViz):
         return fig, ax
 
     def fig2npa(self, fig):
-        data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
+        data = data[:, :, :3]
         return data
 
     def render(self, state) -> np.ndarray:
@@ -256,8 +257,9 @@ class ReservoirVisualizer(BaseViz):
 
     def convert2img(self, fig, ax):
         fig.canvas.draw()
-        data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
+        data = data[:, :, :3]
         img = Image.fromarray(data)
         self._data = data
         self._img = img
