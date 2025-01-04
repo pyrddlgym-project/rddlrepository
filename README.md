@@ -4,6 +4,7 @@
 [![PyPI Version](https://img.shields.io/pypi/v/rddlrepository.svg)](https://pypi.org/project/rddlrepository/)
 [![Documentation Status](https://readthedocs.org/projects/pyrddlgym/badge/?version=latest)](https://pyrddlgym.readthedocs.io/en/latest/rddlrepo.html)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Cumulative PyPI Downloads](https://img.shields.io/pypi/dm/rddlrepository)
 
 [Installation](#installation) | [Usage](#usage) | [Included Domains](#domains-included) 
 
