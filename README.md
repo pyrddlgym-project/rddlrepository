@@ -1,5 +1,10 @@
 # rddlrepository
 
+![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
+[![PyPI Version](https://img.shields.io/pypi/v/rddlrepository.svg)](https://pypi.org/project/rddlrepository/)
+[![Documentation Status](https://readthedocs.org/projects/pyrddlgym/badge/?version=latest)](https://pyrddlgym.readthedocs.io/en/latest/rddlrepo.html)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+
 [Installation](#installation) | [Usage](#usage) | [Included Domains](#domains-included) 
 
 Purpose:
