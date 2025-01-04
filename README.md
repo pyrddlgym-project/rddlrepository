@@ -1,29 +1,22 @@
 # rddlrepository
 
+[Installation](#installation) | [Usage](#usage) | [Included Domains](#domains-included) 
+
 Purpose:
 - contains a [growing collection of standalone problems, and archived problems from previous International Planning Competitions](https://github.com/pyrddlgym-project/rddlrepository/blob/main/domains.pdf)
 - domains are selected across a variety of disciplines, and showcase various aspects of the latest official RDDL syntax, to serve as starting points for learning the language and designing custom domains
 - contains custom visualizers for a subset of domains, to be used with the pyRDDLGym package
 - out-of-the-box compatibility with the [pyRDDLGym ecosystem](https://github.com/pyRDDLGym-project/pyRDDLGym)
 
-## Contents
-- [Installation](#installation)
-- [Usage](#usage)
-    - [Domains](#domains)
-    - [Instances](#instances)
-    - [Loading the Environment in pyRDDLGym](#loading-the-environment-in-pyrddlgym)
-    - [Registering your Own Problems](#registering-your-own-problems)
-- [Domains Included](#domains-included)
-  
 ## Installation
 
-We require Python 3.8+ and ``numpy``. To install via pip:
+To install via pip:
 
 ```shell
 pip install rddlrepository
 ```
 
-To install via github
+To install the pre-release version via git:
 
 ```shell
 git clone https://github.com/pyRDDLGym-project/rddlrepository.git
@@ -152,3 +145,6 @@ Domains are broken down into contexts, which includes some standalone domains, a
 * IPC 2014: [https://ssanner.github.io/IPPC_2014/](https://ssanner.github.io/IPPC_2014/)
 * IPC 2018: [https://ipc2018-probabilistic.bitbucket.io/](https://ipc2018-probabilistic.bitbucket.io/)
 * IPC 2023: [https://ipc2023.github.io](https://ipc2023.github.io).
+
+## License
+This software is distributed under the MIT License.
