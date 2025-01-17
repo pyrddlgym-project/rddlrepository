@@ -28,9 +28,10 @@ class PongVisualizer(BaseViz):
         self.ax.get_xaxis().set_ticks([])
         self.ax.get_yaxis().set_ticks([])
         
-    def convert2img(self, canvas):
-        data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
-        data = data.reshape(canvas.get_width_height()[::-1] + (3,))
+    def convert2img(self, fig):
+        data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
+        data = data[:, :, :3]
         return Image.fromarray(data)
 
     def render(self, state):
@@ -52,7 +53,7 @@ class PongVisualizer(BaseViz):
         self.ax.add_patch(paddle)
         
         self.fig.canvas.draw()        
-        img = self.convert2img(self.fig.canvas)
+        img = self.convert2img(self.fig)
         for ball in balls:
             ball.remove()
         del balls
