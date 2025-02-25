@@ -110,7 +110,7 @@ domain sokoban {
     // a small bonus proportional to change in number of stored boxes
     // a small penalty at each decision step to encourage faster solution
     reward = if(forall_{?x: x-pos, ?y: y-pos} STORAGE(?x, ?y) | ~box(?x, ?y)) then COMPLETION
-		else -sgn[(sum_{?x: x-pos, ?y: y-pos} (box'(?x, ?y) - box(?x, ?y)) * STORAGE(?x, ?y))] * BONUS-STORED - STEP-PENALTY;
+		else sgn[(sum_{?x: x-pos, ?y: y-pos} (box'(?x, ?y) - box(?x, ?y)) * STORAGE(?x, ?y))] * BONUS-STORED - STEP-PENALTY;
 
 
     state-invariants {
