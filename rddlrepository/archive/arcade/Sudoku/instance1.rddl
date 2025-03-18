@@ -27,7 +27,33 @@ non-fluents nf_sudoku_9x9 {
         SHARED_C(c7, c8);
         SHARED_C(c7, c9);
         SHARED_C(c8, c9);
-	    MAX_NUMBER = 9;
+
+        FIXED(r1, c2);
+        FIXED(r2, c1);
+        FIXED(r2, c2);
+        FIXED(r3, c3);
+        FIXED(r1, c6);
+        FIXED(r3, c5);
+        FIXED(r1, c7);
+        FIXED(r1, c9);
+        FIXED(r4, c2);
+        FIXED(r4, c3);
+        FIXED(r5, c1);
+        FIXED(r5, c4);
+        FIXED(r5, c6);
+        FIXED(r5, c9);
+        FIXED(r6, c7);
+        FIXED(r6, c8);
+        FIXED(r9, c1);
+        FIXED(r9, c3);
+        FIXED(r9, c4);
+        FIXED(r7, c5);
+        FIXED(r7, c7);
+        FIXED(r8, c8);
+        FIXED(r8, c9);
+        FIXED(r9, c8);
+
+	MAX_NUMBER = 9;
     };
 }
 
