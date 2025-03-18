@@ -9,8 +9,8 @@
 domain sudoku {
         
     types {
-		brow : object;
-		bcol : object;
+	brow : object;
+	bcol : object;
     };
             
     pvariables {
@@ -18,6 +18,8 @@ domain sudoku {
 		SHARED_R(brow, brow) : { non-fluent, bool, default = false };
 		SHARED_C(bcol, bcol) : { non-fluent, bool, default = false };
 		MAX_NUMBER : { non-fluent, int, default = 0 };
+                INVALID_PENALTY : { non-fluent, real, default = 0.1 };
+                FIXED(brow, bcol) : { non-fluent, bool, default = false };
 
 		board(brow, bcol) : { state-fluent, int, default = 0 };
 
@@ -25,27 +27,29 @@ domain sudoku {
     };
         
     cpfs {
-		board'(?r, ?c) = if ((fill(?r, ?c) > 0) ^ (board(?r, ?c) == 0))
+		board'(?r, ?c) = if ((fill(?r, ?c) > 0) ^ ~FIXED(?r, ?c))
 					then fill(?r, ?c) else board(?r, ?c);
     };
 
-    reward = if ((forall_{?r : brow, ?c : bcol}[board(?r, ?c) > 0])
+    reward = (if ((forall_{?r : brow, ?c : bcol}[board(?r, ?c) > 0])
 		^ (forall_{?r : brow, ?c : bcol, ?c2 : bcol}[
 			(?c ~= ?c2) => (board(?r, ?c) ~= board(?r, ?c2))])				
 		^ (forall_{?r : brow, ?r2 : brow, ?c : bcol}[
 			(?r ~= ?r2) => (board(?r, ?c) ~= board(?r2, ?c))])				
 		^ (forall_{?r : brow, ?r2 : brow, ?c : bcol, ?c2 : bcol}[
 			((?r ~= ?r2) ^ (?c ~= ?c2) ^ SHARED_R(?r, ?r2) ^ SHARED_C(?c, ?c2) 
-				=> (board(?r, ?c) ~= board(?r2, ?c2)))])) then 1.0 else 0.0;
+				=> (board(?r, ?c) ~= board(?r2, ?c2)))])) then 1.0 else 0.0) 
+             - INVALID_PENALTY * (sum_{?r : brow, ?c : bcol}[(fill(?r, ?c) > 0) ^ FIXED(?r, ?c)]);
 	
-    state-invariants {
-        forall_{?r : brow, ?c : bcol}[board(?r, ?c) >= 0];
+ 
+     state-invariants {
+                forall_{?r : brow, ?c : bcol}[board(?r, ?c) >= 0];
 		forall_{?r : brow, ?c : bcol}[board(?r, ?c) <= MAX_NUMBER];
-    };
+     };
 
-    action-preconditions {
+     action-preconditions {
 		forall_{?r : brow, ?c : bcol}[fill(?r, ?c) >= 0];
 		forall_{?r : brow, ?c : bcol}[fill(?r, ?c) <= MAX_NUMBER];
 		(sum_{?r : brow, ?c : bcol}[fill(?r, ?c) > 0]) <= 1; 
-    };
+     };
 }

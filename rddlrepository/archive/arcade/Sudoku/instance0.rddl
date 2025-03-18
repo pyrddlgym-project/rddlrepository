@@ -12,7 +12,12 @@ non-fluents nf_sudoku_4x4 {
         SHARED_R(r3, r4);
         SHARED_C(c1, c2);
         SHARED_C(c3, c4);
-	    MAX_NUMBER = 4;
+        FIXED(r1, c1);
+        FIXED(r2, c2);
+        FIXED(r2, c4);
+        FIXED(r3, c3);
+        FIXED(r4, c4);
+	MAX_NUMBER = 4;
     };
 }
 
@@ -34,3 +39,6 @@ instance sudoku_4x4_inst {
     horizon = 100;
     discount = 1.0;
 }
+
+
+
