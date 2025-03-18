@@ -1,0 +1,36 @@
+non-fluents nf_sudoku_4x4 {
+
+    domain = sudoku;
+
+    objects {
+        brow : { r1, r2, r3, r4 };
+        bcol : { c1, c2, c3, c4 };
+    };
+
+    non-fluents {
+        SHARED_R(r1, r2);
+        SHARED_R(r3, r4);
+        SHARED_C(c1, c2);
+        SHARED_C(c3, c4);
+	    MAX_NUMBER = 4;
+    };
+}
+
+instance sudoku_4x4_inst {
+
+    domain = sudoku;
+
+    non-fluents = nf_sudoku_4x4;
+    
+    init-state {
+        board(r1, c1) = 2;
+        board(r2, c2) = 1;
+        board(r2, c4) = 2;
+        board(r3, c3) = 3;
+        board(r4, c4) = 4;
+    };
+
+    max-nondef-actions = 1;
+    horizon = 100;
+    discount = 1.0;
+}

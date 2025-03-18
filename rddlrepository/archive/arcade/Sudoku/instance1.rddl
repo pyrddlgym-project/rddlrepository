@@ -1,0 +1,70 @@
+non-fluents nf_sudoku_9x9 {
+
+    domain = sudoku;
+
+    objects {
+        brow : { r1, r2, r3, r4, r5, r6, r7, r8, r9 };
+        bcol : { c1, c2, c3, c4, c5, c6, c7, c8, c9 };
+    };
+
+    non-fluents {
+        SHARED_R(r1, r2);
+        SHARED_R(r1, r3);
+        SHARED_R(r2, r3);
+        SHARED_R(r4, r5);
+        SHARED_R(r4, r6);
+        SHARED_R(r5, r6);
+        SHARED_R(r7, r8);
+        SHARED_R(r7, r9);
+        SHARED_R(r8, r9);
+
+        SHARED_C(c1, c2);
+        SHARED_C(c1, c3);
+        SHARED_C(c2, c3);        
+        SHARED_C(c4, c5);
+        SHARED_C(c4, c6);
+        SHARED_C(c5, c6);
+        SHARED_C(c7, c8);
+        SHARED_C(c7, c9);
+        SHARED_C(c8, c9);
+	    MAX_NUMBER = 9;
+    };
+}
+
+instance sudoku_9x9_inst {
+
+    domain = sudoku;
+
+    non-fluents = nf_sudoku_9x9;
+    
+    init-state {
+        board(r1, c2) = 1;
+        board(r2, c1) = 9;
+        board(r2, c2) = 5;
+        board(r3, c3) = 8;
+        board(r1, c6) = 8;
+        board(r3, c5) = 1;
+        board(r1, c7) = 4;
+        board(r1, c9) = 7;
+        board(r4, c2) = 8;
+        board(r4, c3) = 2;
+        board(r5, c1) = 7;
+        board(r5, c4) = 4;
+        board(r5, c6) = 6;
+        board(r5, c9) = 8;
+        board(r6, c7) = 6;
+        board(r6, c8) = 2;
+        board(r9, c1) = 5;
+        board(r9, c3) = 3;
+        board(r9, c4) = 2;
+        board(r7, c5) = 5;
+        board(r7, c7) = 7;
+        board(r8, c8) = 8;
+        board(r8, c9) = 2;
+        board(r9, c8) = 1;
+    };
+
+    max-nondef-actions = 1;
+    horizon = 100;
+    discount = 1.0;
+}

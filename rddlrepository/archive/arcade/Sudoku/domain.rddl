@@ -1,0 +1,51 @@
+////////////////////////////////////////////////////////////////////
+// The classic sudoku game formulated as a deterministic MDP.
+// 
+// Author:
+//    Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+
+domain sudoku {
+        
+    types {
+		brow : object;
+		bcol : object;
+    };
+            
+    pvariables {
+
+		SHARED_R(brow, brow) : { non-fluent, bool, default = false };
+		SHARED_C(bcol, bcol) : { non-fluent, bool, default = false };
+		MAX_NUMBER : { non-fluent, int, default = 0 };
+
+		board(brow, bcol) : { state-fluent, int, default = 0 };
+
+		fill(brow, bcol) : { action-fluent, int, default = 0 };
+    };
+        
+    cpfs {
+		board'(?r, ?c) = if ((fill(?r, ?c) > 0) ^ (board(?r, ?c) == 0))
+					then fill(?r, ?c) else board(?r, ?c);
+    };
+
+    reward = if ((forall_{?r : brow, ?c : bcol}[board(?r, ?c) > 0])
+		^ (forall_{?r : brow, ?c : bcol, ?c2 : bcol}[
+			(?c ~= ?c2) => (board(?r, ?c) ~= board(?r, ?c2))])				
+		^ (forall_{?r : brow, ?r2 : brow, ?c : bcol}[
+			(?r ~= ?r2) => (board(?r, ?c) ~= board(?r2, ?c))])				
+		^ (forall_{?r : brow, ?r2 : brow, ?c : bcol, ?c2 : bcol}[
+			((?r ~= ?r2) ^ (?c ~= ?c2) ^ SHARED_R(?r, ?r2) ^ SHARED_C(?c, ?c2) 
+				=> (board(?r, ?c) ~= board(?r2, ?c2)))])) then 1.0 else 0.0;
+	
+    state-invariants {
+        forall_{?r : brow, ?c : bcol}[board(?r, ?c) >= 0];
+		forall_{?r : brow, ?c : bcol}[board(?r, ?c) <= MAX_NUMBER];
+    };
+
+    action-preconditions {
+		forall_{?r : brow, ?c : bcol}[fill(?r, ?c) >= 0];
+		forall_{?r : brow, ?c : bcol}[fill(?r, ?c) <= MAX_NUMBER];
+		(sum_{?r : brow, ?c : bcol}[fill(?r, ?c) > 0]) <= 1; 
+    };
+}
