@@ -1,0 +1,73 @@
+////////////////////////////////////////////////////////////////////
+// The acrobot discrete control problem. The goal is to swing a
+// two-jointed arm attached at one end to a fixed point, so that it is moved to
+// an upright position.
+//
+// Author(s): 
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain acrobot {
+
+    requirements = {
+        reward-deterministic
+    };
+
+    pvariables {
+		PI : { non-fluent, real, default = 3.14159265 };
+		G : { non-fluent, real, default = 9.8 };
+		L1 : { non-fluent, real, default = 1.0 };
+		L2 : { non-fluent, real, default = 1.0 };
+		LC1 : { non-fluent, real, default = 0.5 };
+		LC2 : { non-fluent, real, default = 0.5 };
+		DELTA : { non-fluent, real, default = 0.05 };
+		M1 : { non-fluent, real, default = 1.0 };
+		M2 : { non-fluent, real, default = 1.0 };
+		I1 : { non-fluent, real, default = 1.0 };
+		I2 : { non-fluent, real, default = 1.0 };
+		
+		d1 : { interm-fluent, real };
+		d2 : { interm-fluent, real };
+		phi1 : { interm-fluent, real };
+		phi2 : { interm-fluent, real };
+
+		theta1 : { state-fluent, real, default = 0.0 };
+		theta2 : { state-fluent, real, default = 0.0 };
+		theta1v : { state-fluent, real, default = 0.0 };
+		theta2v : { state-fluent, real, default = 0.0 };		
+		theta1a : { state-fluent, real, default = 0.0 };
+		theta2a : { state-fluent, real, default = 0.0 };
+
+		torque : { action-fluent, int, default = 0 };
+    };
+
+    cpfs {
+		d1 = M1 * LC1 * LC1 + M2 * (L1 * L1 + LC2 * LC2 + 2 * L1 * LC2 * cos[theta2]) + I1 + I2;
+		d2 = M2 * (LC2 * LC2 + L1 * LC2 * cos[theta2]) + I2;
+		phi2 = M2 * LC2 * G * cos[theta1 + theta2 - PI / 2];
+		phi1 = -M2 * L1 * LC2 * theta2v * theta2v * sin[theta2] 
+				- 2 * M2 * L1 * LC2 * theta2v * theta1v * sin[theta2]
+				+ (M1 * LC1 + M2 * L1) * G * cos[theta1 - PI / 2] + phi2;
+		theta2a' = (torque + (d2 / d1) * phi1 - phi2) / (M2 * LC2 * LC2 + I2 - d2 * d2 / d1);
+		theta1a' = -(d2 * theta2a + phi1) / d1;
+		theta1' = theta1 + DELTA * theta1v;
+		theta2' = theta2 + DELTA * theta2v;
+		theta1v' = max[-4 * PI, min[4 * PI, theta1v + DELTA * theta1a]];
+		theta2v' = max[-9 * PI, min[9 * PI, theta1v + DELTA * theta2a]];
+    };
+
+    reward = if (-cos[theta1] - cos[theta2 + theta1] > 1.0) then 0.0 else -1.0;
+	
+	termination {
+		-cos[theta1] - cos[theta2 + theta1] > 1.0;
+	};
+
+    state-invariants {
+		theta1v >= -4 * PI ^ theta1v <= 4 * PI;
+		theta2v >= -9 * PI ^ theta2v <= 9 * PI;
+    };
+
+    action-preconditions {
+		torque >= -1 ^ torque <= 1;
+    };
+}
