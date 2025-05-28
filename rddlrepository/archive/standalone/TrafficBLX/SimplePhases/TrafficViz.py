@@ -394,7 +394,9 @@ class TrafficVisualizer(BaseViz):
     def build_states_layout(self, states, fig, ax):
 
         for d in self.intersections:
-            signal = self.signal_phases[states[id('signal', d)]]
+            state_signal = states[id('signal', d)]
+            state_signal = self._model.object_to_index.get(state_signal, state_signal)
+            signal = self.signal_phases[state_signal]
             for t in self.green_turns_by_intersection_phase[d][signal]:
                 ax.add_patch(copy(self.turn_patches[t]))
 
