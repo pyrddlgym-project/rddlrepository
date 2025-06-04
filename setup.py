@@ -19,7 +19,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
       name='rddlrepository',
-      version='2.0',
+      version='2.1',
       author="Ayal Taitler, Michael Gimelfarb, Scott Sanner",
       author_email="ataitler@gmail.com, mike.gimelfarb@mail.utoronto.ca, ssanner@mie.utoronto.ca",
       description="Home for all things RDDL",
@@ -31,7 +31,7 @@ setup(
       python_requires=">=3.8",
       include_package_data=True,
       classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
