@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2023 Ayal Taitler, Scott Sanner, Michael Gimelfarb
+Copyright (c) 2025 pyrddlgym-project
 
 Visualizers for CartPole and MountainCar are Copyright (c) 2016 OpenAI (https://openai.com)
 
