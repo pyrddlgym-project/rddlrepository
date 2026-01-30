@@ -1,0 +1,88 @@
+domain epidemic {
+
+  types {
+    group : object;   // age groups
+  };
+
+  pvariables {
+
+    // NON-FLUENTS: disease properties
+    contact_rate(group, group) : { non-fluent, real, default = 0.2 };          
+    incubation_rate(group) : { non-fluent, real, default = 0.2 };                
+    recover_rate(group) : { non-fluent, real, default = 0.1 };               
+    discharge_rate(group) : { non-fluent, real, default = 0.5 };
+    hosp_rate(group) : { non-fluent, real, default = 0.05 };
+    death_rate(group) : { non-fluent, real, default = 0.001 };
+    distancing_reduction_rate : { non-fluent, real, default = 0.7 };
+    school_shutdown_reduction_rate : { non-fluent, real, default = 0.2 };
+
+    // NON-FLUENTS: economic
+    hosp_capacity : { non-fluent, real, default = 0.05 };
+    vacc_cost : { non-fluent, real, default = 0.05 };
+    distancing_cost : { non-fluent, real, default = 0.5 };
+    school_cost : { non-fluent, real, default = 1.0 };
+    death_cost : { non-fluent, real, default = 1000.0 };
+    overload_cost : { non-fluent, real, default = 500.0 };
+
+    affect_by_school_shutdown(group) : { non-fluent, bool, default = false };
+
+    // INTERM FLUENTS
+    effective_contact(group, group) : { interm-fluent, real };
+    infect_rate(group) : { interm-fluent, real };
+
+    // STATE FLUENTS (fractions of population)
+    S(group) : { state-fluent, real, default = 0.99 };
+    E(group) : { state-fluent, real, default = 0.00 };
+    I(group) : { state-fluent, real, default = 0.01 };
+    R(group) : { state-fluent, real, default = 0.00 };
+    H(group) : { state-fluent, real, default = 0.00 };  // hospitalized
+    D(group) : { state-fluent, real, default = 0.00 };  // cumulative deaths
+
+    // ACTIONS
+    vaccinate(group) : { action-fluent, real, default = 0.0 };
+    distancing : { action-fluent, real, default = 0.0 };
+    close_schools : { action-fluent, bool, default = false };
+  };
+
+  cpfs {
+
+    // EFFECTIVE CONTACT RATE (reduced by distancing and school closure)
+    effective_contact(?g1, ?g2) =
+        contact_rate(?g1, ?g2)
+        * (1 - distancing_reduction_rate * distancing)
+        * (if ((affect_by_school_shutdown(?g1) | affect_by_school_shutdown(?g2)) ^ close_schools) 
+                   then school_shutdown_reduction_rate else 1.0);
+
+    // FORCE OF INFECTION for each group
+    infect_rate(?g) = (sum_{?h : group} effective_contact(?g, ?h) * I(?h));
+
+    // STATE TRANSITIONS
+    S'(?g) = max[0.0, (1.0 - infect_rate(?g)) * S(?g) - vaccinate(?g)];
+    E'(?g) = max[0.0, min[1.0, (1.0 - incubation_rate(?g)) * E(?g) + infect_rate(?g) * S(?g)]];
+    I'(?g) = max[0.0, min[1.0, (1.0 - recover_rate(?g)) * I(?g) + incubation_rate(?g) * E(?g)]];
+    R'(?g) = max[0.0, min[1.0, R(?g) + recover_rate(?g) * I(?g) + vaccinate(?g)]];
+    H'(?g) = max[0.0, min[1.0, (1.0 - discharge_rate(?g)) * H(?g) + hosp_rate(?g) * I(?g)]];
+    D'(?g) = min[1.0, D(?g) + death_rate(?g) * H(?g)];
+  };
+
+  reward =
+      - death_cost * (sum_{?g : group} D(?g))
+      - vacc_cost * (sum_{?g : group} vaccinate(?g))
+      - distancing_cost * distancing
+      - school_cost * close_schools
+      - overload_cost * max[0.0, (sum_{?g : group} H(?g)) - hosp_capacity];
+
+  state-invariants {
+    forall_{?g : group}(S(?g) >= 0 ^ S(?g) <= 1);
+    forall_{?g : group}(E(?g) >= 0 ^ E(?g) <= 1);
+    forall_{?g : group}(I(?g) >= 0 ^ I(?g) <= 1);
+    forall_{?g : group}(R(?g) >= 0 ^ R(?g) <= 1);
+    forall_{?g : group}(H(?g) >= 0 ^ H(?g) <= 1);
+    forall_{?g : group}(D(?g) >= 0 ^ D(?g) <= 1);
+  };
+
+  action-preconditions {
+    forall_{?g : group}(vaccinate(?g) >= 0 ^ vaccinate(?g) <= 0.05);
+    distancing >= 0 ^ distancing <= 1;
+  };
+}
