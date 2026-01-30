@@ -1,0 +1,52 @@
+non-fluents epidemic_nf_3 {
+
+	domain = epidemic;
+	
+	objects {
+        group : {children, adults, seniors};
+    };
+	
+	non-fluents {
+
+        // Contact matrix (daily contacts)
+        contact_rate(children, children) = 0.50;
+        contact_rate(children, adults)   = 0.25;
+        contact_rate(children, seniors)  = 0.10;
+        contact_rate(adults, children) = 0.10;
+        contact_rate(adults, adults)   = 0.30;
+        contact_rate(adults, seniors)  = 0.15;
+        contact_rate(seniors, children) = 0.05;
+        contact_rate(seniors, adults)   = 0.10;
+        contact_rate(seniors, seniors)  = 0.20;
+
+        hosp_rate(children) = 0.01;
+        hosp_rate(adults)   = 0.10;
+        hosp_rate(seniors)  = 0.25;
+
+        death_rate(children) = 0.01;
+        death_rate(adults)   = 0.03;
+        death_rate(seniors)  = 0.1;
+
+	    affect_by_school_shutdown(children);
+    };
+ }
+ 
+instance epidemic_inst_0 {
+
+	domain = epidemic; 
+
+ 	non-fluents = epidemic_nf_3;
+
+    init-state {
+        I(children) = 0.01;
+        I(adults)   = 0.005;
+        I(seniors)  = 0.002;
+    };
+
+	max-nondef-actions = pos-inf;
+
+	horizon = 120;
+	
+	discount = 1.0;
+} 
+
