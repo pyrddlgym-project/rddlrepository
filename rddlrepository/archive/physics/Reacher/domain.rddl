@@ -20,7 +20,7 @@ domain reacher {
     pvariables {
 	
 		// non-fluents
-		TORQUE-MAX      : { non-fluent, real, default = 1.0 };       // maximum torque
+		TORQUE-MAX      : { non-fluent, real, default = 0.1 };       // maximum torque
 		TARGET-X        : { non-fluent, real, default = 0.0 };       // target x position
 		TARGET-Y        : { non-fluent, real, default = 0.0 };       // target y position
 		LENGTH(segment) : { non-fluent, real, default = 1.0 };       // length of the pendulum
