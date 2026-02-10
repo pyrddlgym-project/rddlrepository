@@ -19,7 +19,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
       name='rddlrepository',
-      version='2.1',
+      version='2.2',
       author="Ayal Taitler, Michael Gimelfarb, Scott Sanner",
       author_email="ataitler@gmail.com, mike.gimelfarb@mail.utoronto.ca, ssanner@mie.utoronto.ca",
       description="rddlrepository: a repository of RDDL problem description files",
