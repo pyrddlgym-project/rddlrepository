@@ -75,15 +75,19 @@ class RDDLRepoManager:
                 f'Context <{context}> does not exist in the repository, '
                 f'must be one of:\n' + self._print_columns(valid_keys) + '\n')
         return copy.deepcopy(info)
-        
+    
+    def get_problems_as_string(self) -> str:
+        message = ''
+        for context in self.list_contexts():
+            message += context + ':'
+            valid_keys = self.list_problems_by_context(context)
+            message += '\n' +  self._print_columns(valid_keys, prefix='\t') + '\n'
+        return message
+
     def get_problem(self, name: str) -> ProblemInfo:
         info = self.archiver_dict.get(name, None)
         if info is None:
-            message = ''
-            for context in self.list_contexts():
-                message += context + ':'
-                valid_keys = self.list_problems_by_context(context)
-                message += '\n' +  self._print_columns(valid_keys, prefix='\t') + '\n'
+            message = self.get_problems_as_string()
             raise RDDLRepoDomainNotExistError(
                 f'Domain <{name}> does not exist in the repository, '
                 f'must be one of:\n{message}')        
