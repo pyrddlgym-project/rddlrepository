@@ -22,7 +22,7 @@ setup(
       version='2.1',
       author="Ayal Taitler, Michael Gimelfarb, Scott Sanner",
       author_email="ataitler@gmail.com, mike.gimelfarb@mail.utoronto.ca, ssanner@mie.utoronto.ca",
-      description="Home for all things RDDL",
+      description="rddlrepository: a repository of RDDL problem description files",
       #long_description=long_description,
       license="MIT License",
       url="https://github.com/pyrddlgym-project/rddlrepository",
@@ -30,6 +30,9 @@ setup(
       install_requires=['numpy'],
       python_requires=">=3.8",
       include_package_data=True,
+      entry_points={ 
+          'console_scripts': [ 'rddlrepo=rddlrepository.entry_point:main' ],
+      },
       classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
