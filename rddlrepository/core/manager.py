@@ -1,5 +1,6 @@
 import copy
 from datetime import datetime
+import difflib
 import os
 import importlib
 import csv
@@ -86,11 +87,15 @@ class RDDLRepoManager:
 
     def get_problem(self, name: str) -> ProblemInfo:
         info = self.archiver_dict.get(name, None)
+
+        # print nearest matches
         if info is None:
-            message = self.get_problems_as_string()
+            matches = difflib.get_close_matches(name, self.list_problems(), n=5, cutoff=0.3)
+            matches = '\n\t'.join(matches)
             raise RDDLRepoDomainNotExistError(
-                f'Domain <{name}> does not exist in the repository, '
-                f'must be one of:\n{message}')        
+                f'Domain <{name}> does not exist in the repository, did you mean:'
+                f'\n\t{matches}?\n')      
+          
         return ProblemInfo(info)            
     
     # ==========================================================================
