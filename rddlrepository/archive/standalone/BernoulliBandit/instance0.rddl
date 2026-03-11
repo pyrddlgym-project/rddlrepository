@@ -1,0 +1,26 @@
+non-fluents bernoull_bandit_6arms_nf {
+
+    domain = bernoulli_bandit;
+
+    objects {
+        arm : { arm1, arm2, arm3, arm4, arm5, arm6 };
+    };
+
+    non-fluents {
+        TRUE_THETA(arm1) = 0.1;
+        TRUE_THETA(arm2) = 0.2;
+        TRUE_THETA(arm3) = 0.8;
+	    TRUE_THETA(arm4) = 0.9;
+        TRUE_THETA(arm5) = 0.2;
+        TRUE_THETA(arm6) = 0.3;
+    };
+}
+
+instance bernoull_bandit_6arms {
+    
+    domain = bernoulli_bandit;
+ 
+    max-nondef-actions = 1;
+    horizon  = 30;
+    discount = 1.0;
+}

@@ -1,0 +1,46 @@
+domain bernoulli_bandit {
+
+    types {
+        arm : object;
+    };
+
+    pvariables {
+
+        // --- NON-FLUENTS: true underlying Bernoulli parameters ---
+        TRUE_THETA(arm) : { non-fluent, real, default = 0.5 };
+
+        // --- STATE FLUENTS: posterior parameters per arm ---
+        alpha(arm) : { state-fluent, real, default = 1.0 };
+        beta(arm)  : { state-fluent, real, default = 1.0 };
+
+        // --- INTERMEDIATE FLUENT: observed outcome at this step ---
+        outcome(arm) : { interm-fluent, bool };
+
+        // --- ACTION FLUENTS: choose exactly one arm per step ---
+        pull(arm) : { action-fluent, bool, default = false };
+    };
+   
+    cpfs {
+
+        // Only the pulled arm generates an outcome; others are false.
+        // Here we use the true_theta as the environment’s latent parameter.
+        outcome(?a) = if (pull(?a)) then Bernoulli(TRUE_THETA(?a)) else false;
+
+        // Conjugate update for Beta-Bernoulli:
+        // alpha' = alpha + outcome
+        // beta'  = beta  + (1 - outcome)
+        // For non-pulled arms, posterior stays the same.
+        alpha'(?a) = alpha(?a) + (if (pull(?a) ^ outcome(?a)) then 1.0 else 0.0);
+        beta'(?a) = beta(?a) + (if (pull(?a) ^ ~outcome(?a)) then 1.0 else 0.0);
+    };
+
+    // Reward is the observed outcome of the pulled arm.
+    // Since only one arm is pulled, this is equivalent to:
+    //   sum_a [ pull(a) * outcome(a) ]
+    reward = [sum_{?a: arm} (if (pull(?a) ^ outcome(?a)) then 1.0 else 0.0)];
+
+    action-preconditions {    
+	// exactly one arm must be pulled
+        (sum_{?a: arm} pull(?a)) == 1;
+    };
+}
