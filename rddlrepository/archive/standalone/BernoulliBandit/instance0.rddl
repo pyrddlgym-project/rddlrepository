@@ -21,6 +21,6 @@ instance bernoull_bandit_6arms {
     domain = bernoulli_bandit;
  
     max-nondef-actions = 1;
-    horizon  = 30;
+    horizon  = 200;
     discount = 1.0;
 }
