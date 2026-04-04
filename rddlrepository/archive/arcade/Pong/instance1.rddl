@@ -1,14 +1,19 @@
-non-fluents pong {
+non-fluents pong_det {
 	domain = pong_mdp;
 
 	objects { 
 		ball : {b1};
 	}; 
+
+	non-fluents {
+		NOISE-X(b1) = 0.0;
+		NOISE-Y(b1) = 0.0;	
+	};
  }
  
-instance pong_mdp_0 {
+instance pong_mdp_1 {
 	domain = pong_mdp; 
- 	non-fluents = pong;
+ 	non-fluents = pong_det;
 	max-nondef-actions = pos-inf;
 	horizon = 300;
 	discount = 1.0;
