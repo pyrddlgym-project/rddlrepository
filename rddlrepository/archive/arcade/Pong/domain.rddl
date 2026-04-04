@@ -34,6 +34,7 @@ domain pong_mdp {
 		
 		new-x(ball)           : { interm-fluent, real };
 		new-y(ball)           : { interm-fluent, real };
+		ball-crossing-y-raw(ball) : { interm-fluent, real };
 		ball-crossing-y(ball)  : { interm-fluent, real };		
 		contact(ball)       	 : { interm-fluent, bool };
 		
@@ -47,7 +48,14 @@ domain pong_mdp {
 		new-y(?b) = ball-y(?b) + vel-y(?b);
 		
 		// check if the ball contacts the paddle
-		ball-crossing-y(?b) = ball-y(?b) + (vel-y(?b) * sgn[vel-x(?b)] / max[abs[vel-x(?b)], 0.03]) * (1.0 - ball-x(?b)) - paddle-y;
+		ball-crossing-y-raw(?b) = ball-y(?b) + (vel-y(?b) * sgn[vel-x(?b)] / max[abs[vel-x(?b)], 0.03]) * (1.0 - ball-x(?b));
+		ball-crossing-y(?b) = 
+		    if (ball-crossing-y-raw(?b) < 0.0)
+                then -ball-crossing-y-raw(?b) - paddle-y
+            else if (ball-crossing-y-raw(?b) > 1.0)
+                then 2.0 - ball-crossing-y-raw(?b) - paddle-y
+            else ball-crossing-y-raw(?b) - paddle-y;
+
 		contact(?b) = (ball-x(?b) < 1.0) ^ (new-x(?b) >= 1.0) 
 						^ (ball-crossing-y(?b) >= 0.0) 
 						^ (ball-crossing-y(?b) <= PADDLE-H);
