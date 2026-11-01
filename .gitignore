@@ -13,3 +13,6 @@
 # macOS
 .DS_Store
 
+
+# generated at first use, contains machine-specific paths
+rddlrepository/core/manifest.csv

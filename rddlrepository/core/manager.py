@@ -138,7 +138,7 @@ class RDDLRepoManager:
                     
                 instances = [fname[8:-5] for fname in files
                              if fname.startswith('instance') and fname.endswith('.rddl')]
-                instances.sort(key=lambda x: int(x))
+                instances.sort(key=lambda x: (not x.isdigit(), int(x) if x.isdigit() else x))
                 context = mymodule.info['context']
                 if context == '':
                     context = 'standalone'
@@ -256,7 +256,6 @@ class RDDLRepoManager:
             self.archiver_dict = {}
             self.archive_by_context = {}
             self._build_repo()
-            self._load_repo()
         
         print(f'Domain <{name}> was successfully registered in rddlrepository '
               f'with context <{context}>.')
