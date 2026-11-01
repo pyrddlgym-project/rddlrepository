@@ -3,6 +3,7 @@ import sys
 import importlib.util
 from typing import Any, Dict, List
 
+from . import manager
 from .error import (
     RDDLRepoInstanceNotExistError,
     RDDLRepoInstanceDuplicationError,
@@ -81,7 +82,9 @@ class ProblemInfo:
         
         with open(path, 'w') as instance_file:
             instance_file.write(rddl)               
-        self.instances.append(num)
+        self.instances.append(str(num))
+        
+        manager.RDDLRepoManager(rebuild=True)
         
         print(f'Instance <{num}> was successfully registered in rddlrepository '
               f'for domain <{self.name}>.')
