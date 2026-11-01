@@ -13,6 +13,11 @@ import math
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
+
+def cross2(a, b):
+    '''z-component of the cross product of 2D vectors (np.cross dropped 2D support in NumPy 2).'''
+    return a[0] * b[1] - a[1] * b[0]
+
 ROAD_PAVED_WIDTH = 12  # The width of the paved part of the road in m
 ROAD_HALF_MEDIAN_WIDTH = 1  # The width of the median in-between links in m
 ROAD_WIDTH = ROAD_PAVED_WIDTH + ROAD_HALF_MEDIAN_WIDTH  # Combined width of a single link (paved + 0.5*median)
@@ -166,9 +171,9 @@ class TrafficVisualizer(BaseViz):
         # Turns are indexed by upstream, downstream link pairs
         # Additionally, order turns from each link left-to-right
         def signed_angle(v0, v1):
-            if np.cross(v0, v1) == 0:
+            if cross2(v0, v1) == 0:
                 return -math.pi if np.dot(v0, v1) < 0 else 0
-            return np.sign(np.cross(v0, v1)) * np.arccos(np.dot(v0, v1))
+            return np.sign(cross2(v0, v1)) * np.arccos(np.dot(v0, v1))
 
         self.turn_ids = []
         for L in self.linkdata:
@@ -221,12 +226,12 @@ class TrafficVisualizer(BaseViz):
             # Find the middle control point of a quadratic Bezier curve,
             # given the first and third control points ctrl0 and ctrl2,
             # and the tangent vectors d0 at ctrl0 and d2 at ctrl2
-            c = np.cross(dir0, dir2)
+            c = cross2(dir0, dir2)
             if c == 0:
                 # Exceptional case when the tangent vectors are colinear
                 ctrl1 = (ctrl0 + ctrl2) / 2
             else:
-                ctrl1 = ctrl2 + (np.cross(dir0, ctrl0 - ctrl2) / c) * dir2
+                ctrl1 = ctrl2 + (cross2(dir0, ctrl0 - ctrl2) / c) * dir2
             return ctrl1
 
         # Construct intersection objects and correct link lengths
@@ -246,14 +251,14 @@ class TrafficVisualizer(BaseViz):
                 vu, vd = self.linkdata[L]['from'], self.linkdata[L]['to']
                 dir0, n0 = self.linkdata[L]['dir'], self.linkdata[L]['nrm']
                 dir1, n1 = self.linkdata[M]['dir'], self.linkdata[M]['nrm']
-                c = np.cross(dir0, dir1)
+                c = cross2(dir0, dir1)
                 if c == 0:
                     # Exceptional case when the right-turn direction happens to be straight ahead
                     alpha_in[L] = 0
                     alpha_out[M] = 0
                 else:
-                    alpha_in[L] = ROAD_WIDTH * np.cross(dir1, n1 - n0) / np.cross(dir0, dir1)
-                    alpha_out[M] = ROAD_WIDTH * np.cross(dir0, n1 - n0) / np.cross(dir0, dir1)
+                    alpha_in[L] = ROAD_WIDTH * cross2(dir1, n1 - n0) / cross2(dir0, dir1)
+                    alpha_out[M] = ROAD_WIDTH * cross2(dir0, n1 - n0) / cross2(dir0, dir1)
 
             # Construct the intersection contour
             L0 = self.intersections[d]['inc_links'][0]
