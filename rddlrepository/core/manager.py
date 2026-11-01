@@ -88,6 +88,15 @@ class RDDLRepoManager:
     def get_problem(self, name: str) -> ProblemInfo:
         info = self.archiver_dict.get(name, None)
 
+        # fall back to case-insensitive lookup
+        if info is None:
+            matches = [key for key in self.archiver_dict if key.lower() == name.lower()]
+            if len(matches) > 1:
+                raise RDDLRepoDomainNotExistError(
+                    f'Domain <{name}> matches multiple domains when ignoring case.')
+            elif len(matches) == 1:
+                info = self.archiver_dict[matches[0]]
+
         # print nearest matches
         if info is None:
             matches = difflib.get_close_matches(name, self.list_problems(), n=5, cutoff=0.3)
