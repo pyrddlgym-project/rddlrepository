@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rddlrepository"
+version = "2.2"
+description = "rddlrepository: a repository of RDDL problem description files"
+license = "MIT"
+license-files = ["LICENSE.MD"]
+requires-python = ">=3.9"
+authors = [
+    {name = "Michael Gimelfarb", email = "mgimelfarb@yahoo.ca"},
+    {name = "Ayal Taitler", email = "ataitler@gmail.com"},
+    {name = "Scott Sanner", email = "ssanner@mie.utoronto.ca"},
+]
+dependencies = ["numpy"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/pyrddlgym-project/rddlrepository"
+
+[project.scripts]
+rddlrepo = "rddlrepository.entry_point:main"
+
+[tool.setuptools.packages.find]
+include = ["rddlrepository*"]
+
+# ship every RDDL domain/instance file with the package
+[tool.setuptools.package-data]
+"*" = ["*.rddl"]
