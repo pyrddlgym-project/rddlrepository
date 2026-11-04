@@ -64,7 +64,10 @@ domain tetris {
 		stb-x(shape-x, board-x) : { interm-fluent, bool };
 		stb-y(board-y, shape-y, board-y) : { interm-fluent, bool };
 		
+		max-width : { interm-fluent, int };
+		shape-width : { interm-fluent, int };
 		max-height : { interm-fluent, int };
+		blocked-height : { interm-fluent, int };
 		valid(board-y) : { interm-fluent, bool };
 		shape-final-y(board-y) : { interm-fluent, bool };
 		
@@ -73,7 +76,7 @@ domain tetris {
 		cleared-below(board-y) : { interm-fluent, int };
 		total-cleared : { interm-fluent, int };
 		new-pos(board-y, board-y) : { interm-fluent, bool };
-		shape-rand(shape-type) : { interm-fluent, real };
+		next-shape : { interm-fluent, shape-type };
 
 		///////////////////
 		// STATE-FLUENTS
@@ -98,12 +101,16 @@ domain tetris {
 		
 		shape(?i, ?j) = exists_{?s: shape-type}[current-shape-type(?s) ^ SHAPES(?s, rotate, ?i, ?j)];
 		
-		stb-x(?i, ?x2) = exists_{?x: board-x}[place(?x) ^ ((WIDTH(?x) + OFFSET-X(?i)) == WIDTH(?x2))];
+		// a shape placed too close to the right wall stops at the wall
+		max-width = max_{?x: board-x} WIDTH(?x);
+		shape-width = max_{?i: shape-x, ?j: shape-y}[if (shape(?i, ?j)) then 1 + OFFSET-X(?i) else 0];
+		stb-x(?i, ?x2) = exists_{?x: board-x}[place(?x) ^ ((min[WIDTH(?x), 1 + max-width - shape-width] + OFFSET-X(?i)) == WIDTH(?x2))];
 		stb-y(?y, ?j, ?y2) = (HEIGHT(?y) + OFFSET-Y(?j)) == HEIGHT(?y2);
 		
 		//////////////////////////////////////////////////////////////////////////
 		// determine the valid vertical placements of the shape
-		// determine the final shape vertical position
+		// determine the final shape vertical position: the shape falls from above
+		// the board and stops just above the highest position where it collides
 		//////////////////////////////////////////////////////////////////////////
 		
 		max-height = max_{?y: board-y} HEIGHT(?y);
@@ -112,8 +119,9 @@ domain tetris {
 			^ (exists_{?x2: board-x, ?y2: board-y}[
 				stb-x(?i, ?x2) ^ stb-y(?y, ?j, ?y2) ^ filled(?x2, ?y2)]))];
 		
-		shape-final-y(?y) = valid(?y) ^ (HEIGHT(?y) == (min_{?y2: board-y}[
-			if(valid(?y2)) then HEIGHT(?y2) else 1 + max-height]));
+		blocked-height = max_{?y: board-y}[if (valid(?y)) then 0 else HEIGHT(?y)];
+
+		shape-final-y(?y) = HEIGHT(?y) == 1 + blocked-height;
 		
 		//////////////////////////////////////////////////////////////////////////
 		// determine the board configuration after the shape is fixed in place
@@ -144,16 +152,17 @@ domain tetris {
 		// termination of the game
 		//////////////////////////////////////////////////////////////////////////
 		
-		shape-rand(?s) = Bernoulli(PROB-SHAPE(?s) / (sum_{?s2: shape-type} PROB-SHAPE(?s2)));
-		current-shape-type'(?s) = (?s == (argmax_{?s2: shape-type} shape-rand(?s2)));
+		next-shape = Discrete_{?s: shape-type}[PROB-SHAPE(?s) / (sum_{?s2: shape-type} PROB-SHAPE(?s2))];
+		current-shape-type'(?s) = (?s == next-shape);
 									
-		game-over' = game-over | ~(exists_{?y: board-y} valid(?y)) 
+		game-over' = game-over | (shape-width > max-width)
+					| (exists_{?i: shape-x, ?j: shape-y}[shape(?i, ?j) ^ ((1 + blocked-height + OFFSET-Y(?j)) > max-height)]) 
 					| (exists_{?x: board-x, ?y: board-y}[
 						(HEIGHT(?y) == max-height) ^ filled(?x, ?y)]);
     };
     
 	// award points based on the number of rows cleared
-    reward = if (game-over) then -GAME-OVER-SCORE 
+    reward = if (game-over') then GAME-OVER-SCORE 
 				else if(total-cleared == 0) then 0
 				else if(total-cleared == 1) then CLEARED-1
 				else if(total-cleared == 2) then CLEARED-2

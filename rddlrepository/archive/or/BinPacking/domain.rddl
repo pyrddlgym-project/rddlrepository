@@ -32,11 +32,11 @@ domain bin_packing {
     cpfs {
 	
 		// if a bin can hold the item, keep placement
-		// if it cannot, then the placement is into the bin with the least total size
+		// if it cannot, then the placement is into the bin with the most free space
 		real-place(?b) = if(exists_{?b2: bin}[place(?b2) ^ (total-size(?b2) + current-size <= CAPACITY(?b2))]) then
 					(place(?b) ^ (total-size(?b) + current-size <= CAPACITY(?b)))
 				 else
-					 total-size(?b) == (min_{?b2: bin} total-size(?b2));
+					 ?b == (argmin_{?b2: bin} [total-size(?b2) - CAPACITY(?b2)]);
 		
 		// place the new item into the bin
 		total-size'(?b) = if(real-place(?b)) then (total-size(?b) + current-size) else total-size(?b);

@@ -64,10 +64,10 @@ cpfs {
 
     // position changes for each time step
     pos-x'(?a) = if (CONTROLLABLE(?a))
-                 then pos-x(?a) + SCALE-FACTOR * vel(?a) * cos[psi(?a)]
+                 then pos-x(?a) + SCALE-FACTOR * vel(?a) * cos[psi(?a)] * cos[theta(?a)]
                  else pos-x(?a) + Normal(0.0, RANDOM-WALK-COEFF);
     pos-y'(?a) = if (CONTROLLABLE(?a))
-                 then pos-y(?a) + SCALE-FACTOR * vel(?a) * sin[psi(?a)]
+                 then pos-y(?a) + SCALE-FACTOR * vel(?a) * sin[psi(?a)] * cos[theta(?a)]
                  else pos-y(?a) + Normal(0.0, RANDOM-WALK-COEFF);
     pos-z'(?a) = if (CONTROLLABLE(?a))
                  then pos-z(?a) + SCALE-FACTOR * vel(?a) * sin[theta(?a)]

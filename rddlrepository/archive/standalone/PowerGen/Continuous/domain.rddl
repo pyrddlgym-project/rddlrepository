@@ -76,7 +76,7 @@ domain power_gen {
 	reward = [-(sum_{?p : plant} curProd(?p) * COST-PER-UNIT(?p))]
 		     + (fulfilledDemand * INCOME-PER-UNIT)
 		     - (if (demand > fulfilledDemand) then UNFULFILLED-DEMAND-PENALTY else 0.0 )
-		     + (sum_{?p : plant} abs[ curProd(?p) - prevProd(?p) ] * PROD-CHANGE-PENALTY(?p) );
+		     - (sum_{?p : plant} abs[ curProd(?p) - prevProd(?p) ] * PROD-CHANGE-PENALTY(?p) );
 	
 	action-preconditions {
 

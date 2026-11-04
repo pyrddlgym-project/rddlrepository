@@ -53,7 +53,7 @@ domain reservoir_control_dis {
         released_water(?r) = - release(?r) * rlevel(?r) / RELEASE_BETA(?r) * ( exp[- RELEASE_BETA(?r)] - 1);
 
         // amount of water spilled over the rim
-        overflow(?r) = max[0, rlevel(?r) - released_water(?r) - TOP_RES(?r)];
+        overflow(?r) = max[0, rlevel(?r) + inflow(?r) + rain(?r) - evaporated(?r) - released_water(?r) - TOP_RES(?r)];
 
         // the fraction of outflow to each of the forward connected tanks
         individual_outflow(?r) = released_water(?r)* 1 / ((sum_{?out: reservoir} [RES_CONNECT(?r,?out)]) + CONNECTED_TO_SEA(?r));
@@ -65,13 +65,12 @@ domain reservoir_control_dis {
         rlevel'(?r) = min[TOP_RES(?r), max[0, rlevel(?r) + inflow(?r) + rain(?r) - evaporated(?r) - overflow(?r) - released_water(?r)]];
     };
 
-    reward = (sum_{?r: reservoir} [if ((rlevel'(?r) >= MIN_LEVEL(?r)) ^ (rlevel'(?r) <= MAX_LEVEL(?r)))
+    reward = (sum_{?r: reservoir} [(if ((rlevel'(?r) >= MIN_LEVEL(?r)) ^ (rlevel'(?r) <= MAX_LEVEL(?r)))
                                    then 0
                                    else if (rlevel'(?r) <= MIN_LEVEL(?r))
                                         then LOW_COST(?r) * (MIN_LEVEL(?r) - rlevel'(?r))
-                                        else if ((rlevel'(?r) > MAX_LEVEL(?r)) ^ (rlevel'(?r) <= TOP_RES(?r)))
-                                             then HIGH_COST(?r) * (rlevel'(?r) - MAX_LEVEL(?r))
-                                             else HIGH_COST(?r) * (rlevel'(?r) - MAX_LEVEL(?r)) + OVERFLOW_COST(?r) * overflow(?r)
+                                        else HIGH_COST(?r) * (rlevel'(?r) - MAX_LEVEL(?r)))
+                                   + OVERFLOW_COST(?r) * overflow(?r)
                                    ]);
 
 	state-invariants {
