@@ -29,6 +29,7 @@ domain epidemic {
     // INTERM FLUENTS
     effective_contact(group, group) : { interm-fluent, real };
     infect_rate(group) : { interm-fluent, real };
+    vaccinated(group) : { interm-fluent, real };
 
     // STATE FLUENTS (fractions of population)
     S(group) : { state-fluent, real, default = 0.99 };
@@ -54,25 +55,30 @@ domain epidemic {
                    then school_shutdown_reduction_rate else 1.0);
 
     // FORCE OF INFECTION for each group
-    infect_rate(?g) = (sum_{?h : group} effective_contact(?g, ?h) * I(?h));
+    infect_rate(?g) = min[1.0, (sum_{?h : group} effective_contact(?g, ?h) * I(?h))];
+
+    // VACCINATION only reaches those still susceptible after infection
+    vaccinated(?g) = min[vaccinate(?g), (1.0 - infect_rate(?g)) * S(?g)];
 
     // STATE TRANSITIONS
-    S'(?g) = max[0.0, (1.0 - infect_rate(?g)) * S(?g) - vaccinate(?g)];
+    S'(?g) = max[0.0, (1.0 - infect_rate(?g)) * S(?g) - vaccinated(?g)];
     E'(?g) = max[0.0, min[1.0, (1.0 - incubation_rate(?g)) * E(?g) + infect_rate(?g) * S(?g)]];
-    I'(?g) = max[0.0, min[1.0, (1.0 - recover_rate(?g)) * I(?g) + incubation_rate(?g) * E(?g)]];
-    R'(?g) = max[0.0, min[1.0, R(?g) + recover_rate(?g) * I(?g) + vaccinate(?g)]];
-    H'(?g) = max[0.0, min[1.0, (1.0 - discharge_rate(?g)) * H(?g) + hosp_rate(?g) * I(?g)]];
+    I'(?g) = max[0.0, min[1.0, (1.0 - recover_rate(?g) - hosp_rate(?g)) * I(?g) + incubation_rate(?g) * E(?g)]];
+    R'(?g) = max[0.0, min[1.0, R(?g) + recover_rate(?g) * I(?g) + discharge_rate(?g) * H(?g) + vaccinated(?g)]];
+    H'(?g) = max[0.0, min[1.0, (1.0 - discharge_rate(?g) - death_rate(?g)) * H(?g) + hosp_rate(?g) * I(?g)]];
     D'(?g) = min[1.0, D(?g) + death_rate(?g) * H(?g)];
   };
 
   reward =
-      - death_cost * (sum_{?g : group} D(?g))
+      - death_cost * (sum_{?g : group} (D'(?g) - D(?g)))
       - vacc_cost * (sum_{?g : group} vaccinate(?g))
       - distancing_cost * distancing
       - school_cost * close_schools
       - overload_cost * max[0.0, (sum_{?g : group} H(?g)) - hosp_capacity];
 
   state-invariants {
+    // outflows cannot exceed a compartment
+    forall_{?g : group}(incubation_rate(?g) <= 1 ^ recover_rate(?g) + hosp_rate(?g) <= 1 ^ discharge_rate(?g) + death_rate(?g) <= 1);
     forall_{?g : group}(S(?g) >= 0 ^ S(?g) <= 1);
     forall_{?g : group}(E(?g) >= 0 ^ E(?g) <= 1);
     forall_{?g : group}(I(?g) >= 0 ^ I(?g) <= 1);

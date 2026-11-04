@@ -1,10 +1,9 @@
 // ////////////////////////////////////////////////////////////////////
 // The travelling salesman problem involves finding a least cost route
-// that visits each city exactly once. In this slightly relaxed version
-// the reward includes a fuel cost of traversing from one city to another
-// and a bonus if all the cities have previously been visited (including
-// if they were visited more than once). Due to the structure of the
-// reward, an optimal policy should visit each city exactly once.
+// that visits each city exactly once and returns to the origin. The
+// reward includes a fuel cost of traversing from one city to another
+// and a bonus for completing the route. The bonus should exceed the
+// cost of a route, so that completing a route beats never leaving.
 // 
 // Author(s):
 // 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
@@ -20,6 +19,7 @@ domain travelling_salesman {
     pvariables {
 		COST(node, node) : { non-fluent, real, default = 0.0 };
 		ORIGIN(node) : { non-fluent, bool, default = false };
+		COMPLETION-BONUS : { non-fluent, real, default = 1000.0 };
 
 		current(node) : { state-fluent, bool, default = false };
 		visited(node) : { state-fluent, bool, default = false };
@@ -28,11 +28,12 @@ domain travelling_salesman {
     };
         
     cpfs {
-		current'(?n) = move(?n);
+		current'(?n) = if (exists_{?n2: node}[move(?n2)]) then move(?n) else current(?n);
 		visited'(?n) = visited(?n) | move(?n);
     };
                 
-    reward = -(sum_{?n: node, ?n2: node}[COST(?n, ?n2) * current(?n) * current'(?n2)]); 
+    reward = -(sum_{?n: node, ?n2: node}[COST(?n, ?n2) * current(?n) * current'(?n2)])
+			 + (if (forall_{?n: node}[visited'(?n) ^ (ORIGIN(?n) => current'(?n))]) then COMPLETION-BONUS else 0.0);
 
 	termination {
 		forall_{?n: node}[visited(?n) ^ (ORIGIN(?n) => current(?n))];
@@ -55,9 +56,9 @@ domain travelling_salesman {
 		// move somewhere
 		(sum_{?n: node} move(?n)) == 1;
 		
-		// all nodes are visited and move back to origin or move to unvisited node
+		// move to an unvisited node, or back to the origin once all nodes are visited
 		(exists_{?n: node}[~visited(?n)]) ^ (forall_{?n: node}[move(?n) => ~visited(?n)])
-			| (forall_{?n: node}[move(?n) <=> ORIGIN(?n)]);
+			| (forall_{?n: node}[visited(?n)]) ^ (forall_{?n: node}[move(?n) <=> ORIGIN(?n)]);
 	};
 }
 
