@@ -10,8 +10,12 @@ non-fluents nf_sudoku_4x4 {
     non-fluents {
         SHARED_R(r1, r2);
         SHARED_R(r3, r4);
+        SHARED_R(r2, r1);
+        SHARED_R(r4, r3);
         SHARED_C(c1, c2);
         SHARED_C(c3, c4);
+        SHARED_C(c2, c1);
+        SHARED_C(c4, c3);
         FIXED(r1, c1);
         FIXED(r2, c2);
         FIXED(r2, c4);
