@@ -8,6 +8,9 @@ from pyRDDLGym.core.visualizer.viz import BaseViz
 
 
 class EightVisualizer(BaseViz):
+    '''Draws the current board next to the target arrangement, with the squares already
+    at their target in green. The drawing only depends on the current state.
+    '''
 
     def __init__(self, model: RDDLPlanningModel,
                  figure_size=(8, 4.5),
@@ -32,15 +35,17 @@ class EightVisualizer(BaseViz):
                         self._targets[s] = (x, y)
 
         self.fig = plt.figure(figsize=self._figure_size)
+        self.fig.subplots_adjust(left=0.03, right=0.97, bottom=0.03, top=0.85, wspace=0.1)
         self.ax = self.fig.add_subplot(1, 2, 1)
         self._setup_board(self.ax)
+        self.ax.set_title('Current', fontsize=10)
 
         # the target arrangement never changes, so it is only drawn once
         target_ax = self.fig.add_subplot(1, 2, 2)
         self._setup_board(target_ax)
-        target_ax.set_title('Target', fontsize=14, fontweight='bold')
+        target_ax.set_title('Target', fontsize=10)
         for (s, cell) in self._targets.items():
-            self._draw_tile(target_ax, s, cell, '#90a4ae')
+            self._draw_tile(target_ax, s, cell, '#eceff1')
 
     def _setup_board(self, ax):
         ax.set_xlim(0, len(self._xs))
@@ -48,7 +53,9 @@ class EightVisualizer(BaseViz):
         ax.set_aspect('equal')
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
-        ax.set_facecolor('#37474f')
+        ax.set_facecolor('#cfd8dc')
+        for spine in ax.spines.values():
+            spine.set_color('#b0bec5')
 
     def _draw_tile(self, ax, square, cell, color):
 
@@ -58,10 +65,10 @@ class EightVisualizer(BaseViz):
         tile = ax.add_patch(patches.FancyBboxPatch(
             (col + 0.05, row + 0.05), 0.9, 0.9,
             boxstyle='round,pad=0,rounding_size=0.08',
-            facecolor=color, edgecolor='black', linewidth=1.5))
+            facecolor=color, edgecolor='#37474f', linewidth=1.2))
         label = ax.text(col + 0.5, row + 0.5, square, ha='center', va='center',
                         fontsize=self._font_size * min(1, 4 / len(square)),
-                        fontweight='bold')
+                        fontweight='bold', color='#37474f')
         return [tile, label]
 
     def convert2img(self, fig):
@@ -82,14 +89,14 @@ class EightVisualizer(BaseViz):
                         correct = self._targets.get(s) == (x, y)
                         num_correct += correct
                         artists.extend(self._draw_tile(
-                            self.ax, s, (x, y), '#81c784' if correct else '#eceff1'))
+                            self.ax, s, (x, y), '#c8e6c9' if correct else 'white'))
 
         # squares without a target do not need to be in any particular place
         solved = all(
             state[RDDLPlanningModel.ground_var('at', [s, *cell])]
             for (s, cell) in self._targets.items())
-        title = 'SOLVED' if solved else f'{num_correct} / {len(self._targets)} in place'
-        self.ax.set_title(title, fontsize=14, fontweight='bold',
+        title = 'Solved' if solved else f'{num_correct} / {len(self._targets)} in place'
+        self.fig.suptitle(title, fontsize=13, fontweight='bold',
                           color='#2e7d32' if solved else 'black')
 
         self.fig.canvas.draw()

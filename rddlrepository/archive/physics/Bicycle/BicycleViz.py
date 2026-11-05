@@ -8,7 +8,7 @@ from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
 BIKE_COLOR = '#1565c0'
-WARNING_COLOR = '#ffa000'
+WARNING_COLOR = '#ff8f00'
 FALLEN_COLOR = '#c62828'
 FRONT_WHEEL_COLOR = '#ef6c00'
 OK_COLOR = '#2e7d32'
@@ -62,6 +62,9 @@ class BicycleVisualizer(BaseViz):
         self._setup_rear_view()
         self._setup_top_view()
         self._setup_history()
+        for ax in self.fig.axes:
+            for spine in ax.spines.values():
+                spine.set_color('#b0bec5')
 
     def _get_state(self, state):
         return tuple(float(state[var]) for var in ('omega', 'domega', 'theta', 'dtheta', 'psi'))
@@ -94,7 +97,7 @@ class BicycleVisualizer(BaseViz):
         ax.set_aspect('equal')
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.plot([0, 0], [-self._top_limit, self._top_limit], color='#bdbdbd',
+        ax.plot([0, 0], [-self._top_limit, self._top_limit], color='#b0bec5',
                 linestyle=':', linewidth=1, zorder=0)
 
     def _setup_history(self):
@@ -102,16 +105,16 @@ class BicycleVisualizer(BaseViz):
         self._lean_ax.set_ylim(-1.25 * limit, 1.25 * limit)
         for side in (-1, 1):
             self._lean_ax.axhline(side * limit, color=FALLEN_COLOR, linestyle='--', linewidth=1)
-        self._lean_ax.axhline(0, color='#bdbdbd', linewidth=1)
+        self._lean_ax.axhline(0, color='#b0bec5', linewidth=1)
         self._lean_line, = self._lean_ax.plot([], [], color=BIKE_COLOR, linewidth=1.3)
         self._lean_ax.set_ylabel('lean (deg)', fontsize=9)
-        self._lean_ax.tick_params(labelsize=8, labelbottom=False)
+        self._lean_ax.tick_params(labelsize=8, colors='#616161', labelbottom=False)
 
-        self._steer_ax.axhline(0, color='#bdbdbd', linewidth=1)
+        self._steer_ax.axhline(0, color='#b0bec5', linewidth=1)
         self._steer_line, = self._steer_ax.plot([], [], color=FRONT_WHEEL_COLOR, linewidth=1.3)
         self._steer_ax.set_ylabel('steering (deg)', fontsize=9)
         self._steer_ax.set_xlabel('time', fontsize=9)
-        self._steer_ax.tick_params(labelsize=8)
+        self._steer_ax.tick_params(labelsize=8, colors='#616161')
 
     def _update_history(self, state):
 
@@ -150,7 +153,7 @@ class BicycleVisualizer(BaseViz):
         wheel_top = 2 * self._radius
         rider_top = self._height + self._rider_offset
         artists = []
-        artists.extend(segment(0, wheel_top, color='#212121', linewidth=7, zorder=3))
+        artists.extend(segment(0, wheel_top, color='#37474f', linewidth=7, zorder=3))
         artists.extend(segment(wheel_top, self._height, color=color, linewidth=5, zorder=3))
         artists.extend(segment(self._height, rider_top, color=color, linewidth=9, zorder=3))
         artists.append(ax.add_patch(plt.Circle(
@@ -178,7 +181,7 @@ class BicycleVisualizer(BaseViz):
         artists = []
         artists.extend(ax.plot([rear[0], front[0]], [rear[1], front[1]],
                                color=BIKE_COLOR, linewidth=3, zorder=2))
-        artists.extend(wheel_line(rear, forward, '#212121'))
+        artists.extend(wheel_line(rear, forward, '#37474f'))
         artists.extend(wheel_line(front, wheel, FRONT_WHEEL_COLOR))
 
         # the initial heading may be outside of the range the domain wraps it to
@@ -211,7 +214,7 @@ class BicycleVisualizer(BaseViz):
 
         fallen = abs(lean) > LEAN_LIMIT
         self.fig.suptitle(
-            f'FELL OVER at time {self._times[-1]:.2f}' if fallen
+            f'Fell over at time {self._times[-1]:.2f}' if fallen
             else f'Balanced, time {self._times[-1]:.2f}',
             fontsize=13, fontweight='bold', color=FALLEN_COLOR if fallen else OK_COLOR)
 

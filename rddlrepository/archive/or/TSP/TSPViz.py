@@ -10,9 +10,9 @@ from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
 ROUTE_COLOR = '#1565c0'
-NEWEST_COLOR = '#ffa000'
-OPTION_COLOR = '#9e9e9e'
-VISITED_COLOR = '#90caf9'
+NEWEST_COLOR = '#ff8f00'
+OPTION_COLOR = '#90a4ae'
+VISITED_COLOR = '#bbdefb'
 DONE_COLOR = '#2e7d32'
 
 # the curve of the route, which keeps moves in opposite directions apart
@@ -85,16 +85,17 @@ class TSPVisualizer(BaseViz):
                              ha='center' if abs(x) < 0.1 else ('left' if x > 0 else 'right'),
                              va='center' if abs(y) < 0.9 else ('bottom' if y > 0 else 'top'))
 
-        self.ax.legend(handles=[
+        self.fig.legend(handles=[
             Line2D([], [], marker='s', color='none', markerfacecolor='white',
-                   markeredgecolor='black', label='Origin'),
+                   markeredgecolor='#37474f', label='Origin'),
             Line2D([], [], marker='o', color='none', markerfacecolor=VISITED_COLOR,
-                   markeredgecolor='black', label='Visited'),
+                   markeredgecolor='#37474f', label='Visited'),
             Line2D([], [], marker='o', color='none', markerfacecolor='white',
                    markeredgecolor=NEWEST_COLOR, markeredgewidth=2, label='Current'),
             Line2D([], [], color=ROUTE_COLOR, linewidth=2, label='Route'),
             Line2D([], [], color=OPTION_COLOR, linestyle='--', label='Next moves')
-        ], loc='upper center', bbox_to_anchor=(0.5, 0), ncol=5, frameon=False, fontsize=9)
+        ], loc='lower center', ncol=5, frameon=False, fontsize=8.5, columnspacing=1.0,
+           handlelength=1.4)
 
     def _get_state(self, state):
         return (frozenset(n for n in self._nodes
@@ -170,7 +171,7 @@ class TSPVisualizer(BaseViz):
             [x], [y], marker='s' if node in self._origins else 'o',
             markersize=self._marker_size, zorder=3,
             markerfacecolor=VISITED_COLOR if node in visited else 'white',
-            markeredgecolor=NEWEST_COLOR if node in current else 'black',
+            markeredgecolor=NEWEST_COLOR if node in current else '#37474f',
             markeredgewidth=3 if node in current else 1)
 
     def convert2img(self, fig):
@@ -195,7 +196,7 @@ class TSPVisualizer(BaseViz):
         # same rule as the termination condition
         done = len(visited) == len(self._nodes) and self._origins <= current
         route_cost = sum(self._cost(start, end) for (start, end) in self._route)
-        title = (f'ROUTE COMPLETE: cost {route_cost:g}' if done else
+        title = (f'Route complete: cost {route_cost:g}' if done else
                  f'{len(visited)} / {len(self._nodes)} visited, route cost {route_cost:g}')
         self.ax.set_title(title, fontsize=13, fontweight='bold',
                           color=DONE_COLOR if done else 'black')

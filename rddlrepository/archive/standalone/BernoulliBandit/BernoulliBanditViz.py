@@ -9,9 +9,9 @@ from PIL import Image
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
-BELIEF_COLOR = '#64b5f6'
-TRUTH_COLOR = '#212121'
-MEAN_COLOR = '#0d47a1'
+BELIEF_COLOR = '#42a5f5'
+TRUTH_COLOR = '#37474f'
+MEAN_COLOR = '#1565c0'
 WIN_COLOR = '#c8e6c9'
 LOSS_COLOR = '#ffcdd2'
 
@@ -65,8 +65,10 @@ class BernoulliBanditVisualizer(BaseViz):
         self.ax.set_xlim(0, 1)
         self.ax.set_ylim(0, num_arms)
         self.ax.set_yticks([])
-        self.ax.set_xlabel('probability of success', fontsize=10)
-        self.ax.tick_params(axis='x', labelsize=9)
+        self.ax.set_xlabel('probability of success', fontsize=9)
+        self.ax.tick_params(axis='x', labelsize=8, colors='#616161')
+        for spine in self.ax.spines.values():
+            spine.set_color('#b0bec5')
 
         # the first arm is on the top row: rows and their names never change
         self._rows = {a: num_arms - 1 - i for (i, a) in enumerate(self._arms)}
@@ -74,7 +76,7 @@ class BernoulliBanditVisualizer(BaseViz):
         for a in self._arms:
             row = self._rows[a]
             if row > 0:
-                self.ax.axhline(row, color='#e0e0e0', linewidth=0.8, zorder=1)
+                self.ax.axhline(row, color='#cfd8dc', linewidth=0.8, zorder=1)
             self.ax.plot([self._theta[a]] * 2, [row, row + 0.92], color=TRUTH_COLOR,
                          linewidth=1.5, zorder=4)
             font_size = min(self._text_size, 72 * 1.15 / (0.62 * len(a)))
@@ -82,16 +84,17 @@ class BernoulliBanditVisualizer(BaseViz):
                 self.ax.text(-0.015, row + 0.5, a, ha='right', va='center', fontsize=font_size,
                              fontweight='bold' if self._theta[a] == self._best else 'normal')
 
-        self.ax.legend(handles=[
+        self.fig.legend(handles=[
             patches.Patch(facecolor=BELIEF_COLOR, label='Belief'),
             Line2D([], [], color=TRUTH_COLOR, linewidth=1.5, label='True probability'),
             Line2D([], [], marker='o', color='none', markerfacecolor=MEAN_COLOR,
                    markeredgecolor='none', label='Belief mean'),
             patches.Patch(facecolor=WIN_COLOR, label='Last pull won'),
             patches.Patch(facecolor=LOSS_COLOR, label='Last pull lost')
-        ], loc='upper center', bbox_to_anchor=(0.5, -0.5 / (num_arms * row_height)), ncol=5,
-           frameon=False, fontsize=8.5, columnspacing=1.2, handlelength=1.5)
-        self.fig.text(0.985, 0.02, 'Bold name: best arm', ha='right', va='bottom', fontsize=8)
+        ], loc='lower center', bbox_to_anchor=(0.5, 0.25 / fig_height), ncol=5,
+           frameon=False, fontsize=8.5, columnspacing=1.0,
+           handlelength=1.4)
+        self.fig.text(0.5, 0.1 / fig_height, 'Bold name: best arm', ha='center', va='bottom', fontsize=9, color='#37474f')
 
     def _get_state(self, state):
         return {a: (float(state[RDDLPlanningModel.ground_var('alpha', [a])]),

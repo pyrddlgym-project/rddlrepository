@@ -1,215 +1,223 @@
+import math
+
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.lines import Line2D
 import numpy as np
 from PIL import Image
 
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
+PRODUCTION_COLOR = '#1565c0'
+LIMIT_COLOR = '#37474f'
+GUIDE_COLOR = '#b0bec5'
+CURVE_COLOR = '#37474f'
+CAPACITY_COLOR = '#c62828'
+MET_COLOR = '#2e7d32'
+SHORT_COLOR = '#c62828'
+
+# text smaller than this is not readable, so it is left out
+MIN_FONT_SIZE = 5
+
 
 class PowerGenVisualizer(BaseViz):
+    '''Draws the production of each plant from the previous step within its limits,
+    next to the demand at the current temperature.
 
-    def __init__(self, model: RDDLPlanningModel, dpi=20, fontsize=8) -> None:
+    The state holds the production of the previous step and the temperature of the
+    current one, so the comparison shows whether keeping the same production would
+    meet the current demand. The drawing only depends on the current state.
+    '''
+
+    def __init__(self, model: RDDLPlanningModel,
+                 column_width=0.9,
+                 plot_height=3.8,
+                 curve_width=3.4,
+                 max_width=14.0,
+                 min_plants_width=3.0,
+                 num_points=100,
+                 wait_time=100) -> None:
         self._model = model
-        self._nonfluents = model.ground_vars_with_values(model.non_fluents)
-        self._objects = model.type_to_objects
-        self._figure_size = None
-        self._dpi = dpi
-        self._fontsize = fontsize
-        self._interval = 15
+        self._wait_time = wait_time
+        self._num_points = num_points
 
-        self._nonfluent_layout = None
-        self._state_layout = None
-        self._fig, self._ax = None, None
-        self._data = None
-        self._img = None
-    
-    def build_nonfluents_layout(self):
-        prod_units_min = {o: None for o in self._objects['plant']}
-        prod_units_max = {o: None for o in self._objects['plant']}
-        prod_change_penalty = {o: None for o in self._objects['plant']}
-        cost_per_unit = {o: None for o in self._objects['plant']}
-        
-        # add none-fluents
-        for k, v in self._nonfluents.items():
-            var, objects = RDDLPlanningModel.parse_grounded(k)
-            if var == 'PROD-UNITS-MIN':
-                prod_units_min[objects[0]] = v
-            elif var == 'PROD-UNITS-MAX':
-                prod_units_max[objects[0]] = v
-            elif var == 'PROD-CHANGE-PENALTY':
-                prod_change_penalty[objects[0]] = v
-            elif var == 'COST-PER-UNIT':
-                cost_per_unit[objects[0]] = v
+        nonfluents = model.ground_vars_with_values(model.non_fluents)
+        self._plants = model.type_to_objects['plant']
+        self._min = self._get_values(nonfluents, 'PROD-UNITS-MIN')
+        self._max = self._get_values(nonfluents, 'PROD-UNITS-MAX')
+        self._cost = self._get_values(nonfluents, 'COST-PER-UNIT')
+        self._penalty = self._get_values(nonfluents, 'PROD-CHANGE-PENALTY')
+        self._min_consumption = nonfluents['MIN-CONSUMPTION']
+        self._coefficient = nonfluents['DEMAND-EXP-COEF']
+        self._min_demand_temp = nonfluents['MIN-DEMAND-TEMP']
+        self._capacity = sum(self._max.values())
 
-        return {'prod_units_min': prod_units_min,
-                'prod_units_max': prod_units_max,
-                'prod_change_penalty': prod_change_penalty,
-                'cost_per_unit': cost_per_unit}
+        # the curve reaches the total capacity, unless demand does not depend on the
+        # temperature, and otherwise grows only if the temperature leaves this range
+        excess = max(self._capacity - self._min_consumption, 1.0)
+        self._half_range = math.sqrt(excess / self._coefficient) if self._coefficient > 0 else 1.0
 
-    def build_states_layout(self, state):
-        prevProd = {o: None for o in self._objects['plant']}
-        temperature = None
-        for k, v in state.items():
-            var, objects = RDDLPlanningModel.parse_grounded(k)
-            if var == 'prevProd':
-                prevProd[objects[0]] = v
-            elif 'temperature' in k:
-                temperature = v        
-        return {'prevProd': prevProd, 'temperature': temperature}
+        # the left margin of each panel holds its axis, and the bottom the labels
+        left, gap, right, bottom, top = 0.65, 0.75, 0.2, 1.0, 0.85
+        plants_width = max(column_width * len(self._plants), min_plants_width)
+        plants_width = min(plants_width, max_width - curve_width - left - gap - right)
+        fig_width = left + plants_width + gap + curve_width + right
+        fig_height = bottom + plot_height + top
+        self._column_inches = plants_width / len(self._plants)
 
-    def init_canvas_info(self):
-        interval = self._interval
-        plant_list = self._objects['plant']
-        room_grid_size = (int((len(plant_list)) ** 0.5) + 1,
-                          int((len(plant_list)) ** 0.5) + 1)
-        start_points_zone = []
-        
-        for i in range(room_grid_size[0]):
-            for j in range(room_grid_size[1]):
-                start_points_zone.append((i * 15, j * 15))
+        self.fig = plt.figure(figsize=(fig_width, fig_height))
+        self._plant_ax = self.fig.add_axes(
+            [left / fig_width, bottom / fig_height,
+             plants_width / fig_width, plot_height / fig_height])
+        self._curve_ax = self.fig.add_axes(
+            [(left + plants_width + gap) / fig_width, bottom / fig_height,
+             curve_width / fig_width, plot_height / fig_height])
+        self._setup_plants(plot_height)
+        self._setup_curve()
 
-        start_points_zone.sort(key=lambda x: x[1])
-        start_points_zone.sort(key=lambda x: x[0], reverse=True)
+    def _get_values(self, nonfluents, var):
+        return {p: nonfluents[RDDLPlanningModel.ground_var(var, [p])] for p in self._plants}
 
-        init_points = {}
-        for i in range(len(plant_list)):
-            init_points[plant_list[i]] = (
-                start_points_zone[i][0], start_points_zone[i][1])
+    def _font_size(self, lines, font_size):
 
-        canvas_info = {'canvas_size': (room_grid_size[0] * interval,
-                                       room_grid_size[1] * interval),
-                       'plant_init_points': init_points}
-        return canvas_info
-        
-    def init_canvas(self, figure_size, dpi):
-        fig = plt.figure(figsize=figure_size, dpi=dpi)
-        ax = plt.gca()
-        plt.xlim([-2, figure_size[0]])
-        plt.ylim([-2, figure_size[1]])
-        plt.axis('scaled')
-        plt.axis('off')
-        return fig, ax
+        # text shrinks to the width of a column, and is left out if unreadable
+        length = max(len(line) for line in lines)
+        size = min(font_size, 72 * 0.95 * self._column_inches / (0.62 * length))
+        return size if size >= MIN_FONT_SIZE else None
 
-    def render_plant(self, plant, nonfluent_layout, state_layout):
-        fig = self._fig
-        ax = self._ax
-        interval = self._interval * 2 / 3
-        init_x, init_y = self._canvas_info['plant_init_points'][plant]
+    def _setup_plants(self, plot_height):
+        ax = self._plant_ax
+        ax.set_xlim(0, len(self._plants))
+        ax.set_xticks([])
+        ax.set_ylabel('production', fontsize=9)
+        ax.tick_params(labelsize=8, colors='#616161')
+        ax.set_title('Production at the previous step', fontsize=10)
+        for side in ('top', 'right', 'bottom'):
+            ax.spines[side].set_visible(False)
+        ax.spines['left'].set_color('#b0bec5')
+        self._plot_height = plot_height
 
-        prod_min = nonfluent_layout['prod_units_min'][plant]
-        prod_max = nonfluent_layout['prod_units_max'][plant]
+        # the limits and names of the plants never change, so they are only drawn once
+        self._low = min(0.0, *self._min.values())
+        self._high = max(*self._max.values(), 0.0)
+        for (i, p) in enumerate(self._plants):
+            ax.add_patch(patches.Rectangle(
+                (i + 0.12, self._low), 0.76, self._max[p] - self._low, facecolor='none',
+                edgecolor=LIMIT_COLOR, linewidth=1.2, zorder=3))
+            if self._min[p] > self._low:
+                ax.plot([i + 0.12, i + 0.88], [self._min[p]] * 2, color=LIMIT_COLOR,
+                        linestyle='--', linewidth=1, zorder=4)
+            size = self._font_size([p], 10)
+            if size is not None:
+                ax.annotate(p, (i + 0.5, self._low), xytext=(0, -6), textcoords='offset points',
+                            ha='center', va='top', fontsize=size, annotation_clip=False)
+            lines = [f'cost {self._cost[p]:g}', f'change {self._penalty[p]:g}']
+            size = self._font_size(lines, 8)
+            if size is not None:
+                ax.annotate('\n'.join(lines), (i + 0.5, self._low), xytext=(0, -22),
+                            textcoords='offset points', ha='center', va='top', fontsize=size,
+                            color='#616161', annotation_clip=False)
 
-        change_penalty = nonfluent_layout['prod_change_penalty'][plant]
-        unit_cost = nonfluent_layout['cost_per_unit'][plant]
+    def _setup_curve(self):
+        ax = self._curve_ax
+        ax.set_xlabel('temperature', fontsize=9, labelpad=2)
+        ax.set_ylabel('power', fontsize=9)
+        ax.tick_params(labelsize=8, colors='#616161')
+        ax.set_title('Demand at the current temperature', fontsize=10)
+        ax.set_autoscale_on(False)
+        for side in ('top', 'right'):
+            ax.spines[side].set_visible(False)
+        for side in ('left', 'bottom'):
+            ax.spines[side].set_color('#b0bec5')
+        self._curve_line, = ax.plot([], [], color=CURVE_COLOR, linewidth=2, zorder=2)
+        self._production_line = ax.axhline(0, color=PRODUCTION_COLOR, linewidth=1.5, zorder=1)
+        ax.axhline(self._capacity, color=CAPACITY_COLOR, linestyle='--', linewidth=1.2, zorder=1)
+        self.fig.legend(handles=[
+            Line2D([], [], color=CURVE_COLOR, linewidth=2, label='Demand'),
+            Line2D([], [], color=PRODUCTION_COLOR, linewidth=1.5, label='Production'),
+            Line2D([], [], color=CAPACITY_COLOR, linestyle='--', linewidth=1.2, label='Capacity'),
+            Line2D([], [], marker='o', color='none', markerfacecolor=MET_COLOR,
+                   markeredgecolor='none', label='Would be met'),
+            Line2D([], [], marker='o', color='none', markerfacecolor=SHORT_COLOR,
+                   markeredgecolor='none', label='Would fall short')
+        ], loc='lower center', ncol=5, frameon=False, fontsize=8.5, columnspacing=1.0,
+           handlelength=1.4)
 
-        prev_prod = state_layout['prevProd'][plant]
-        temp = state_layout['temperature']
+    def _demand(self, temperature):
 
-        upL = [init_x, init_y + interval * 1.2]
-        upR = [init_x + interval, init_y + interval * 1.2]
-        maxL = [init_x, interval + init_y]
-        maxR = [init_x + interval, interval + init_y]
-        lowL = [init_x, prod_min / prod_max * interval + init_y]
-        lowR = [init_x + interval, prod_min / prod_max * interval + init_y]
+        # same rule as the domain
+        return self._min_consumption + self._coefficient * (
+            temperature - self._min_demand_temp) ** 2
 
-        set_lw = 5
+    def _draw_plants(self, production):
+        ax = self._plant_ax
 
-        line_max = plt.Line2D((maxL[0], maxR[0]),
-                              (maxL[1], maxR[1]),
-                              ls='--', color='orange', lw=set_lw, zorder=3)
-        line_up = plt.Line2D((upL[0], upR[0]),
-                             (upL[1], upR[1]),
-                             ls='--', color='black', lw=set_lw, zorder=3)
-        line_low = plt.Line2D((lowL[0], lowR[0]),
-                              (lowL[1], lowR[1]),
-                              ls='--', color='orange', lw=set_lw, zorder=3)
-        lineL = plt.Line2D((init_x, upL[0]),
-                           (init_y, upL[1]),
-                           color='black', lw=set_lw, zorder=3)
-        lineR = plt.Line2D((init_x + interval, upR[0]),
-                           (init_y, upR[1]),
-                           color='black', lw=set_lw, zorder=3)
-        lineB = plt.Line2D((init_x, init_x + interval),
-                           (init_y, init_y),
-                           color='black', lw=set_lw, zorder=3)
+        # production outside of the limits is only possible if invalid actions are allowed,
+        # and the scale must then grow, with room for the labels above the tallest column
+        high = max(self._high, *production.values())
+        low = min(self._low, *production.values())
+        span = (high - low) or 1.0
+        ax.set_ylim(low, high + 0.08 * span)
 
-        ax.add_line(line_max)
-        ax.add_line(line_up)
-        ax.add_line(line_low)
-        ax.add_line(lineL)
-        ax.add_line(lineR)
-        ax.add_line(lineB)
-        
-        prod_rect = plt.Rectangle((init_x, init_y),
-                                  interval,
-                                  prev_prod / prod_max * interval,
-                                  fc='limegreen',
-                                  zorder=2)
-        temp_rect = plt.Rectangle((init_x, init_y),
-                                  interval,
-                                  interval * 1.2,
-                                  fc='firebrick',
-                                  alpha=max(min(temp, 100), 0) / 100,
-                                  zorder=2)
-        cost_rect = plt.Rectangle((init_x, upL[1]),
-                                  interval / 2,
-                                  interval / 5,
-                                  fc='deepskyblue',
-                                  alpha=max(min(unit_cost, 10), 0) / 10,
-                                  zorder=2)
-        pen_rect = plt.Rectangle((init_x + interval / 2, upL[1]),
-                                 interval / 2,
-                                 interval / 5,
-                                 fc='darkcyan',
-                                 alpha=max(min(change_penalty, 10), 0) / 10,
-                                 zorder=2)
+        artists = []
+        for (i, p) in enumerate(self._plants):
+            amount = production[p]
+            artists.append(ax.add_patch(patches.Rectangle(
+                (i + 0.12, min(amount, 0.0)), 0.76, abs(amount), facecolor=PRODUCTION_COLOR,
+                edgecolor='none', alpha=0.85, zorder=2)))
+            text = f'{amount:.3g} / {self._max[p]:g}'
+            size = self._font_size([text], 9)
+            if size is not None:
+                artists.append(ax.annotate(
+                    text, (i + 0.5, max(amount, self._max[p])), xytext=(0, 3),
+                    textcoords='offset points', ha='center', va='bottom', fontsize=size,
+                    annotation_clip=False, zorder=5))
+        return artists
 
-        ax.add_patch(prod_rect)
-        ax.add_patch(temp_rect)
-        ax.add_patch(cost_rect)
-        ax.add_patch(pen_rect)
+    def _draw_curve(self, temperature, demand, total):
+        ax = self._curve_ax
+        half = max(self._half_range, 1.1 * abs(temperature - self._min_demand_temp))
+        xs = np.linspace(self._min_demand_temp - half, self._min_demand_temp + half,
+                         self._num_points)
+        self._curve_line.set_data(xs, self._demand(xs))
+        self._production_line.set_ydata([total, total])
 
-        plt.text(init_x + interval * 1.1,
-                 init_y + interval * 1.3,
-                 "%s" % plant,
-                 color='black', fontsize=50)
+        ax.set_xlim(xs[0], xs[-1])
+        top = max(self._capacity, demand, total, self._min_consumption) or 1.0
+        ax.set_ylim(0, 1.1 * top)
 
-        return fig, ax
+        met = total >= demand
+        artists = ax.plot([temperature], [demand], marker='o', markersize=10, zorder=4,
+                          color=MET_COLOR if met else SHORT_COLOR, markeredgecolor='white')
+        artists.extend(ax.plot([temperature, temperature], [demand, total], zorder=3,
+                               color=MET_COLOR if met else SHORT_COLOR, linestyle=':', linewidth=1.5))
+        return artists
 
-    def convert2img(self, fig, ax):        
-        ax.set_position((0, 0, 1, 1))
-        fig.canvas.draw()
+    def convert2img(self, fig):
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
         data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
         data = data[:, :, :3]
-        img = Image.fromarray(data)
-        self._data = data
-        self._img = img
-        return img
-
-    def fig2npa(self, fig):
-        data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-        data = data[:, :, :3]
-        return data
+        return Image.fromarray(data)
 
     def render(self, state):
-        self.states = state
+        production = {p: float(state[RDDLPlanningModel.ground_var('prevProd', [p])])
+                      for p in self._plants}
+        temperature = float(state['temperature'])
+        demand = float(self._demand(temperature))
+        total = sum(production.values())
 
-        self._nonfluent_layout = self.build_nonfluents_layout()
-        self._state_layout = self.build_states_layout(state)
-        self._canvas_info = self.init_canvas_info()
-        self._figure_size = self._canvas_info['canvas_size']
-        self._fig, self._ax = self.init_canvas(self._figure_size, self._dpi)
+        artists = self._draw_plants(production)
+        artists.extend(self._draw_curve(temperature, demand, total))
 
-        for plant in self._objects['plant']: 
-            self.render_plant(plant, self._nonfluent_layout, self._state_layout)
+        self.fig.suptitle(
+            f'Demand {demand:.1f} at temperature {temperature:.1f}, previous production {total:.1f}',
+            fontsize=13, fontweight='bold', color=MET_COLOR if total >= demand else SHORT_COLOR)
 
-        img = self.convert2img(self._fig, self._ax)
-            
-        self._ax.cla()
-        plt.cla()
-        plt.close()
+        self.fig.canvas.draw()
+        img = self.convert2img(self.fig)
+        for artist in artists:
+            artist.remove()
+        del artists
 
         return img
-

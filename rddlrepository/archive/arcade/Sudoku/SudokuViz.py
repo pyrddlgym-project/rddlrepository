@@ -10,6 +10,10 @@ from pyRDDLGym.core.visualizer.viz import BaseViz
 
 
 class SudokuVisualizer(BaseViz):
+    '''Draws the board with its blocks, the fixed cells in grey and the cells in conflict
+    in red. Only the highlight on the most recently filled cell depends on the previous
+    render.
+    '''
 
     def __init__(self, model: RDDLPlanningModel,
                  figure_size=(5, 5.5),
@@ -78,17 +82,18 @@ class SudokuVisualizer(BaseViz):
         # the grid and the fixed cells never change, so they are only drawn once
         for (r, c) in self._fixed:
             self.ax.add_patch(patches.Rectangle(
-                self._cell_position(r, c), 1, 1, facecolor='#cfd8dc', zorder=0))
+                self._cell_position(r, c), 1, 1, facecolor='#eceff1', zorder=0))
         for i in range(1, ncols):
-            self.ax.axvline(i, color='#90a4ae', linewidth=1, zorder=2)
+            self.ax.axvline(i, color='#cfd8dc', linewidth=1, zorder=2)
         for i in range(1, nrows):
-            self.ax.axhline(i, color='#90a4ae', linewidth=1, zorder=2)
+            self.ax.axhline(i, color='#cfd8dc', linewidth=1, zorder=2)
         for i in self._block_edges(self._cols, 'SHARED_C'):
-            self.ax.axvline(i, color='black', linewidth=2.5, zorder=3)
+            self.ax.axvline(i, color='#37474f', linewidth=2.5, zorder=3)
         for i in self._block_edges(self._rows, 'SHARED_R'):
-            self.ax.axhline(nrows - i, color='black', linewidth=2.5, zorder=3)
+            self.ax.axhline(nrows - i, color='#37474f', linewidth=2.5, zorder=3)
         for spine in self.ax.spines.values():
             spine.set_linewidth(2.5)
+            spine.set_color('#37474f')
 
     def _update_newest(self, board):
 
@@ -132,18 +137,18 @@ class SudokuVisualizer(BaseViz):
             if cell == self._newest:
                 artists.append(self.ax.add_patch(patches.Rectangle(
                     (x + 0.04, y + 0.04), 0.92, 0.92, facecolor='none',
-                    edgecolor='#ffa000', linewidth=2.5, zorder=4)))
+                    edgecolor='#ff8f00', linewidth=2.5, zorder=4)))
             if value > 0:
                 artists.append(self.ax.text(
                     x + 0.5, y + 0.5, str(value), ha='center', va='center',
                     fontsize=self._font_size, zorder=5, fontweight='bold',
-                    color='black' if cell in self._fixed else '#1565c0'))
+                    color='#37474f' if cell in self._fixed else '#1565c0'))
 
         # the board is solved when it is full and has no conflicts
         num_filled = sum(value > 0 for value in board.values())
         solved = num_filled == len(self._cells) and not conflict_pairs
         if solved:
-            title = 'SOLVED'
+            title = 'Solved'
         else:
             title = (f'{num_filled} / {len(self._cells)} filled, '
                      f'{len(conflict_pairs)} conflicts')

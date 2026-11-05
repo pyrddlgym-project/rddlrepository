@@ -18,7 +18,7 @@ class BlackjackVisualizer(BaseViz):
     '''
 
     def __init__(self, model: RDDLPlanningModel,
-                 figure_size=(6, 5),
+                 figure_size=(6, 5.4),
                  card_size=(0.12, 0.26),
                  wait_time=100) -> None:
         self._model = model
@@ -32,12 +32,14 @@ class BlackjackVisualizer(BaseViz):
         self._last_state = None
 
         self.fig = plt.figure(figsize=self._figure_size)
-        self.ax = self.fig.add_axes([0, 0, 1, 1])
+        self.ax = self.fig.add_axes([0.02, 0.02, 0.96, 0.89])
         self.ax.set_xlim(0, 1)
         self.ax.set_ylim(0, 1)
         self.ax.get_xaxis().set_ticks([])
         self.ax.get_yaxis().set_ticks([])
-        self.ax.set_facecolor('#1b6e3c')
+        self.ax.set_facecolor('#c8e6c9')
+        for spine in self.ax.spines.values():
+            spine.set_color('#b0bec5')
 
     def convert2img(self, fig):
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
@@ -80,28 +82,28 @@ class BlackjackVisualizer(BaseViz):
         if stage == 'done':
             player, dealer = int(state['player-value']), int(state['dealer-value'])
             if player > 21:
-                return 'PLAYER BUSTS', '#ff8a80'
+                return 'Player busts', '#c62828'
             elif dealer > 21:
-                return 'DEALER BUSTS - PLAYER WINS', '#ffe082'
+                return 'Dealer busts, player wins', '#2e7d32'
             elif player > dealer:
-                return 'PLAYER WINS', '#ffe082'
+                return 'Player wins', '#2e7d32'
             elif player == dealer:
-                return 'PUSH', 'white'
+                return 'Push', 'black'
             else:
-                return 'DEALER WINS', '#ff8a80'
+                return 'Dealer wins', '#c62828'
         elif stage == 'pn':
-            return "Player's turn", 'white'
+            return "Player's turn", 'black'
         elif stage in ('d2', 'dn'):
-            return "Dealer's turn", 'white'
+            return "Dealer's turn", 'black'
         else:
-            return 'Dealing', 'white'
+            return 'Dealing', 'black'
 
     def _draw_card(self, x, y, zorder, label=None, highlight=False):
         w, h = self._card_size
         artists = [self.ax.add_patch(patches.FancyBboxPatch(
             (x, y), w, h, boxstyle='round,pad=0,rounding_size=0.015', zorder=zorder,
-            facecolor='white' if label else '#8c2f39',
-            edgecolor='#ffc107' if highlight else 'black',
+            facecolor='white' if label else '#1565c0',
+            edgecolor='#ff8f00' if highlight else '#37474f',
             linewidth=3.0 if highlight else 1.0))]
         if label:
 
@@ -117,10 +119,10 @@ class BlackjackVisualizer(BaseViz):
     def _draw_hand(self, who, y, face_down, state):
         total = int(state[f'{who}-value'])
         soft = ' (soft)' if state[f'{who}-soft'] else ''
-        title = f'{who.upper()}  {total}{soft}' if self._hands[who] else who.upper()
+        title = f'{who.capitalize()}: {total}{soft}' if self._hands[who] else who.capitalize()
         artists = [self.ax.text(
             0.04, y + self._card_size[1] + 0.025, title,
-            color='white', fontsize=13, fontweight='bold', va='bottom')]
+            fontsize=10, fontweight='bold', va='bottom')]
 
         # cards are spaced evenly, overlapping when they would not fit on the table
         hand = self._hands[who] + [None] * face_down
@@ -141,11 +143,9 @@ class BlackjackVisualizer(BaseViz):
 
         # draw the hands and the status of the game
         status, color = self._status(state)
-        artists = self._draw_hand('dealer', 0.60, int(face_down), state)
-        artists.extend(self._draw_hand('player', 0.14, 0, state))
-        artists.append(self.ax.text(
-            0.5, 0.05, status, color=color, fontsize=15, fontweight='bold',
-            ha='center', va='center'))
+        artists = self._draw_hand('dealer', 0.56, int(face_down), state)
+        artists.extend(self._draw_hand('player', 0.08, 0, state))
+        self.ax.set_title(status, fontsize=13, fontweight='bold', color=color)
 
         self.fig.canvas.draw()
         img = self.convert2img(self.fig)
