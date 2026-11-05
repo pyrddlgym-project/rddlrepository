@@ -3,5 +3,5 @@ info = {
     'description': 'Tetris is the classic block stacking game.',
     'context': 'arcade',
     'tags': '',
-    'viz': 'None'
+    'viz': 'TetrisViz.TetrisVisualizer'
 }

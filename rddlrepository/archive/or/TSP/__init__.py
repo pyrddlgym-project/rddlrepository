@@ -3,5 +3,5 @@ info = {
     'description': 'The travelling salesman problem.',
     'context': 'or',
     'tags': '',
-    'viz': 'None'
+    'viz': 'TSPViz.TSPVisualizer'
 }

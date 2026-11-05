@@ -3,5 +3,5 @@ info = {
     'description': 'Continuous state action navigation problem with regions to be avoided.',
     'context': '',
     'tags': '',
-    'viz': 'None'
+    'viz': 'NavigationViz.NavigationVisualizer'
 }
