@@ -3,5 +3,5 @@ info = {
     'description': 'Exercise an American max option on correlated assets.',
     'context': 'or',
     'tags': '',
-    'viz': 'None'
+    'viz': 'OptionViz.OptionVisualizer'
 }
