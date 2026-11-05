@@ -26,7 +26,8 @@ class WildfireVisualizer(BaseViz):
     '''Draws the grid in the order the positions are declared, with the first y position
     at the top, showing which cells have fuel, which are burning and which are targets.
     Targets that have burned stay marked, as the reward penalizes them on every step.
-    The drawing only depends on the current state.
+    The POMDP shows the true fire rather than only the noisy observations of it. The drawing
+    only depends on the current state.
     '''
 
     def __init__(self, model: RDDLPlanningModel,
