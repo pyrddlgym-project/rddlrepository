@@ -23,8 +23,8 @@ domain Intruders_continuous {
     	// domain bounds
     	DANGER-L(zone) : { non-fluent, real, default = 0.3 };  // left edge of zone
 		DANGER-R(zone) : { non-fluent, real, default = 0.7 };  // right edge of zone
-		DANGER-T(zone) : { non-fluent, real, default = 0.3 };  // top edge of zone
-		DANGER-B(zone) : { non-fluent, real, default = 0.7 };  // bottom edge of zone
+		DANGER-T(zone) : { non-fluent, real, default = 0.7 };  // top edge of zone
+		DANGER-B(zone) : { non-fluent, real, default = 0.3 };  // bottom edge of zone
  		DT : { non-fluent, real, default = 0.1 };		// how much time passes between epochs	
 
  		// properties of the camera systems
