@@ -3,5 +3,5 @@ info = {
     'description': 'Discrete intruder detection problem on a grid.',
     'context': '',
     'tags': '',
-    'viz': 'None'
+    'viz': 'IntrudersViz.IntrudersVisualizer'
 }

@@ -3,5 +3,5 @@ info = {
     'description': 'Squares are moved to adjacent empty cells until a specific arrangement is achieved.',
     'context': 'arcade',
     'tags': '',
-    'viz': 'None'
+    'viz': 'EightViz.EightVisualizer'
 }

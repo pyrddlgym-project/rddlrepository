@@ -3,5 +3,5 @@ info = {
     'description': 'Room temperature control simulation.',
     'context': '',
     'tags': '',
-    'viz': 'None'
+    'viz': 'HVACViz.HVACVisualizer'
 }
