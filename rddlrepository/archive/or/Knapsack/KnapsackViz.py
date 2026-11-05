@@ -9,9 +9,9 @@ from PIL import Image
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
-NEWEST_COLOR = '#ffa000'
+NEWEST_COLOR = '#ff8f00'
 NO_ROOM_COLOR = '#c62828'
-INITIAL_COLOR = '#9e9e9e'
+INITIAL_COLOR = '#90a4ae'
 
 # text smaller than this is not readable, so it is left out
 MIN_FONT_SIZE = 5
@@ -36,7 +36,7 @@ class KnapsackVisualizer(BaseViz):
                  column_width=0.9,
                  plot_height=5.0,
                  max_width=14.0,
-                 min_width=4.2,
+                 min_width=4.8,
                  wait_time=100) -> None:
         self._model = model
         self._wait_time = wait_time
@@ -82,18 +82,20 @@ class KnapsackVisualizer(BaseViz):
         self.ax.set_xlim(0, num_columns)
         self.ax.set_xticks([])
         self.ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-        self.ax.set_ylabel('weight')
+        self.ax.set_ylabel('weight', fontsize=9)
+        self.ax.tick_params(labelsize=8, colors='#616161')
         for side in ('top', 'right', 'bottom'):
             self.ax.spines[side].set_visible(False)
+        self.ax.spines['left'].set_color('#b0bec5')
 
         # the knapsacks and their names never change, so they are only drawn once
         for (i, k) in enumerate(self._knapsacks):
             self.ax.add_patch(patches.Rectangle(
                 (i + 0.1, 0), 0.8, self._capacity[k],
-                facecolor='none', edgecolor='black', linewidth=1.2, zorder=3))
+                facecolor='none', edgecolor='#37474f', linewidth=1.2, zorder=3))
             self._add_label(i + 0.5, 0, k, -5, 'top', 10)
         self._add_label(self._next_x + 0.4, 0, 'offer', -5, 'top', 10, fontweight='bold')
-        self.ax.axvline(num_knapsacks + 0.25, color='#bdbdbd', linestyle='--', linewidth=1)
+        self.ax.axvline(num_knapsacks + 0.25, color='#b0bec5', linestyle='--', linewidth=1)
 
         # the color scale is only useful if the items differ
         if self._norm.vmax > self._norm.vmin:
@@ -103,12 +105,13 @@ class KnapsackVisualizer(BaseViz):
                  bar_width / fig_width, 0.1 / fig_height])
             bar = self.fig.colorbar(ScalarMappable(self._norm, ITEM_COLORMAP),
                                     cax=bar_axis, orientation='horizontal')
-            bar.ax.tick_params(labelsize=7)
-            bar.set_label('value per unit of weight', fontsize=8, labelpad=1)
+            bar.ax.tick_params(labelsize=8, colors='#616161')
+            bar.outline.set_edgecolor('#b0bec5')
+            bar.set_label('value per unit of weight', fontsize=9, labelpad=1)
         self.fig.text(
-            0.5, 0.06 / fig_height,
+            0.5, 0.1 / fig_height,
             'Height: weight. Number: value. Red count: the offer does not fit.',
-            ha='center', va='bottom', fontsize=8)
+            ha='center', va='bottom', fontsize=9, color='#37474f')
 
     def _get_state(self, state):
         return (tuple(int(state[RDDLPlanningModel.ground_var('total-weight', [k])])

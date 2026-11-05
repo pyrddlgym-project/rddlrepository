@@ -2,6 +2,8 @@ import matplotlib
 matplotlib.use('agg')
 import pygame
 import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgba
+from matplotlib.lines import Line2D
 from matplotlib.path import Path
 import matplotlib.patches as mpatches
 import numpy as np
@@ -25,18 +27,18 @@ ROAD_DELTA = ROAD_PAVED_WIDTH / 12  # Division of a link into parts for drawing 
 TURN_RADIUS_DELTA = 5  # Curvature of a turn
 LINK_GRID_SAT_DENSITY = 0.2  # per lane                   # Density at which a cell in the flow grid gets a saturated color
 
-RGBA_PAVEMENT_COLOR = (0.6, 0.6, 0.6, 1)
-RGBA_INTERSECTION_COLOR = (0.3, 0.3, 0.3, 1)
-RGBA_GREEN_TURN_COLOR = (0.2, 1, 0.2, 1)
-RGBA_Q_PATCH_COLOR = (1, 0.2, 0.2, 0.4)
-RGBA_Q_LINE_COLOR = (1, 0.2, 0.2, 1)
+RGBA_PAVEMENT_COLOR = to_rgba('#cfd8dc')
+RGBA_INTERSECTION_COLOR = to_rgba('#90a4ae')
+RGBA_GREEN_TURN_COLOR = to_rgba('#2e7d32')
+RGBA_Q_PATCH_COLOR = to_rgba('#c62828', 0.35)
+RGBA_Q_LINE_COLOR = to_rgba('#c62828')
 RGBA_LINK_GRID_COLOR = RGBA_PAVEMENT_COLOR
-RGBA_LINK_GRID_SAT_COLOR = (0.9, 0.3, 0.9, 1)
+RGBA_LINK_GRID_SAT_COLOR = to_rgba('#1565c0')
 
 
 def get_fillcolor_by_density(N, capacity):
     p = max(min(1, N / capacity), 0)
-    return tuple(p * c for c in RGBA_LINK_GRID_SAT_COLOR)
+    return RGBA_LINK_GRID_SAT_COLOR[:3] + (p,)
 
 
 def id(var_id, *objs):
@@ -377,7 +379,10 @@ class TrafficVisualizer(BaseViz):
         return fig, ax
 
     def convert2img(self, fig, ax):
-        ax.set_position((0, 0, 1, 1))
+
+        # leave room for the title and legend
+        height = fig.get_figheight()
+        ax.set_position((0, 0.45 / height, 1, 1 - 0.95 / height))
         fig.canvas.draw()
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
         data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
@@ -462,12 +467,29 @@ class TrafficVisualizer(BaseViz):
                                 edgecolor=RGBA_LINK_GRID_COLOR)
             ax.add_patch(patch)
 
+    def build_labels(self, states, fig, ax):
+
+        # same rule as the reward, which counts vehicles on links and waiting to enter
+        on_links = sum(float(states[id('Nc', L)]) for L in self.linkdata)
+        entering = sum(float(states[id('virtual-q', L)]) for L in self.sources)
+        ax.set_title(f'{on_links:.0f} vehicles on links, {entering:.0f} waiting to enter',
+                     fontsize=13, fontweight='bold')
+        fig.legend(handles=[
+            mpatches.Patch(facecolor=RGBA_PAVEMENT_COLOR, label='Road'),
+            mpatches.Patch(facecolor=RGBA_INTERSECTION_COLOR, label='Intersection'),
+            Line2D([], [], color=RGBA_GREEN_TURN_COLOR, linewidth=2, label='Green turn'),
+            mpatches.Patch(facecolor=RGBA_LINK_GRID_SAT_COLOR, alpha=0.6, label='Moving vehicles'),
+            mpatches.Patch(facecolor=RGBA_Q_LINE_COLOR, alpha=0.6, label='Queue')
+        ], loc='lower center', ncol=5, frameon=False, fontsize=8.5, columnspacing=1.0,
+           handlelength=1.4)
+
     def render(self, state):
         self.states = state
 
         self._fig, self._ax = self.init_canvas(self._figure_size, self._dpi)
         self.build_nonfluents_layout(self._fig, self._ax)
         self.build_states_layout(state, self._fig, self._ax)
+        self.build_labels(state, self._fig, self._ax)
 
         img = self.convert2img(self._fig, self._ax)
         self._ax.cla()

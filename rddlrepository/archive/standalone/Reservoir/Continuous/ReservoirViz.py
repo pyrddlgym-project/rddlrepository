@@ -1,267 +1,249 @@
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+import matplotlib.patches as patches
+from matplotlib.lines import Line2D
 import numpy as np
 from PIL import Image
-from typing import Optional
 
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
+TANK_COLOR = '#eceff1'
+TANK_EDGE_COLOR = '#37474f'
+RANGE_COLOR = '#c8e6c9'
+RANGE_EDGE_COLOR = '#2e7d32'
+WATER_COLOR = '#42a5f5'
+LOW_COLOR = '#ff8f00'
+HIGH_COLOR = '#c62828'
+FLOW_COLOR = '#546e7a'
+BACK_FLOW_COLOR = '#ad1457'
+SEA_COLOR = '#bbdefb'
+SEA_EDGE_COLOR = '#1565c0'
+OK_COLOR = '#2e7d32'
+
+# text smaller than this is not readable, so it is left out
+MIN_FONT_SIZE = 5
+
+# the width of the sea along the right edge of the figure, in inches
+SEA_WIDTH = 0.55
+
 
 class ReservoirVisualizer(BaseViz):
+    '''Draws the reservoirs in a row, sorted so that water flows from left to right along
+    the arcs above them, ending at the sea along the right edge. Each tank is scaled to its own
+    capacity, with its water and the range of levels that are not penalized. Flows cannot
+    all go left to right if they form a cycle, and those that do not are drawn below the
+    row. The drawing only depends on the current state.
+    '''
 
     def __init__(self, model: RDDLPlanningModel,
-                 grid_size: Optional[int]=[50, 50],
-                 resolution: Optional[int]=[500, 500]) -> None:
+                 column_width=1.1,
+                 max_width=14.0,
+                 min_width=6.8,
+                 tank_height=1.25,
+                 arc_height=2.4,
+                 wait_time=100) -> None:
         self._model = model
-        self._states = model.ground_vars_with_values(model.state_fluents)
-        self._nonfluents = model.ground_vars_with_values(model.non_fluents)
-        self._objects = model.type_to_objects
-        self._grid_size = grid_size
-        self._resolution = resolution
-        self._interval = 15
+        self._wait_time = wait_time
 
-        self._object_layout = None
-        self._canvas_info = None
-        self._render_frame = None
-        self._data = None
-        self._fig = None
-        self._ax = None
+        nonfluents = model.ground_vars_with_values(model.non_fluents)
+        tanks = model.type_to_objects['reservoir']
+        self._top = self._get_values(nonfluents, 'TOP_RES', tanks)
+        self._high = self._get_values(nonfluents, 'MAX_LEVEL', tanks)
+        self._low = self._get_values(nonfluents, 'MIN_LEVEL', tanks)
+        self._rain = self._get_values(nonfluents, 'RAIN_VAR', tanks)
+        self._to_sea = [r for r in tanks if nonfluents[
+            RDDLPlanningModel.ground_var('CONNECTED_TO_SEA', [r])]]
+        flows = [(r1, r2) for r1 in tanks for r2 in tanks if r1 != r2 and nonfluents[
+            RDDLPlanningModel.ground_var('RES_CONNECT', [r1, r2])]]
 
-    def build_object_layout(self) -> dict:
-        max_res_cap = {o: None for o in self._objects['reservoir']}
-        upper_bound = {o: None for o in self._objects['reservoir']}
-        lower_bound = {o: None for o in self._objects['reservoir']}
-        rain_shape = {o: None for o in self._objects['reservoir']}
-        rain_scale = {o: None for o in self._objects['reservoir']}
-        downstream = {o: [] for o in self._objects['reservoir']}
-        sink_res = {o: None for o in self._objects['reservoir']}
-        rlevel = {o: None for o in self._objects['reservoir']}
+        self._tanks = self._get_flow_order(tanks, flows)
+        position = {r: i for (i, r) in enumerate(self._tanks)}
+        self._forward = [(a, b) for (a, b) in flows if position[a] < position[b]]
+        self._backward = [(a, b) for (a, b) in flows if position[a] > position[b]]
 
-        # add none-fluents
-        for k, v in self._nonfluents.items():
-            var, objects = RDDLPlanningModel.parse_grounded(k)
-            if var == 'TOP_RES':
-                max_res_cap[objects[0]] = v
-            elif var == 'MAX_LEVEL':
-                upper_bound[objects[0]] = v
-            elif var == 'MIN_LEVEL':
-                lower_bound[objects[0]] = v
-            elif var == 'RAIN_VAR':
-                rain_shape[objects[0]] = v
-            elif var == 'RES_CONNECT':
-                if v == True:
-                    downstream[objects[0]].append(objects[1])
-            elif var == 'CONNECTED_TO_SEA':
-                sink_res[objects[0]] = v
+        # one column for each reservoir, smaller to fit on screen, and the sea along the
+        # right edge of the figure
+        num_columns = len(self._tanks)
+        margin = 0.2
+        sea_width = SEA_WIDTH if self._to_sea else margin
+        width = max(min(column_width * num_columns + margin + sea_width, max_width), min_width)
+        self._column = min((width - margin - sea_width) / num_columns, column_width)
+        self._tank_width = 0.82 * self._column
 
-        # # add states
-        for k, v in self._states.items():
-            var, objects = RDDLPlanningModel.parse_grounded(k)
-            if var == 'rlevel':
-                rlevel[objects[0]] = v
+        # from the bottom: the legend, flows that go backwards, names, tanks and the arcs
+        self._back_height = 0.5 if self._backward else 0.0
+        self._tank_y = 0.45 + self._back_height + 0.5
+        self._tank_height = tank_height
+        self._arc_y = self._tank_y + tank_height
+        self._arc_height = arc_height if self._forward or self._to_sea else 0.0
+        height = self._arc_y + self._arc_height + 0.6
 
-        # adding defaults
-        for o in self._objects['reservoir']:
-            if max_res_cap[o] == None:
-                max_res_cap[o] = self._nonfluents['TOP_RES']
-            if upper_bound[o] == None:
-                upper_bound[o] = self._nonfluents['MAX_LEVEL']
-            if lower_bound[o] == None:
-                lower_bound[o] = self._nonfluents['MIN_LEVEL']
-            if rain_shape[o] == None:
-                rain_shape[o] = self._nonfluents['RAIN_VAR']
-            if rlevel[o] == None:
-                rlevel[o] = self._states['rlevel']
-            if sink_res[o] == None:
-                sink_res[o] = False
+        self.fig = plt.figure(figsize=(width, height))
+        self.ax = self.fig.add_axes([0, 0, 1, 1 - 0.5 / height])
+        self.ax.set_xlim(0, width)
+        self.ax.set_ylim(0, height - 0.5)
+        self.ax.axis('off')
 
-        object_layout = {
-            'rain_shape': rain_shape, 'max_res_cap': max_res_cap, 'rlevel': rlevel,
-            'upper_bound': upper_bound, 'lower_bound': lower_bound, 'downstream': downstream,
-            'sink_res': sink_res
-        }
-        return object_layout
+        self._sea_x = width - sea_width
+        start = (self._sea_x - (num_columns - 1) * self._column) / 2
+        self._x = {r: start + i * self._column for (i, r) in enumerate(self._tanks)}
+        self._num_columns = num_columns
 
-    def init_canvas_info(self):
-        interval = self._interval
-        objects_set = set(self._objects['reservoir'])
-        sink_res_set = set([k for k, v in self._object_layout['sink_res'].items() 
-                            if v == True])
+        # the flows, tanks and sea never change, so they are only drawn once
+        self._draw_flows()
+        for r in self._tanks:
+            self._draw_tank(r)
+        if self._to_sea:
+            self._draw_sea(width, height)
 
-        all_child_set = []
-        for i in self._object_layout['downstream'].values():
-            all_child_set += i
-        all_child_set = set(all_child_set) - sink_res_set
+        # the legend and title are centered on the land, as the sea would cover them
+        self._title_x = self._sea_x / 2 / width
+        handles = [
+            patches.Patch(facecolor=WATER_COLOR, label='In range'),
+            patches.Patch(facecolor=LOW_COLOR, label='Too low'),
+            patches.Patch(facecolor=HIGH_COLOR, label='Too high'),
+            patches.Patch(facecolor=RANGE_COLOR, edgecolor=RANGE_EDGE_COLOR, label='Desired range'),
+            Line2D([], [], color=FLOW_COLOR, label='Flow, left to right')
+        ]
+        if self._backward:
+            handles.append(Line2D([], [], color=BACK_FLOW_COLOR, label='Right to left'))
+        self.fig.legend(handles=handles, loc='lower center', bbox_to_anchor=(self._title_x, 0),
+                        ncol=len(handles), frameon=False, fontsize=8.5, columnspacing=1.0,
+                        handlelength=1.4)
 
-        all_root_set = objects_set - all_child_set - sink_res_set
+    def _get_values(self, nonfluents, var, tanks):
+        return {r: nonfluents[RDDLPlanningModel.ground_var(var, [r])] for r in tanks}
 
-        level_list = [list(all_root_set)]
-        visited_nodes = objects_set.copy() - all_child_set
+    def _get_flow_order(self, tanks, flows):
 
-        top_set = all_root_set
-        bot_set = set()
+        # repeatedly take the first reservoir with nothing left flowing into it, which also
+        # keeps the declared order as far as possible: with a cycle of flows no reservoir
+        # may qualify, so take the one with the fewest left instead
+        remaining = list(tanks)
+        order = []
+        while remaining:
+            inflows = {r: sum(b == r and a in remaining for (a, b) in flows) for r in remaining}
+            chosen = min(remaining, key=lambda r: inflows[r])
+            order.append(chosen)
+            remaining.remove(chosen)
+        return order
 
-        while len(visited_nodes) < len(objects_set):
-            for i in top_set:
-                for j in self._object_layout['downstream'][i]:
-                    bot_set.add(j)
-                    visited_nodes.add(j)
-            level_list.append(list(bot_set))
-            top_set = bot_set
-            bot_set = set()
+    def _add_text(self, x, y, text, va, font_size, width, **kwargs):
 
-        level_list.append(list(sink_res_set))
+        # text shrinks to the given width, and is left out if unreadable
+        size = min(font_size, 72 * width / (0.62 * len(text)))
+        if size < MIN_FONT_SIZE:
+            return None
+        return self.ax.text(x, y, text, ha='center', va=va, fontsize=size, **kwargs)
 
-        row_num = len(level_list)
-        col_num = max(len(i) for i in level_list)
+    def _draw_arc(self, x1, x2, base, height, color, width, alpha):
+        angles = np.linspace(0, np.pi, 60)
+        self.ax.plot((x1 + x2) / 2 + (x2 - x1) / 2 * np.cos(angles), base + height * np.sin(angles),
+                     color=color, linewidth=width, alpha=alpha, zorder=1)
 
-        canvas_size = (col_num * interval, row_num * interval)
-        init_points = {}
-        for i in range(len(level_list)):
-            for j in range(len(level_list[i])):
-                init_x = 0 + interval * j
-                init_y = canvas_size[1] - interval * (i + 1)
-                init_points[level_list[i][j]] = (init_x, init_y)
-                
-        canvas_info = {'canvas_size': canvas_size, 'init_points': init_points}
-        return canvas_info
+    def _draw_flows(self):
 
-    def render_conn(self):
-        ax = self._ax
-        downstream = self._object_layout['downstream']
-        init_points = self._canvas_info['init_points']
-        interval = self._interval * 2 / 3
-        for k, v in downstream.items():
-            top_point = (init_points[k][0] + interval / 2, init_points[k][1])
-            for p in v:
-                bot_point = (init_points[p][0] + interval / 2, init_points[p][1] + interval * 1.25)
-                style = mpatches.ArrowStyle('Fancy', head_length=2, head_width=2, tail_width=0.01)
-                arrow = mpatches.FancyArrowPatch(top_point, bot_point, arrowstyle=style, color='k')
-                ax.add_patch(arrow)
+        # lines get thinner and fainter as there are more of them, to stay readable
+        count = max(len(self._forward) + len(self._backward) + len(self._to_sea), 1)
+        width = max(0.6, min(1.5, 40 / count))
+        alpha = max(0.3, min(0.8, 30 / count))
 
-    def render_res(self, res: str) -> tuple:
-        fig = self._fig
-        ax = self._ax
-        interval = self._interval * 2 / 3
-        curr_t = res
-        init_x, init_y = self._canvas_info['init_points'][curr_t]
+        # the height of an arc grows with its length, so that arcs nest instead of overlapping
+        columns = max(self._num_columns - 1, 1)
+        for (a, b) in self._forward:
+            span = abs(self._x[b] - self._x[a]) / (columns * self._column)
+            self._draw_arc(self._x[a], self._x[b], self._arc_y,
+                           (0.12 + 0.88 * span) * self._arc_height, FLOW_COLOR, width, alpha)
+        for r in self._to_sea:
+            span = (self._sea_x - self._x[r]) / (self._sea_x - self._x[self._tanks[0]])
+            self._draw_arc(self._x[r], self._sea_x, self._arc_y,
+                           (0.12 + 0.88 * span) * self._arc_height, SEA_EDGE_COLOR, 1.5, 0.8)
+        for (a, b) in self._backward:
+            span = abs(self._x[b] - self._x[a]) / (columns * self._column)
+            self._draw_arc(self._x[a], self._x[b], self._tank_y - 0.42,
+                           -(0.2 + 0.8 * span) * self._back_height, BACK_FLOW_COLOR, width, alpha)
 
-        rlevel = self._object_layout['rlevel'][curr_t]
-        rain_shape = self._object_layout['rain_shape'][curr_t]
+    def _level_y(self, reservoir, level):
+        fraction = level / self._top[reservoir] if self._top[reservoir] > 0 else 0.0
+        return self._tank_y + min(max(fraction, 0.0), 1.0) * self._tank_height
 
-        max_res_cap = self._object_layout['max_res_cap'][curr_t]
-        upper_bound = self._object_layout['upper_bound'][curr_t]
-        lower_bound = self._object_layout['lower_bound'][curr_t]
+    def _draw_tank(self, reservoir):
+        x = self._x[reservoir]
+        left = x - self._tank_width / 2
+        self.ax.add_patch(patches.Rectangle(
+            (left, self._tank_y), self._tank_width, self._tank_height, facecolor=TANK_COLOR,
+            edgecolor='none', zorder=2))
 
-        sink_res = self._object_layout['sink_res'][curr_t]
+        # the range of levels that are not penalized
+        low, high = self._level_y(reservoir, self._low[reservoir]), self._level_y(reservoir, self._high[reservoir])
+        self.ax.add_patch(patches.Rectangle(
+            (left, low), self._tank_width, high - low, facecolor=RANGE_COLOR, edgecolor='none', zorder=2))
+        for y in (low, high):
+            self.ax.plot([left, left + self._tank_width], [y, y], color=RANGE_EDGE_COLOR,
+                         linestyle='--', linewidth=1, zorder=5)
+        self.ax.add_patch(patches.Rectangle(
+            (left, self._tank_y), self._tank_width, self._tank_height, facecolor='none',
+            edgecolor=TANK_EDGE_COLOR, linewidth=1.2, zorder=6))
+        self._add_text(x, self._tank_y - 0.05, reservoir, 'top', 10, self._column, zorder=7)
+        self._add_text(x, self._tank_y - 0.24, f'rain {self._rain[reservoir]:g}', 'top', 8,
+                       self._column, color='#616161', zorder=7)
 
-        maxL = [init_x, max_res_cap / 150 * interval + init_y]
-        maxR = [init_x + interval, max_res_cap / 150 * interval + init_y]
-        upL = [init_x, upper_bound / 150 * interval + init_y]
-        upR = [init_x + interval, upper_bound / 150 * interval + init_y]
-        lowL = [init_x, lower_bound / 150 * interval + init_y]
-        lowR = [init_x + interval, lower_bound / 150 * interval + init_y]
+    def _draw_sea(self, right, top):
 
-        line_max = plt.Line2D((maxL[0], maxR[0]), (maxL[1], maxR[1]), 
-                              ls='-', color='black', lw=0.25)
-        line_up = plt.Line2D((upL[0], upR[0]), (upL[1], upR[1]), 
-                             ls='--', color='orange', lw=0.25)
-        line_low = plt.Line2D((lowL[0], lowR[0]), (lowL[1], lowR[1]), 
-                              ls='--', color='orange', lw=0.25)
-        lineL = plt.Line2D((init_x, init_x), (init_y, init_y + interval), 
-                           color='black', lw=0.5)
-        lineR = plt.Line2D((init_x + interval, init_x + interval), (init_y, init_y + interval), 
-                           color='black', lw=0.5)
-        lineB = plt.Line2D((init_x, init_x + interval), (init_y, init_y), 
-                           color='black', lw=0.5)
+        # the sea has no edge of its own except the shore, facing the reservoirs
+        self.ax.add_patch(patches.Rectangle(
+            (self._sea_x, 0), right - self._sea_x, top, facecolor=SEA_COLOR, edgecolor='none',
+            zorder=0, clip_on=False))
+        self.ax.plot([self._sea_x, self._sea_x], [0, top], color=SEA_EDGE_COLOR, linewidth=1.5,
+                     zorder=1, clip_on=False)
+        self.ax.text((self._sea_x + right) / 2, self._tank_y + self._tank_height / 2, 'sea', rotation=90,
+                     ha='center', va='center', fontsize=10, color=SEA_EDGE_COLOR, fontweight='bold',
+                     zorder=7)
 
-        water_rect = plt.Rectangle((init_x, init_y), interval, rlevel / 120 * interval, 
-                                   fc='royalblue')
-        res_rect = plt.Rectangle((init_x, init_y), interval, interval, 
-                                 fc='lightgrey', alpha=0.5)
-        shape_rect = plt.Rectangle((init_x, init_y + interval), interval, interval / 4, 
-                                   fc='darkcyan', alpha=np.clip(rain_shape / 50, 0, 1))
-
-        ax.add_line(line_max)
-        ax.add_line(line_up)
-        ax.add_line(line_low)
-        ax.add_line(lineL)
-        ax.add_line(lineR)
-        ax.add_line(lineB)
-
-        lineU = plt.Line2D((init_x + interval * 1.25, init_x + interval * 1.25), 
-                           (init_y, init_y + interval),
-                           color='black', lw=1)
-        lineD = plt.Line2D((init_x + interval, init_x + interval * 1.25), (init_y, init_y), 
-                           color='black', lw=1)
-
-        if sink_res:
-            land_shape = plt.Rectangle((init_x + interval, init_y), interval / 4, interval, 
-                                       fc='royalblue')
+    def _draw_water(self, reservoir, level):
+        x = self._x[reservoir]
+        if level < self._low[reservoir]:
+            color = LOW_COLOR
         else:
-            land_shape = plt.Rectangle((init_x + interval, init_y), interval / 4, interval, 
-                                       fc='darkgoldenrod')
+            color = HIGH_COLOR if level > self._high[reservoir] else WATER_COLOR
+        artists = [self.ax.add_patch(patches.Rectangle(
+            (x - self._tank_width / 2, self._tank_y), self._tank_width,
+            self._level_y(reservoir, level) - self._tank_y,
+            facecolor=color, edgecolor='none', alpha=0.85, zorder=3))]
 
-        plt.text(init_x + interval * 1.1, init_y + interval * 1.1, "%s" % curr_t, 
-                 color='black', fontsize=5)
+        # the fill shows how full a tank is against its own capacity, and the number the level
+        label = self._add_text(
+            x, self._tank_y + self._tank_height / 2, f'{level:.3g}', 'center', 10, self._tank_width,
+            fontweight='bold', zorder=7,
+            bbox={'facecolor': 'white', 'edgecolor': 'none', 'pad': 1.0, 'alpha': 0.8})
+        if label is not None:
+            artists.append(label)
+        return artists
 
-        ax.add_patch(water_rect)
-        ax.add_patch(res_rect)
-        # ax.add_patch(scale_rect)
-        ax.add_patch(shape_rect)
-
-        ax.add_line(line_max)
-        ax.add_line(line_up)
-        ax.add_line(line_low)
-        ax.add_line(lineL)
-        ax.add_line(lineR)
-        ax.add_line(lineB)
-        ax.add_line(lineU)
-        ax.add_line(lineD)
-
-        ax.add_patch(land_shape)
-
-        return fig, ax
-
-    def fig2npa(self, fig):
+    def convert2img(self, fig):
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
         data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
         data = data[:, :, :3]
-        return data
+        return Image.fromarray(data)
 
-    def render(self, state) -> np.ndarray:
-        self._states = state
-        self._object_layout = self.build_object_layout()
-        self._canvas_info = self.init_canvas_info()
-        canvas_size = self._canvas_info['canvas_size']
-        self._fig = plt.figure(figsize=(canvas_size[0] / 10, canvas_size[1] / 10), dpi=200)
-        self._ax = plt.gca()
+    def render(self, state):
+        levels = {r: float(state[RDDLPlanningModel.ground_var('rlevel', [r])]) for r in self._tanks}
 
-        plt.xlim([0, canvas_size[0]])
-        plt.ylim([0, canvas_size[1]])
-        plt.axis('scaled')
-        plt.axis('off')
+        artists = []
+        for r in self._tanks:
+            artists.extend(self._draw_water(r, levels[r]))
 
-        for res in self._objects['reservoir']:
-            curr_t = res
-            fig, ax = self.render_res(curr_t)
-        self.render_conn()
-        img = self.convert2img(self._fig, self._ax)
+        # same rule as the reward
+        in_range = sum(self._low[r] <= levels[r] <= self._high[r] for r in self._tanks)
+        all_in_range = in_range == len(self._tanks)
+        self.ax.set_title(f'{in_range} / {len(self._tanks)} reservoirs in range', fontsize=13,
+                          fontweight='bold', x=self._title_x,
+                          color=OK_COLOR if all_in_range else HIGH_COLOR)
 
-        self._ax.cla()
-        plt.cla()
-        plt.close()
+        self.fig.canvas.draw()
+        img = self.convert2img(self.fig)
+        for artist in artists:
+            artist.remove()
+        del artists
 
         return img
-
-    def convert2img(self, fig, ax):
-        fig.canvas.draw()
-        data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-        data = data[:, :, :3]
-        img = Image.fromarray(data)
-        self._data = data
-        self._img = img
-        return img
-

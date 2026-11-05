@@ -1,256 +1,248 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 from PIL import Image
-from typing import Optional
 
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
+COMFORT_COLOR = '#66bb6a'
+COLD_COLOR = '#42a5f5'
+HOT_COLOR = '#c62828'
+RANGE_COLOR = '#c8e6c9'
+RANGE_EDGE_COLOR = '#2e7d32'
+EDGE_COLOR = '#37474f'
+EMPTY_COLOR = '#b0bec5'
+HEATER_COLOR = '#ef6c00'
+BACKGROUND_COLOR = '#eceff1'
+ZONE_LINK_COLOR = '#546e7a'
+OK_COLOR = '#2e7d32'
+BAD_COLOR = '#c62828'
+
+# text smaller than this is not readable, so it is left out
+MIN_FONT_SIZE = 5
+
 
 class HVACVisualizer(BaseViz):
+    '''Draws the zones in a row in the order they are declared, with the heaters in a row
+    below them, in the order that keeps them closest to the zones they serve. Each tile
+    fills up with its temperature, and dashed lines mark the comfort range. Arcs above the
+    zones join adjacent zones, and lines connect heaters to the zones they serve.
+
+    All tiles use one temperature scale, so a tile hotter than the scale stays full and
+    its number gives the exact value. Discomfort is only penalized in occupied zones. The
+    drawing only depends on the current state.
+    '''
 
     def __init__(self, model: RDDLPlanningModel,
-                 grid_size: Optional[int] = [50, 50],
-                 resolution: Optional[int] = [500, 500]) -> None:
+                 column_width=1.1,
+                 max_width=14.0,
+                 min_width=6.6,
+                 max_zone_size=0.95,
+                 max_heater_size=0.75,
+                 arc_height=1.6,
+                 gap_height=1.1,
+                 wait_time=100) -> None:
         self._model = model
-        self._states = model.ground_vars_with_values(model.state_fluents)
+        self._wait_time = wait_time
+
         self._nonfluents = model.ground_vars_with_values(model.non_fluents)
-        self._objects = model.type_to_objects
-        self._grid_size = grid_size
-        self._resolution = resolution
-        self._interval = 15
+        self._zones = model.type_to_objects['zone']
+        self._low = self._nonfluents['TEMP-ZONE-MIN']
+        self._high = self._nonfluents['TEMP-ZONE-MAX']
+        self._heater_zones = {h: [z for z in self._zones if self._nonfluents[
+            RDDLPlanningModel.ground_var('ADJ-HEATER', [h, z])]]
+            for h in model.type_to_objects['heater']}
+        self._zone_links = [
+            (z1, z2) for (i, z1) in enumerate(self._zones) for z2 in self._zones[i + 1:]
+            if self._nonfluents[RDDLPlanningModel.ground_var('ADJ-ZONES', [z1, z2])]
+            or self._nonfluents[RDDLPlanningModel.ground_var('ADJ-ZONES', [z2, z1])]]
+        self._heaters = self._get_heater_order(model.type_to_objects['heater'])
+        self._scale = self._get_scale(model)
 
-        self._object_layout = None
-        self._canvas_info = None
-        self._render_frame = None
-        self._data = None
-        self._fig = None
-        self._ax = None
+        # both rows use the same spacing, and wide rows use smaller tiles to fit on screen
+        num_columns = max(len(self._zones), len(self._heaters), 1)
+        margin, left_over = 0.2, 0.75
+        width = max(min(column_width * num_columns + 2 * margin, max_width), min_width)
+        self._column = min((width - 2 * margin) / num_columns, column_width)
+        self._zone_size = min(max_zone_size, 0.8 * self._column)
+        self._heater_size = min(max_heater_size, 0.68 * self._column)
 
-    def build_object_layout(self) -> dict:
-        zone_vol = {o: None for o in self._objects['zone']}
-        heater_vol = {o: None for o in self._objects['heater']}
-        adj_zone = {o: [] for o in self._objects['zone']}
-        adj_heater = {o: [] for o in self._objects['heater']}
-        temp_zone = {o: None for o in self._objects['zone']}
-        temp_heater = {o: None for o in self._objects['heater']}
+        # from the bottom: names and tiles of heaters, a gap for the lines, names and tiles
+        # of zones, and the arcs above them
+        name_height = 0.28
+        self._heater_y = left_over + name_height
+        self._zone_y = self._heater_y + self._heater_size + gap_height + name_height
+        self._arc_y = self._zone_y + self._zone_size
+        self._arc_height = arc_height if self._zone_links else 0.0
+        height = self._arc_y + self._arc_height + 0.6
 
-        # add none-fluents
-        for k, v in self._nonfluents.items():
-            var, objects = RDDLPlanningModel.parse_grounded(k)
-            if var == 'ZONE_VOL':
-                zone_vol[objects[0]] = v
-            elif var == 'HEATER-VOL':
-                heater_vol[objects[0]] = v
-            elif var == 'ADJ_ZONES':
-                if v == True:
-                    adj_zone[objects[0]].append(objects[1])
-            elif var == 'ADJ_HEATER':
-                if v == True:
-                    adj_heater[objects[0]].append(objects[1])
+        self.fig = plt.figure(figsize=(width, height))
+        self.ax = self.fig.add_axes([0, 0, 1, 1 - 0.5 / height])
+        self.ax.set_xlim(0, width)
+        self.ax.set_ylim(0, height - 0.5)
+        self.ax.axis('off')
 
-        # add states
-        for k, v in self._states.items():
-            var, objects = RDDLPlanningModel.parse_grounded(k)
-            if var == 'temp-zone':
-                temp_zone[objects[0]] = v
-            elif var == 'temp-heater':
-                temp_heater[objects[0]] = v
+        center = width / 2
+        self._x = {}
+        for row in (self._zones, self._heaters):
+            for (i, name) in enumerate(row):
+                self._x[name] = center + (i - (len(row) - 1) / 2) * self._column
 
-        temp_zone_max = self._nonfluents['TEMP-ZONE-MAX']
-        temp_zone_min = self._nonfluents['TEMP-ZONE-MIN']
-        temp_out = self._nonfluents['TEMP-OUT']
+        # the links and tiles never change, so they are only drawn once
+        self._draw_links()
+        for z in self._zones:
+            self._draw_tile(z, self._zone_y, self._zone_size, comfort=True)
+        for h in self._heaters:
+            self._draw_tile(h, self._heater_y, self._heater_size, comfort=False)
 
-        object_layout = {'temp-zone-max': temp_zone_max, 
-                         'temp-zone-min': temp_zone_min,
-                         'temp-out': temp_out,
-                         'zone-vol': zone_vol,
-                         'heater-vol': heater_vol,
-                         'temp-zone': temp_zone,
-                         'temp-heater': temp_heater,
-                         'adj-zone': adj_zone,
-                         'adj-heater': adj_heater}
-        return object_layout
+        self.fig.legend(handles=[
+            patches.Patch(facecolor=COMFORT_COLOR, label='In range'),
+            patches.Patch(facecolor=COLD_COLOR, label='Too cold'),
+            patches.Patch(facecolor=HOT_COLOR, label='Too hot'),
+            patches.Patch(facecolor=EMPTY_COLOR, label='Unoccupied'),
+            patches.Patch(facecolor=HEATER_COLOR, label='Heater'),
+            patches.Patch(facecolor=RANGE_COLOR, edgecolor=RANGE_EDGE_COLOR, label='Comfort range')
+        ], loc='lower center', bbox_to_anchor=(0.5, 0.25 / height), ncol=6, frameon=False,
+           fontsize=8.5, columnspacing=1.0, handlelength=1.4)
+        self.fig.text(0.5, 0.1 / height,
+                      f'Tiles fill from {self._scale[0]:.1f} to {self._scale[1]:.1f} degrees',
+                      ha='center', va='bottom', fontsize=9, color='#37474f')
 
-    def init_canvas_info(self):
-        interval = self._interval
+    def _get_heater_order(self, heaters):
 
-        zone_list = self._objects['zone']
-        heater_list = self._objects['heater']
+        # each heater goes below the middle of the zones it serves, which keeps the lines
+        # short: heaters that serve no zones go last
+        position = {z: i for (i, z) in enumerate(self._zones)}
 
-        room_grid_size = (max(len(zone_list), len(heater_list)),
-                          max(len(zone_list), len(heater_list)) + 1)
+        def key(heater):
+            zones = self._heater_zones[heater]
+            if not zones:
+                return len(self._zones)
+            return sum(position[z] for z in zones) / len(zones)
 
-        room_center = (room_grid_size[0] * self._interval / 2,
-                       (room_grid_size[1] - 1) * self._interval / 2 + interval)
+        return sorted(heaters, key=key)
 
-        start_points_zone = []
-        for i in range(room_grid_size[0]):
-            for j in range(room_grid_size[1]):
-                start_points_zone.append((i * interval, j * interval))
+    def _get_scale(self, model):
 
-        start_points_heater = []
-        for i in range(room_grid_size[0]):
-            start_points_heater.append((i * interval, 0))
+        # the outside, the comfort range and the initial temperatures bound where zones
+        # normally stay: heaters can be hotter, and then their tiles stay full
+        init_state = model.ground_vars_with_values(model.state_fluents)
+        temps = [self._nonfluents['TEMP-OUT'], self._low, self._high]
+        temps.extend(init_state[RDDLPlanningModel.ground_var('temp-zone', [z])] for z in self._zones)
+        temps.extend(init_state[RDDLPlanningModel.ground_var('temp-heater', [h])] for h in self._heaters)
+        low, high = min(temps), max(temps)
+        return (low, high) if high > low else (low - 1.0, low + 1.0)
 
-        # rank start point by distance from center
-        start_points_zone.sort(
-            key=lambda x: abs(x[0] + interval / 2 - room_center[0]) + \
-                          abs(x[1] + interval / 2 - room_center[1]))
-        start_points_heater.sort(
-            key=lambda x: abs(x[0] + interval / 2 - room_center[0]) + \
-                          abs(x[1] + interval / 2 - room_center[1]))
+    def _fraction(self, temp):
+        low, high = self._scale
+        return min(max((temp - low) / (high - low), 0.0), 1.0)
 
-        # rank by number of adj rooms
-        zone_list.sort(reverse=True,
-                       key=lambda x: len(self._object_layout['adj-zone'][x]))
-        heater_list.sort(reverse=True,
-                         key=lambda x: len(self._object_layout['adj-heater'][x]))
+    def _add_text(self, x, y, text, va, font_size, width, **kwargs):
 
-        zone_init_points = {zone_list[i]: start_points_zone[i]
-                            for i in range(len(zone_list))}
-        heater_init_points = {heater_list[i]: start_points_heater[i]
-                              for i in range(len(heater_list))}
+        # text shrinks to the given width, and is left out if unreadable
+        size = min(font_size, 72 * width / (0.62 * len(text)))
+        if size < MIN_FONT_SIZE:
+            return None
+        return self.ax.text(x, y, text, ha='center', va=va, fontsize=size, zorder=6, **kwargs)
 
-        canvas_info = {
-            'canvas_size': (room_grid_size[0] * interval,
-                            room_grid_size[1] * interval),
-            'zone_init_points': zone_init_points,
-            'heater_init_points': heater_init_points
-        }
-        return canvas_info
+    def _draw_links(self):
 
-    def render_conn(self):
-        ax = self._ax
-        adj_zone = self._object_layout['adj-zone']
-        adj_heater = self._object_layout['adj-heater']
-        zone_init_points = self._canvas_info['zone_init_points']
-        heater_init_points = self._canvas_info['heater_init_points']
+        # lines get thinner and fainter as there are more of them, to stay readable
+        count = max(len(self._zone_links) + sum(map(len, self._heater_zones.values())), 1)
+        width = max(0.7, min(1.5, 40 / count))
+        alpha = max(0.35, min(0.8, 30 / count))
 
-        interval = self._interval * 2 / 3
+        # heat flows between two zones if either one is declared adjacent to the other: the
+        # height of an arc grows with its length, so that arcs nest instead of overlapping
+        num_zones = max(len(self._zones) - 1, 1)
+        angles = np.linspace(0, np.pi, 60)
+        position = {z: i for (i, z) in enumerate(self._zones)}
+        for (z1, z2) in self._zone_links:
+            x1, x2 = self._x[z1], self._x[z2]
+            span = abs(position[z2] - position[z1]) / num_zones
+            height = (0.15 + 0.85 * span) * self._arc_height
+            self.ax.plot((x1 + x2) / 2 + (x2 - x1) / 2 * np.cos(angles),
+                         self._arc_y + height * np.sin(angles),
+                         color=ZONE_LINK_COLOR, linewidth=width, alpha=alpha, zorder=1)
 
-        for k, v in adj_zone.items():
-            from_point = (zone_init_points[k][0] + interval / 2,
-                          zone_init_points[k][1] + interval / 2)
-            for p in v:
-                to_point = (zone_init_points[p][0] + interval / 2,
-                            zone_init_points[p][1] + interval / 2)
-                line = plt.Line2D((from_point[0], to_point[0]),
-                                  (from_point[1], to_point[1]),
-                                  ls='-', color='black', lw=2, zorder=1)
-                ax.add_line(line)
-        for k, v in adj_heater.items():
-            from_point = (heater_init_points[k][0] + interval / 2,
-                          heater_init_points[k][1] + interval / 2)
-            for p in v:
-                to_point = (zone_init_points[p][0] + interval / 2,
-                            zone_init_points[p][1] + interval / 2)
-                line = plt.Line2D((from_point[0], to_point[0]),
-                                  (from_point[1], to_point[1]),
-                                  ls='-', color='red', lw=2, zorder=1)
-                ax.add_line(line)
+        # the lines from heaters to zones run straight across the gap between the rows
+        for (h, zones) in self._heater_zones.items():
+            for z in zones:
+                self.ax.plot([self._x[h], self._x[z]],
+                             [self._heater_y + self._heater_size, self._zone_y],
+                             color=HEATER_COLOR, linewidth=width, alpha=alpha, zorder=1)
 
-    def render_zone(self, zone: str) -> tuple:
-        ax = self._ax
+    def _draw_tile(self, name, y, size, comfort):
+        x = self._x[name]
+        self.ax.add_patch(patches.Rectangle(
+            (x - size / 2, y), size, size, facecolor=BACKGROUND_COLOR,
+            edgecolor='none', zorder=2))
+        self.ax.add_patch(patches.Rectangle(
+            (x - size / 2, y), size, size, facecolor='none',
+            edgecolor=EDGE_COLOR, linewidth=1.2, zorder=5))
+        self._add_text(x, y - 0.05, name, 'top', 10, self._column,
+                       bbox={'facecolor': 'white', 'edgecolor': 'none', 'pad': 0.8, 'alpha': 0.85})
+        if comfort:
+            low, high = y + size * self._fraction(self._low), y + size * self._fraction(self._high)
+            self.ax.add_patch(patches.Rectangle(
+                (x - size / 2, low), size, high - low, facecolor=RANGE_COLOR, edgecolor='none', zorder=2))
+            for level in (low, high):
+                self.ax.plot([x - size / 2, x + size / 2], [level, level], color=RANGE_EDGE_COLOR,
+                             linestyle='--', linewidth=1, zorder=4)
 
-        curr_z = zone
-        vol_ratio = 1
+    def _zone_color(self, temp, occupied):
+        if not occupied:
+            return EMPTY_COLOR
+        if temp < self._low:
+            return COLD_COLOR
+        return HOT_COLOR if temp > self._high else COMFORT_COLOR
 
-        init_x, init_y = self._canvas_info['zone_init_points'][curr_z]
-        interval = self._interval * 2 / 3 * vol_ratio
+    def _draw_temperature(self, name, temp, y, size, color):
+        x = self._x[name]
+        artists = [self.ax.add_patch(patches.Rectangle(
+            (x - size / 2, y), size, size * self._fraction(temp),
+            facecolor=color, edgecolor='none', alpha=0.85, zorder=3))]
+        label = self._add_text(
+            x, y + size / 2, f'{temp:.1f}', 'center', 10, size, fontweight='bold',
+            bbox={'facecolor': 'white', 'edgecolor': 'none', 'pad': 1.0, 'alpha': 0.8})
+        if label is not None:
+            artists.append(label)
+        return artists
 
-        temp = self._object_layout['temp-zone'][curr_z]
-        upper_bound = self._object_layout['temp-zone-max']
-        lower_bound = self._object_layout['temp-zone-min']
-
-        upL = [init_x, upper_bound / 100 * interval + init_y]
-        upR = [init_x + interval, upper_bound / 100 * interval + init_y]
-        lowL = [init_x, lower_bound / 100 * interval + init_y]
-        lowR = [init_x + interval, lower_bound / 100 * interval + init_y]
-
-        background_rect = plt.Rectangle((init_x, init_y),
-                                        interval,
-                                        interval,
-                                        fc='lightgrey', alpha=1, zorder=3)
-        temp_rect = plt.Rectangle((init_x, init_y), interval, temp / 100 * interval, 
-                                  fc='crimson', zorder=3)
-        line_up = plt.Line2D((upL[0], upR[0]), (upL[1], upR[1]), 
-                             ls='--', color='orange', lw=0.5, zorder=3)
-        line_low = plt.Line2D((lowL[0], lowR[0]), (lowL[1], lowR[1]), 
-                              ls='--', color='lime', lw=0.5, zorder=4)
-
-        ax.add_patch(background_rect)
-        ax.add_patch(temp_rect)
-        ax.add_line(line_up)
-        ax.add_line(line_low)
-
-        plt.text(init_x + interval * 0.8, init_y + interval * 0.8, "%s" % curr_z, 
-                 color='black', fontsize=5, zorder=5)
-
-    def render_heater(self, heater: str) -> tuple:
-        ax = self._ax
-
-        curr_h = heater
-        vol_ratio = 1
-
-        init_x, init_y = self._canvas_info['heater_init_points'][curr_h]
-        interval = self._interval * 2 / 3 * vol_ratio
-
-        temp = self._object_layout['temp-heater'][curr_h]
-
-        background_rect = plt.Rectangle((init_x, init_y), interval, interval,
-                                        fc='lightcoral', alpha=1, zorder=3)
-        temp_rect = plt.Rectangle((init_x, init_y), interval, temp / 100 * interval, 
-                                  fc='crimson', zorder=3)
-
-        ax.add_patch(background_rect)
-        ax.add_patch(temp_rect)
-
-        plt.text(init_x + interval * 0.8, init_y + interval * 0.8, "%s" % curr_h, 
-                 color='black', fontsize=5, zorder=5)
-
-    def fig2npa(self, fig):
+    def convert2img(self, fig):
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
         data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
         data = data[:, :, :3]
-        return data
+        return Image.fromarray(data)
 
-    def render(self, state) -> np.ndarray:
-        self._object_layout = self.build_object_layout()
-        self._states = state
-        self._canvas_info = self.init_canvas_info()
+    def render(self, state):
+        artists = []
+        occupied_zones = 0
+        comfortable = 0
+        for z in self._zones:
+            temp = float(state[RDDLPlanningModel.ground_var('temp-zone', [z])])
+            occupied = bool(state[RDDLPlanningModel.ground_var('occupied', [z])])
+            artists.extend(self._draw_temperature(
+                z, temp, self._zone_y, self._zone_size, self._zone_color(temp, occupied)))
 
-        canvas_size = self._canvas_info['canvas_size']
-        self._fig = plt.figure(figsize=(canvas_size[0] / 10, canvas_size[1] / 10),
-                               dpi=200)
-        self._ax = plt.gca()
+            # same rule as the penalty in the reward
+            if occupied:
+                occupied_zones += 1
+                comfortable += self._low <= temp <= self._high
+        for h in self._heaters:
+            temp = float(state[RDDLPlanningModel.ground_var('temp-heater', [h])])
+            artists.extend(self._draw_temperature(
+                h, temp, self._heater_y, self._heater_size, HEATER_COLOR))
 
-        plt.xlim([-canvas_size[0] / 5, canvas_size[0]])
-        plt.ylim([-canvas_size[1] / 5, canvas_size[1]])
-        plt.axis('scaled')
-        plt.axis('off')
+        self.ax.set_title(f'{comfortable} / {occupied_zones} occupied zones in range',
+                          fontsize=13, fontweight='bold',
+                          color=OK_COLOR if comfortable == occupied_zones else BAD_COLOR)
 
-        for z in self._objects['zone']:
-            self.render_zone(z)
-        for h in self._objects['heater']:
-            self.render_heater(h)
+        self.fig.canvas.draw()
+        img = self.convert2img(self.fig)
+        for artist in artists:
+            artist.remove()
+        del artists
 
-        self.render_conn()
-
-        img = self.convert2img(self._fig, self._ax)
-
-        self._ax.cla()
-        plt.cla()
-        plt.close()
-
-        return img
-
-    def convert2img(self, fig, ax):
-        fig.canvas.draw()
-        data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-        data = data[:, :, :3]
-        img = Image.fromarray(data)
-        self._data = data
-        self._img = img
         return img

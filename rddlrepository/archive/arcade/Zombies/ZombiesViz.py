@@ -12,9 +12,9 @@ from pyRDDLGym.core.visualizer.viz import BaseViz
 
 HUMAN_COLOR = '#1565c0'
 ZOMBIE_COLOR = '#2e7d32'
-STUNNED_COLOR = '#9e9e9e'
+STUNNED_COLOR = '#90a4ae'
 DANGER_COLOR = '#c62828'
-INFECTED_COLOR = '#ffa000'
+INFECTED_COLOR = '#ff8f00'
 
 # a human can only be infected by a zombie closer than this along both axes
 INFECTION_RANGE = 1.0
@@ -58,19 +58,22 @@ class ZombiesVisualizer(BaseViz):
         self.ax = self.fig.add_axes(
             [0.5 / fig_width, 0.75 / fig_height, width / fig_width, height / fig_height])
 
-        self.ax.set_title(f'field: {x_max:g} x {y_max:g}', loc='right', fontsize=8)
-        self.ax.tick_params(labelsize=8)
-        self.ax.set_facecolor('#eeeeee')
+        self.ax.tick_params(labelsize=8, colors='#616161')
+        for spine in self.ax.spines.values():
+            spine.set_color('#b0bec5')
+        self.ax.set_facecolor('#eceff1')
         self.ax.add_patch(patches.Rectangle(
-            (0, 0), x_max, y_max, facecolor='#fafafa', edgecolor='black', zorder=0))
+            (0, 0), x_max, y_max, facecolor='#fafafa', edgecolor='#b0bec5', zorder=0))
 
-        self.ax.legend(handles=[
+        self.fig.legend(handles=[
             Line2D([], [], marker='o', color='none', markerfacecolor=HUMAN_COLOR, label='Human'),
             Line2D([], [], marker='o', color='none', markerfacecolor=ZOMBIE_COLOR, label='Zombie'),
             Line2D([], [], marker='o', color='none', markerfacecolor=STUNNED_COLOR, label='Stunned'),
             patches.Patch(facecolor=DANGER_COLOR, alpha=0.2, label='Infection zone')
-        ], loc='upper center', bbox_to_anchor=(0.5, -0.3 / height), ncol=4,
-           frameon=False, fontsize=9)
+        ], loc='lower center', bbox_to_anchor=(0.5, 0.25 / fig_height), ncol=4,
+           frameon=False, fontsize=8.5, columnspacing=1.0,
+           handlelength=1.4)
+        self.fig.text(0.5, 0.1 / fig_height, f'Field: {x_max:g} x {y_max:g}', ha='center', va='bottom', fontsize=9, color='#37474f')
 
     def _get(self, state, var, agent):
         return state[RDDLPlanningModel.ground_var(var, [agent])]
@@ -154,10 +157,10 @@ class ZombiesVisualizer(BaseViz):
                 markeredgecolor=INFECTED_COLOR, markeredgewidth=3))
         artists.extend(self.ax.plot(
             [x], [y], marker='o', markersize=11, color=color,
-            markeredgecolor='black', zorder=3))
+            markeredgecolor='white', zorder=3))
         artists.append(self.ax.annotate(
             agent, (x, y), xytext=(0, 11), textcoords='offset points',
-            ha='center', va='bottom', fontsize=9, fontweight='bold', zorder=5))
+            ha='center', va='bottom', fontsize=9, zorder=5))
         return artists
 
     def convert2img(self, fig):
@@ -177,7 +180,7 @@ class ZombiesVisualizer(BaseViz):
         num_zombies = sum(bool(self._get(state, 'zombie', a)) for a in self._agents)
         num_humans = len(self._agents) - num_zombies
         if num_humans == 0:
-            title = 'ALL INFECTED'
+            title = 'All infected'
         else:
             title = (f'{num_humans} human{"s" if num_humans != 1 else ""}, '
                      f'{num_zombies} zombie{"s" if num_zombies != 1 else ""}')

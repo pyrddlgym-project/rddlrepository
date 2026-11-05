@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 from PIL import Image
 
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
-PATH_COLOR = '#0d47a1'
+PATH_COLOR = '#1565c0'
 GOAL_COLOR = '#2e7d32'
-ZONE_COLOR = '#212121'
+ZONE_COLOR = '#37474f'
 FIELD_COLORMAP = 'YlOrRd_r'
 
 # the slowdown of a zone is mostly gone at this many multiples of one over its decay
@@ -53,17 +54,20 @@ class NavigationVisualizer(BaseViz):
         self._bounds = None
         self._view = None
 
-        # the map is square, with room for the labels, title and color scale
+        # the map is square, with room for the labels, title, legend and color scale
         fig_width, fig_height = figure_size
-        size = fig_height - 1.1
+        size = fig_height - 1.4
         self.fig = plt.figure(figsize=figure_size)
         self.ax = self.fig.add_axes(
-            [0.7 / fig_width, 0.6 / fig_height, size / fig_width, size / fig_height])
+            [0.7 / fig_width, 0.9 / fig_height, size / fig_width, size / fig_height])
         self.ax.set_autoscale_on(False)
         self.ax.set_aspect('equal')
-        self.ax.set_xlabel(self._dims[0])
+        self.ax.set_xlabel(self._dims[0], fontsize=9)
+        self.ax.tick_params(labelsize=8, colors='#616161')
+        for spine in self.ax.spines.values():
+            spine.set_color('#b0bec5')
         if len(self._dims) > 1:
-            self.ax.set_ylabel(self._dims[1])
+            self.ax.set_ylabel(self._dims[1], fontsize=9)
         else:
             self.ax.set_yticks([])
 
@@ -72,10 +76,11 @@ class NavigationVisualizer(BaseViz):
             vmin=0.0, vmax=1.0, interpolation='bilinear', zorder=0)
         self.ax.set_autoscale_on(False)
         bar_axis = self.fig.add_axes(
-            [(0.95 + size) / fig_width, 0.6 / fig_height, 0.15 / fig_width, size / fig_height])
+            [(0.95 + size) / fig_width, 0.9 / fig_height, 0.15 / fig_width, size / fig_height])
         bar = self.fig.colorbar(self._image, cax=bar_axis)
         bar.set_label('fraction of each move taken', fontsize=9)
-        bar.ax.tick_params(labelsize=8)
+        bar.ax.tick_params(labelsize=8, colors='#616161')
+        bar.outline.set_edgecolor('#b0bec5')
 
         # the goal and zones never change, so they are only drawn once
         goal_x, goal_y = self._project(self._goal)
@@ -87,6 +92,15 @@ class NavigationVisualizer(BaseViz):
                          color=ZONE_COLOR, zorder=2)
             self.ax.annotate(z, (x, y), xytext=(6, 4), textcoords='offset points',
                              fontsize=8, color=ZONE_COLOR, zorder=2)
+
+        self.fig.legend(handles=[
+            Line2D([], [], marker='*', color='none', markerfacecolor=GOAL_COLOR,
+                   markeredgecolor='none', markersize=11, label='Goal'),
+            Line2D([], [], marker='x', color='none', markeredgecolor=ZONE_COLOR,
+                   markeredgewidth=1.5, label='Slowdown zone'),
+            Line2D([], [], color=PATH_COLOR, marker='o', markersize=3, label='Path')
+        ], loc='lower center', ncol=3, frameon=False, fontsize=8.5, columnspacing=1.0,
+           handlelength=1.4)
 
     def _get_location(self, state):
         return tuple(float(state[RDDLPlanningModel.ground_var('location', [d])])
@@ -203,7 +217,7 @@ class NavigationVisualizer(BaseViz):
         distance = float(np.sqrt(np.sum((self._goal - np.array(state)) ** 2)))
         self.ax.set_title(f'Distance to goal: {distance:.2f}, '
                           f'move taken: {self._current_factor(state):.0%}',
-                          fontsize=12, fontweight='bold')
+                          fontsize=13, fontweight='bold')
 
         self.fig.canvas.draw()
         img = self.convert2img(self.fig)

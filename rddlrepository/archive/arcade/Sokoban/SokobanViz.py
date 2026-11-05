@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.lines import Line2D
 import numpy as np
 from PIL import Image
 
@@ -8,6 +9,9 @@ from pyRDDLGym.core.visualizer.viz import BaseViz
 
 
 class SokobanVisualizer(BaseViz):
+    '''Draws the walls, storage areas, boxes and player, with the boxes on a storage
+    area in green. The drawing only depends on the current state.
+    '''
 
     def __init__(self, model: RDDLPlanningModel,
                  cell_size=0.8,
@@ -30,34 +34,46 @@ class SokobanVisualizer(BaseViz):
         # above the grid for the title, even if the grid is narrow
         cell_size = min(cell_size, max_size / max(len(self._xs), len(self._ys)))
         grid_size = (len(self._xs) * cell_size, len(self._ys) * cell_size)
-        self._figure_size = (max(grid_size[0], 2.5), grid_size[1] + 0.5)
+        self._figure_size = (max(grid_size[0], 4.8), grid_size[1] + 0.95)
         width, height = self._figure_size
         self.fig = plt.figure(figsize=self._figure_size)
-        self.ax = self.fig.add_axes([(width - grid_size[0]) / (2 * width), 0,
+        self.ax = self.fig.add_axes([(width - grid_size[0]) / (2 * width), 0.45 / height,
                                      grid_size[0] / width, grid_size[1] / height])
         self.ax.set_xlim(0, len(self._xs))
         self.ax.set_ylim(0, len(self._ys))
         self.ax.set_aspect('equal')
         self.ax.get_xaxis().set_ticks([])
         self.ax.get_yaxis().set_ticks([])
-        self.ax.set_facecolor('#f5efe0')
+        self.ax.set_facecolor('#fafafa')
+        for spine in self.ax.spines.values():
+            spine.set_color('#b0bec5')
 
         # walls and storage areas never change, so they are only drawn once
         for (col, row, x, y) in self._cells:
             if self._nonfluents[RDDLPlanningModel.ground_var('WALL', [x, y])]:
                 self.ax.add_patch(patches.Rectangle(
-                    (col, row), 1, 1, facecolor='#455a64', edgecolor='#263238'))
+                    (col, row), 1, 1, facecolor='#37474f', edgecolor='#37474f'))
             if self._is_storage(x, y):
                 self.ax.add_patch(patches.Circle(
                     (col + 0.5, row + 0.5), 0.2, facecolor='none',
-                    edgecolor='#c62828', linewidth=2.5, linestyle='--'))
+                    edgecolor='#2e7d32', linewidth=2, linestyle='--'))
+
+        self.fig.legend(handles=[
+            patches.Patch(facecolor='#37474f', label='Wall'),
+            patches.Patch(facecolor='none', edgecolor='#2e7d32', linestyle='--', label='Storage'),
+            patches.Patch(facecolor='#ffe0b2', edgecolor='#ef6c00', label='Box'),
+            patches.Patch(facecolor='#c8e6c9', edgecolor='#2e7d32', label='Stored'),
+            Line2D([], [], marker='o', color='none', markerfacecolor='#1565c0',
+                   markeredgecolor='none', label='Player')
+        ], loc='lower center', ncol=5, frameon=False, fontsize=8.5, columnspacing=1.0,
+           handlelength=1.4)
 
     def _is_storage(self, x, y):
         return self._nonfluents[RDDLPlanningModel.ground_var('STORAGE', [x, y])]
 
     def _draw_box(self, col, row, stored):
-        color = '#66bb6a' if stored else '#c98f4e'
-        edge = '#1b5e20' if stored else '#6d4c2a'
+        color = '#c8e6c9' if stored else '#ffe0b2'
+        edge = '#2e7d32' if stored else '#ef6c00'
         artists = [self.ax.add_patch(patches.Rectangle(
             (col + 0.08, row + 0.08), 0.84, 0.84,
             facecolor=color, edgecolor=edge, linewidth=2))]
@@ -97,7 +113,7 @@ class SokobanVisualizer(BaseViz):
 
         # the problem is solved when every box is on a storage area
         solved = num_stored == num_boxes
-        title = 'ALL STORED' if solved else f'{num_stored} / {num_boxes} stored'
+        title = 'All stored' if solved else f'{num_stored} / {num_boxes} stored'
         self.ax.set_title(title, fontsize=13, fontweight='bold',
                           color='#2e7d32' if solved else 'black')
 

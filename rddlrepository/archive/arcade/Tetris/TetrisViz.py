@@ -53,11 +53,13 @@ class TetrisVisualizer(BaseViz):
         self.ax.set_aspect('equal')
         self.ax.get_xaxis().set_ticks([])
         self.ax.get_yaxis().set_ticks([])
-        self.ax.set_facecolor('#263238')
+        self.ax.set_facecolor('#fafafa')
+        for spine in self.ax.spines.values():
+            spine.set_color('#b0bec5')
         for i in range(1, len(self._xs)):
-            self.ax.axvline(i, color='#37474f', linewidth=1, zorder=0)
+            self.ax.axvline(i, color='#cfd8dc', linewidth=1, zorder=0)
         for i in range(1, len(self._ys)):
-            self.ax.axhline(i, color='#37474f', linewidth=1, zorder=0)
+            self.ax.axhline(i, color='#cfd8dc', linewidth=1, zorder=0)
 
         # the panel showing the piece about to be placed
         self._panel = self.fig.add_axes(
@@ -73,6 +75,8 @@ class TetrisVisualizer(BaseViz):
         self._panel.get_xaxis().set_ticks([])
         self._panel.get_yaxis().set_ticks([])
         self._panel.set_facecolor('#eceff1')
+        for spine in self._panel.spines.values():
+            spine.set_color('#b0bec5')
 
     def _get_shape_cells(self, shape):
 
@@ -91,17 +95,14 @@ class TetrisVisualizer(BaseViz):
     def _draw_cell(self, ax, x, y, color, size=1.0):
         return ax.add_patch(patches.Rectangle(
             (x + 0.03 * size, y + 0.03 * size), 0.94 * size, 0.94 * size,
-            facecolor=color, edgecolor='black', linewidth=1))
+            facecolor=color, edgecolor='white', linewidth=1))
 
     def _draw_piece(self, state):
         artists = []
         for (shape, cells) in self._shape_cells.items():
             if not state[RDDLPlanningModel.ground_var('current-shape-type', [shape])]:
                 continue
-            artists.append(self._panel.text(
-                self._panel_size / 2, 1.05 * self._panel_size, f'Next piece: {shape}',
-                ha='center', va='bottom',
-                fontsize=min(12, 200 / len(f'Next piece: {shape}')), fontweight='bold'))
+            self._panel.set_title(f'Next piece: {shape}', fontsize=min(10, 200 / len(f'Next piece: {shape}')))
             if not cells:
                 continue
 
@@ -114,7 +115,7 @@ class TetrisVisualizer(BaseViz):
             for (x, y) in cells:
                 artists.append(self._draw_cell(
                     self._panel, left + size * (x - min_x), bottom + size * (y - min_y),
-                    '#4fc3f7', size))
+                    '#1565c0', size))
         return artists
 
     def convert2img(self, fig):
@@ -134,13 +135,13 @@ class TetrisVisualizer(BaseViz):
 
         # draw the board and the piece about to be placed
         artists = [self._draw_cell(self.ax, col, row,
-                                   '#ffb300' if (col, row) in self._newest else '#4fc3f7')
+                                   '#ff8f00' if (col, row) in self._newest else '#1565c0')
                    for (col, row) in filled]
         artists.extend(self._draw_piece(state))
 
         game_over = state['game-over']
-        self.ax.set_title('GAME OVER' if game_over else 'Tetris', fontsize=13, loc='left',
-                          fontweight='bold', color='#c62828' if game_over else 'black')
+        self.fig.suptitle('Game over' if game_over else f'{len(filled)} / {len(self._cells)} cells filled',
+                          fontsize=13, fontweight='bold', color='#c62828' if game_over else 'black')
 
         self.fig.canvas.draw()
         img = self.convert2img(self.fig)
