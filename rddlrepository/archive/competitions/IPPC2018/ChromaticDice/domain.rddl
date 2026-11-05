@@ -183,7 +183,7 @@ domain chromatic-dice_mdp {
         // until all categories are assigned, then there is a single @receive-boni
         // and @finish phase
         current-phase' =
-            if ( ( forall_{?c : category} [ taken(?c) | assign-to(?c) ] ) & (current-phase ~= @receive-boni))
+            if ( ( forall_{?c : category} [ taken(?c) | assign-to(?c) ] ) & (current-phase ~= @receive-boni) & (current-phase ~= @finish) )
                then @receive-boni
             else if ( forall_{?c : category} [ taken(?c) ] )
                then @finish
