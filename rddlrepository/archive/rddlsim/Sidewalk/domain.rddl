@@ -45,6 +45,9 @@ domain sidewalk {
 		nextYPos(person) : { interm-fluent, int, level = 2 };
 		blocked(person, person) : { interm-fluent, bool, level = 3 };  // check if people trying to claim the same square
 		numMoves(person) : { interm-fluent, int, level = 1 };          // number of actions used (limit is 2)
+		tryXPos(person) : { interm-fluent, int, level = 4 };           // positions after resolving conflicts on the next squares
+		tryYPos(person) : { interm-fluent, int, level = 4 };
+		collision : { interm-fluent, bool, level = 5 };                // check if someone stepped onto the square of a blocked person
 
 		walk(person) : { action-fluent, direction, default = @none }; 
 	};
@@ -78,11 +81,18 @@ domain sidewalk {
 		//check if there is conflict on the next locations
 		blocked(?x, ?y) = (?x ~= ?y) ^ (nextXPos(?x) == nextXPos(?y)) ^ (nextYPos(?x) == nextYPos(?y));
 		  
-		//update xpos unless there was a conflict (stays the same)
-		xPos'(?p) = if(exists_{?x : person} (blocked(?p, ?x))) then xPos(?p) else nextXPos(?p);
+		//resolve conflicts on the next squares (blocked people stay the same)
+		tryXPos(?p) = if(exists_{?x : person} (blocked(?p, ?x))) then xPos(?p) else nextXPos(?p);
+		tryYPos(?p) = if(exists_{?x : person} (blocked(?p, ?x))) then yPos(?p) else nextYPos(?p);
 
-		//update ypos unless there was a conflict (stays the same)
-		yPos'(?p) =  if(exists_{?x : person} (blocked(?p, ?x))) then yPos(?p) else nextYPos(?p);
+		//a blocked person can end up sharing a square with someone who moved onto it
+		collision = exists_{?a : person, ?b : person} [(?a ~= ?b) ^ (tryXPos(?a) == tryXPos(?b)) ^ (tryYPos(?a) == tryYPos(?b))];
+
+		//update xpos unless there was a collision (everyone stays the same)
+		xPos'(?p) = if(collision) then xPos(?p) else tryXPos(?p);
+
+		//update ypos unless there was a collision (everyone stays the same)
+		yPos'(?p) = if(collision) then yPos(?p) else tryYPos(?p);
 	};
   
 	//reward for every player that has reached their x goal.  	

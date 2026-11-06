@@ -75,11 +75,11 @@ domain workforce {
 	
 		// compute workforce for each skill lvl, again rif and ATTRITIONAMOUNT is kludge to have integer values.
 		rif(?l) = Bernoulli(ATTRITION(?l));
-		labor'(?l) = labor(?l) + training(?l) - rif(?l) * ATTRITIONAMOUNT(?l);
+		labor'(?l) = max[0, labor(?l) + training(?l) - rif(?l) * ATTRITIONAMOUNT(?l)];
 
 		// modeling call valume as simple AR model with unusual seasonal noise
-		demand'(?l) = 0.95 * demand(?l) + Normal(0.05 * demand(?l), 0.1 * demand(?l)) 
-			+ (month(?l) == 0) * SEASONALPEAK(?l);
+		demand'(?l) = max[0, 0.95 * demand(?l) + Normal(0.05 * demand(?l), 0.1 * demand(?l))
+			+ (month(?l) == 0) * SEASONALPEAK(?l)];
 
 		// putting next workforce in the queue
 		training'(?l) = train(?l);
@@ -92,4 +92,8 @@ domain workforce {
 	// cost always happens
 	reward = (sum_{?l : lvl} [(labor(?l) >= demand(?l)) * SERVICEREWARD(?l)]) - 
 			(sum_{?l :lvl} [LABORCOST(?l) * (labor(?l) + training(?l))]);
+
+	action-preconditions {
+		forall_{?l : lvl} [train(?l) >= 0];
+	};
 }

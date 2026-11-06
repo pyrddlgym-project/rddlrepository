@@ -82,7 +82,7 @@ domain sysadmin {
 						then KronDelta(true)  // if computer is rebooted then must be running 
 						else if (running(?x)) // otherwise outcome depends on network properties
 							then Bernoulli(0.5 + 0.5 * [sum_{?y : computer} [CONNECTED(?y, ?x) ^ running(?y)]] 
-													/ [sum_{?y : computer} CONNECTED(?y, ?x)])
+													/ max[1, sum_{?y : computer} CONNECTED(?y, ?x)])
 							else Bernoulli(REBOOT-PROB); 
       
 		// CPFs need to be probability distributions (unless the requirements state that
@@ -110,8 +110,8 @@ domain sysadmin {
       	
 		net-status-enum = Discrete(status,
 										@poor : 0.1,
-										@good : (1.0 - net-status-real) - 0.05,
-										@excellent : net-status-real - 0.05
+										@good : max[0, min[0.9, (1.0 - net-status-real) - 0.05]],
+										@excellent : max[0, min[0.9, net-status-real - 0.05]]
 										);
       	
 		// Observation variables would only be used in a partially observed problem.
