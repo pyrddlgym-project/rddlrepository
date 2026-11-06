@@ -74,7 +74,7 @@ domain pizza {
 		disposed'(?p) = disposed(?p) | (exists_{?t: truck} dispose(?t, ?p));
 
 		hot'(?p) = if(~hot(?p)) then false
-			  else if(exists_{?l: location}[delivered(?p, ?l)]) then true
+			  else if((exists_{?l: location}[delivered(?p, ?l)]) | (exists_{?t: truck, ?l: location}[deliver(?t, ?p, ?l)])) then true
 			  else if(pizzaFree(?p)) then true // has to be at the shop and not cold (should the shop be able to warm them up?)
 			  else Bernoulli(hotPizzasTogether(?p) / (hotPizzasTogether(?p) + 1));
 	};
