@@ -1,0 +1,110 @@
+// Six large obstacles, from pinball_simple_single in RLPy.
+
+non-fluents pinball_nf1 {
+	domain = pinball;
+
+	objects {
+		point : {
+			o0p0, o0p1, o0p2, o0p3, o1p0, o1p1, o1p2, o1p3, o2p0, o2p1,
+			o2p2, o2p3, o3p0, o3p1, o3p2, o3p3, o4p0, o4p1, o4p2, o4p3,
+			o4p4, o4p5, o4p6, o5p0, o5p1, o5p2, o5p3, o5p4, o5p5, o5p6,
+			o5p7, o6p0, o6p1, o6p2, o6p3, o6p4, o6p5, o7p0, o7p1, o7p2,
+			o7p3, o7p4, o7p5, o8p0, o8p1, o8p2, o8p3, o8p4, o8p5, o9p0,
+			o9p1, o9p2, o9p3
+		};
+	};
+
+	non-fluents {
+		BALL-RADIUS = 0.02;
+		TARGET-X = 0.9;
+		TARGET-Y = 0.2;
+		TARGET-RADIUS = 0.04;
+
+		// the bottom wall
+		X(o0p0) = 0.0; Y(o0p0) = 0.0; NEXT(o0p0) = @o0p1;
+		X(o0p1) = 0.0; Y(o0p1) = 0.01; NEXT(o0p1) = @o0p2;
+		X(o0p2) = 1.0; Y(o0p2) = 0.01; NEXT(o0p2) = @o0p3;
+		X(o0p3) = 1.0; Y(o0p3) = 0.0; NEXT(o0p3) = @o0p0;
+
+		// the left wall
+		X(o1p0) = 0.0; Y(o1p0) = 0.0; NEXT(o1p0) = @o1p1;
+		X(o1p1) = 0.01; Y(o1p1) = 0.0; NEXT(o1p1) = @o1p2;
+		X(o1p2) = 0.01; Y(o1p2) = 1.0; NEXT(o1p2) = @o1p3;
+		X(o1p3) = 0.0; Y(o1p3) = 1.0; NEXT(o1p3) = @o1p0;
+
+		// the top wall
+		X(o2p0) = 0.0; Y(o2p0) = 1.0; NEXT(o2p0) = @o2p1;
+		X(o2p1) = 0.0; Y(o2p1) = 0.99; NEXT(o2p1) = @o2p2;
+		X(o2p2) = 1.0; Y(o2p2) = 0.99; NEXT(o2p2) = @o2p3;
+		X(o2p3) = 1.0; Y(o2p3) = 1.0; NEXT(o2p3) = @o2p0;
+
+		// the right wall
+		X(o3p0) = 1.0; Y(o3p0) = 1.0; NEXT(o3p0) = @o3p1;
+		X(o3p1) = 0.99; Y(o3p1) = 1.0; NEXT(o3p1) = @o3p2;
+		X(o3p2) = 0.99; Y(o3p2) = 0.0; NEXT(o3p2) = @o3p3;
+		X(o3p3) = 1.0; Y(o3p3) = 0.0; NEXT(o3p3) = @o3p0;
+
+		// obstacle 1
+		X(o4p0) = 0.35; Y(o4p0) = 0.4; NEXT(o4p0) = @o4p1;
+		X(o4p1) = 0.45; Y(o4p1) = 0.55; NEXT(o4p1) = @o4p2;
+		X(o4p2) = 0.43; Y(o4p2) = 0.65; NEXT(o4p2) = @o4p3;
+		X(o4p3) = 0.3; Y(o4p3) = 0.7; NEXT(o4p3) = @o4p4;
+		X(o4p4) = 0.45; Y(o4p4) = 0.7; NEXT(o4p4) = @o4p5;
+		X(o4p5) = 0.5; Y(o4p5) = 0.6; NEXT(o4p5) = @o4p6;
+		X(o4p6) = 0.45; Y(o4p6) = 0.35; NEXT(o4p6) = @o4p0;
+
+		// obstacle 2
+		X(o5p0) = 0.2; Y(o5p0) = 0.6; NEXT(o5p0) = @o5p1;
+		X(o5p1) = 0.25; Y(o5p1) = 0.55; NEXT(o5p1) = @o5p2;
+		X(o5p2) = 0.15; Y(o5p2) = 0.5; NEXT(o5p2) = @o5p3;
+		X(o5p3) = 0.15; Y(o5p3) = 0.45; NEXT(o5p3) = @o5p4;
+		X(o5p4) = 0.2; Y(o5p4) = 0.3; NEXT(o5p4) = @o5p5;
+		X(o5p5) = 0.12; Y(o5p5) = 0.27; NEXT(o5p5) = @o5p6;
+		X(o5p6) = 0.075; Y(o5p6) = 0.35; NEXT(o5p6) = @o5p7;
+		X(o5p7) = 0.09; Y(o5p7) = 0.55; NEXT(o5p7) = @o5p0;
+
+		// obstacle 3
+		X(o6p0) = 0.3; Y(o6p0) = 0.8; NEXT(o6p0) = @o6p1;
+		X(o6p1) = 0.6; Y(o6p1) = 0.75; NEXT(o6p1) = @o6p2;
+		X(o6p2) = 0.8; Y(o6p2) = 0.8; NEXT(o6p2) = @o6p3;
+		X(o6p3) = 0.8; Y(o6p3) = 0.9; NEXT(o6p3) = @o6p4;
+		X(o6p4) = 0.6; Y(o6p4) = 0.85; NEXT(o6p4) = @o6p5;
+		X(o6p5) = 0.3; Y(o6p5) = 0.9; NEXT(o6p5) = @o6p0;
+
+		// obstacle 4
+		X(o7p0) = 0.8; Y(o7p0) = 0.7; NEXT(o7p0) = @o7p1;
+		X(o7p1) = 0.975; Y(o7p1) = 0.65; NEXT(o7p1) = @o7p2;
+		X(o7p2) = 0.75; Y(o7p2) = 0.5; NEXT(o7p2) = @o7p3;
+		X(o7p3) = 0.9; Y(o7p3) = 0.3; NEXT(o7p3) = @o7p4;
+		X(o7p4) = 0.7; Y(o7p4) = 0.35; NEXT(o7p4) = @o7p5;
+		X(o7p5) = 0.63; Y(o7p5) = 0.65; NEXT(o7p5) = @o7p0;
+
+		// obstacle 5
+		X(o8p0) = 0.6; Y(o8p0) = 0.25; NEXT(o8p0) = @o8p1;
+		X(o8p1) = 0.3; Y(o8p1) = 0.07; NEXT(o8p1) = @o8p2;
+		X(o8p2) = 0.15; Y(o8p2) = 0.175; NEXT(o8p2) = @o8p3;
+		X(o8p3) = 0.15; Y(o8p3) = 0.2; NEXT(o8p3) = @o8p4;
+		X(o8p4) = 0.3; Y(o8p4) = 0.175; NEXT(o8p4) = @o8p5;
+		X(o8p5) = 0.6; Y(o8p5) = 0.3; NEXT(o8p5) = @o8p0;
+
+		// obstacle 6
+		X(o9p0) = 0.75; Y(o9p0) = 0.025; NEXT(o9p0) = @o9p1;
+		X(o9p1) = 0.8; Y(o9p1) = 0.24; NEXT(o9p1) = @o9p2;
+		X(o9p2) = 0.725; Y(o9p2) = 0.27; NEXT(o9p2) = @o9p3;
+		X(o9p3) = 0.7; Y(o9p3) = 0.025; NEXT(o9p3) = @o9p0;
+	};
+}
+
+instance pinball_inst1 {
+	domain = pinball;
+	non-fluents = pinball_nf1;
+
+	init-state {
+		x = 0.2;
+		y = 0.9;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}

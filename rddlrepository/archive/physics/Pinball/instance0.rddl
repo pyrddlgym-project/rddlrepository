@@ -1,0 +1,63 @@
+// One square obstacle in the middle of the table, from pinball_box in RLPy.
+
+non-fluents pinball_nf0 {
+	domain = pinball;
+
+	objects {
+		point : {
+			o0p0, o0p1, o0p2, o0p3, o1p0, o1p1, o1p2, o1p3, o2p0, o2p1,
+			o2p2, o2p3, o3p0, o3p1, o3p2, o3p3, o4p0, o4p1, o4p2, o4p3
+		};
+	};
+
+	non-fluents {
+		BALL-RADIUS = 0.02;
+		TARGET-X = 0.9;
+		TARGET-Y = 0.2;
+		TARGET-RADIUS = 0.04;
+
+		// the bottom wall
+		X(o0p0) = 0.0; Y(o0p0) = 0.0; NEXT(o0p0) = @o0p1;
+		X(o0p1) = 0.0; Y(o0p1) = 0.01; NEXT(o0p1) = @o0p2;
+		X(o0p2) = 1.0; Y(o0p2) = 0.01; NEXT(o0p2) = @o0p3;
+		X(o0p3) = 1.0; Y(o0p3) = 0.0; NEXT(o0p3) = @o0p0;
+
+		// the left wall
+		X(o1p0) = 0.0; Y(o1p0) = 0.0; NEXT(o1p0) = @o1p1;
+		X(o1p1) = 0.01; Y(o1p1) = 0.0; NEXT(o1p1) = @o1p2;
+		X(o1p2) = 0.01; Y(o1p2) = 1.0; NEXT(o1p2) = @o1p3;
+		X(o1p3) = 0.0; Y(o1p3) = 1.0; NEXT(o1p3) = @o1p0;
+
+		// the top wall
+		X(o2p0) = 0.0; Y(o2p0) = 1.0; NEXT(o2p0) = @o2p1;
+		X(o2p1) = 0.0; Y(o2p1) = 0.99; NEXT(o2p1) = @o2p2;
+		X(o2p2) = 1.0; Y(o2p2) = 0.99; NEXT(o2p2) = @o2p3;
+		X(o2p3) = 1.0; Y(o2p3) = 1.0; NEXT(o2p3) = @o2p0;
+
+		// the right wall
+		X(o3p0) = 1.0; Y(o3p0) = 1.0; NEXT(o3p0) = @o3p1;
+		X(o3p1) = 0.99; Y(o3p1) = 1.0; NEXT(o3p1) = @o3p2;
+		X(o3p2) = 0.99; Y(o3p2) = 0.0; NEXT(o3p2) = @o3p3;
+		X(o3p3) = 1.0; Y(o3p3) = 0.0; NEXT(o3p3) = @o3p0;
+
+		// obstacle 1
+		X(o4p0) = 0.45; Y(o4p0) = 0.45; NEXT(o4p0) = @o4p1;
+		X(o4p1) = 0.55; Y(o4p1) = 0.45; NEXT(o4p1) = @o4p2;
+		X(o4p2) = 0.55; Y(o4p2) = 0.55; NEXT(o4p2) = @o4p3;
+		X(o4p3) = 0.45; Y(o4p3) = 0.55; NEXT(o4p3) = @o4p0;
+	};
+}
+
+instance pinball_inst0 {
+	domain = pinball;
+	non-fluents = pinball_nf0;
+
+	init-state {
+		x = 0.2;
+		y = 0.9;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}
