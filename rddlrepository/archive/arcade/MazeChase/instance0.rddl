@@ -1,0 +1,70 @@
+// A small garden with one wolf and one torch.
+//
+//   #########
+//   #+.....W#
+//   #.##.##.#
+//   #...#...#
+//   #.##.##.#
+//   #F......#
+//   #########
+
+non-fluents maze_chase_0_nf {
+	domain = maze_chase;
+
+	objects {
+		cell : {
+			c1_5, c2_5, c3_5, c4_5, c5_5, c6_5, c7_5, c1_4, c4_4, c7_4,
+			c1_3, c2_3, c3_3, c5_3, c6_3, c7_3, c1_2, c4_2, c7_2, c1_1,
+			c2_1, c3_1, c4_1, c5_1, c6_1, c7_1
+		};
+		wolf : { w1 };
+	};
+
+	non-fluents {
+		X(c1_5) = 1; Y(c1_5) = 5; NEXT(c1_5, @stay) = @c1_5; NEXT(c1_5, @north) = @c1_5; NEXT(c1_5, @east) = @c2_5; NEXT(c1_5, @south) = @c1_4; NEXT(c1_5, @west) = @c1_5;
+		X(c2_5) = 2; Y(c2_5) = 5; NEXT(c2_5, @stay) = @c2_5; NEXT(c2_5, @north) = @c2_5; NEXT(c2_5, @east) = @c3_5; NEXT(c2_5, @south) = @c2_5; NEXT(c2_5, @west) = @c1_5;
+		X(c3_5) = 3; Y(c3_5) = 5; NEXT(c3_5, @stay) = @c3_5; NEXT(c3_5, @north) = @c3_5; NEXT(c3_5, @east) = @c4_5; NEXT(c3_5, @south) = @c3_5; NEXT(c3_5, @west) = @c2_5;
+		X(c4_5) = 4; Y(c4_5) = 5; NEXT(c4_5, @stay) = @c4_5; NEXT(c4_5, @north) = @c4_5; NEXT(c4_5, @east) = @c5_5; NEXT(c4_5, @south) = @c4_4; NEXT(c4_5, @west) = @c3_5;
+		X(c5_5) = 5; Y(c5_5) = 5; NEXT(c5_5, @stay) = @c5_5; NEXT(c5_5, @north) = @c5_5; NEXT(c5_5, @east) = @c6_5; NEXT(c5_5, @south) = @c5_5; NEXT(c5_5, @west) = @c4_5;
+		X(c6_5) = 6; Y(c6_5) = 5; NEXT(c6_5, @stay) = @c6_5; NEXT(c6_5, @north) = @c6_5; NEXT(c6_5, @east) = @c7_5; NEXT(c6_5, @south) = @c6_5; NEXT(c6_5, @west) = @c5_5;
+		X(c7_5) = 7; Y(c7_5) = 5; NEXT(c7_5, @stay) = @c7_5; NEXT(c7_5, @north) = @c7_5; NEXT(c7_5, @east) = @c7_5; NEXT(c7_5, @south) = @c7_4; NEXT(c7_5, @west) = @c6_5;
+		X(c1_4) = 1; Y(c1_4) = 4; NEXT(c1_4, @stay) = @c1_4; NEXT(c1_4, @north) = @c1_5; NEXT(c1_4, @east) = @c1_4; NEXT(c1_4, @south) = @c1_3; NEXT(c1_4, @west) = @c1_4;
+		X(c4_4) = 4; Y(c4_4) = 4; NEXT(c4_4, @stay) = @c4_4; NEXT(c4_4, @north) = @c4_5; NEXT(c4_4, @east) = @c4_4; NEXT(c4_4, @south) = @c4_4; NEXT(c4_4, @west) = @c4_4;
+		X(c7_4) = 7; Y(c7_4) = 4; NEXT(c7_4, @stay) = @c7_4; NEXT(c7_4, @north) = @c7_5; NEXT(c7_4, @east) = @c7_4; NEXT(c7_4, @south) = @c7_3; NEXT(c7_4, @west) = @c7_4;
+		X(c1_3) = 1; Y(c1_3) = 3; NEXT(c1_3, @stay) = @c1_3; NEXT(c1_3, @north) = @c1_4; NEXT(c1_3, @east) = @c2_3; NEXT(c1_3, @south) = @c1_2; NEXT(c1_3, @west) = @c1_3;
+		X(c2_3) = 2; Y(c2_3) = 3; NEXT(c2_3, @stay) = @c2_3; NEXT(c2_3, @north) = @c2_3; NEXT(c2_3, @east) = @c3_3; NEXT(c2_3, @south) = @c2_3; NEXT(c2_3, @west) = @c1_3;
+		X(c3_3) = 3; Y(c3_3) = 3; NEXT(c3_3, @stay) = @c3_3; NEXT(c3_3, @north) = @c3_3; NEXT(c3_3, @east) = @c3_3; NEXT(c3_3, @south) = @c3_3; NEXT(c3_3, @west) = @c2_3;
+		X(c5_3) = 5; Y(c5_3) = 3; NEXT(c5_3, @stay) = @c5_3; NEXT(c5_3, @north) = @c5_3; NEXT(c5_3, @east) = @c6_3; NEXT(c5_3, @south) = @c5_3; NEXT(c5_3, @west) = @c5_3;
+		X(c6_3) = 6; Y(c6_3) = 3; NEXT(c6_3, @stay) = @c6_3; NEXT(c6_3, @north) = @c6_3; NEXT(c6_3, @east) = @c7_3; NEXT(c6_3, @south) = @c6_3; NEXT(c6_3, @west) = @c5_3;
+		X(c7_3) = 7; Y(c7_3) = 3; NEXT(c7_3, @stay) = @c7_3; NEXT(c7_3, @north) = @c7_4; NEXT(c7_3, @east) = @c7_3; NEXT(c7_3, @south) = @c7_2; NEXT(c7_3, @west) = @c6_3;
+		X(c1_2) = 1; Y(c1_2) = 2; NEXT(c1_2, @stay) = @c1_2; NEXT(c1_2, @north) = @c1_3; NEXT(c1_2, @east) = @c1_2; NEXT(c1_2, @south) = @c1_1; NEXT(c1_2, @west) = @c1_2;
+		X(c4_2) = 4; Y(c4_2) = 2; NEXT(c4_2, @stay) = @c4_2; NEXT(c4_2, @north) = @c4_2; NEXT(c4_2, @east) = @c4_2; NEXT(c4_2, @south) = @c4_1; NEXT(c4_2, @west) = @c4_2;
+		X(c7_2) = 7; Y(c7_2) = 2; NEXT(c7_2, @stay) = @c7_2; NEXT(c7_2, @north) = @c7_3; NEXT(c7_2, @east) = @c7_2; NEXT(c7_2, @south) = @c7_1; NEXT(c7_2, @west) = @c7_2;
+		X(c1_1) = 1; Y(c1_1) = 1; NEXT(c1_1, @stay) = @c1_1; NEXT(c1_1, @north) = @c1_2; NEXT(c1_1, @east) = @c2_1; NEXT(c1_1, @south) = @c1_1; NEXT(c1_1, @west) = @c1_1;
+		X(c2_1) = 2; Y(c2_1) = 1; NEXT(c2_1, @stay) = @c2_1; NEXT(c2_1, @north) = @c2_1; NEXT(c2_1, @east) = @c3_1; NEXT(c2_1, @south) = @c2_1; NEXT(c2_1, @west) = @c1_1;
+		X(c3_1) = 3; Y(c3_1) = 1; NEXT(c3_1, @stay) = @c3_1; NEXT(c3_1, @north) = @c3_1; NEXT(c3_1, @east) = @c4_1; NEXT(c3_1, @south) = @c3_1; NEXT(c3_1, @west) = @c2_1;
+		X(c4_1) = 4; Y(c4_1) = 1; NEXT(c4_1, @stay) = @c4_1; NEXT(c4_1, @north) = @c4_2; NEXT(c4_1, @east) = @c5_1; NEXT(c4_1, @south) = @c4_1; NEXT(c4_1, @west) = @c3_1;
+		X(c5_1) = 5; Y(c5_1) = 1; NEXT(c5_1, @stay) = @c5_1; NEXT(c5_1, @north) = @c5_1; NEXT(c5_1, @east) = @c6_1; NEXT(c5_1, @south) = @c5_1; NEXT(c5_1, @west) = @c4_1;
+		X(c6_1) = 6; Y(c6_1) = 1; NEXT(c6_1, @stay) = @c6_1; NEXT(c6_1, @north) = @c6_1; NEXT(c6_1, @east) = @c7_1; NEXT(c6_1, @south) = @c6_1; NEXT(c6_1, @west) = @c5_1;
+		X(c7_1) = 7; Y(c7_1) = 1; NEXT(c7_1, @stay) = @c7_1; NEXT(c7_1, @north) = @c7_2; NEXT(c7_1, @east) = @c7_1; NEXT(c7_1, @south) = @c7_1; NEXT(c7_1, @west) = @c6_1;
+		DEN(w1) = @c7_5; ORDER(w1) = 1;
+	};
+}
+
+instance maze_chase_0_inst {
+	domain = maze_chase;
+	non-fluents = maze_chase_0_nf;
+
+	init-state {
+		forager = @c1_1;
+		at(w1) = @c7_5;
+		torch(c1_5);
+		berry(c2_5); berry(c3_5); berry(c4_5); berry(c5_5); berry(c6_5); berry(c1_4); berry(c4_4); berry(c7_4);
+		berry(c1_3); berry(c2_3); berry(c3_3); berry(c5_3); berry(c6_3); berry(c7_3); berry(c1_2); berry(c4_2);
+		berry(c7_2); berry(c2_1); berry(c3_1); berry(c4_1); berry(c5_1); berry(c6_1); berry(c7_1);
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}
