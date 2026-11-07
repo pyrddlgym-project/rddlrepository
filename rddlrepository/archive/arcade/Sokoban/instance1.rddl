@@ -1,0 +1,99 @@
+// An 8 by 8 level with 3 boxes, where the shortest solution takes 22 moves.
+//
+//    y8  ########
+//    y7  #  .   #
+//    y6  # $  # #
+//    y5  #  ##  #
+//    y4  # @ $  #
+//    y3  # #  . #
+//    y2  #. $   #
+//    y1  ########
+//        x      x
+//        1      8
+//
+// where # is a wall, . is a storage area, $ is a box and @ is the man.
+
+non-fluents nf_sokoban_1 {
+
+    domain = sokoban;
+
+    objects {
+		x-pos : { x1, x2, x3, x4, x5, x6, x7, x8 };
+		y-pos : { y1, y2, y3, y4, y5, y6, y7, y8 };
+    };
+
+    non-fluents {
+		STORAGE(x4, y7);
+		STORAGE(x6, y3);
+		STORAGE(x2, y2);
+
+		WALL(x1, y1);
+		WALL(x2, y1);
+		WALL(x3, y1);
+		WALL(x4, y1);
+		WALL(x5, y1);
+		WALL(x6, y1);
+		WALL(x7, y1);
+		WALL(x8, y1);
+		WALL(x1, y8);
+		WALL(x2, y8);
+		WALL(x3, y8);
+		WALL(x4, y8);
+		WALL(x5, y8);
+		WALL(x6, y8);
+		WALL(x7, y8);
+		WALL(x8, y8);
+		WALL(x1, y2);
+		WALL(x1, y3);
+		WALL(x1, y4);
+		WALL(x1, y5);
+		WALL(x1, y6);
+		WALL(x1, y7);
+		WALL(x8, y2);
+		WALL(x8, y3);
+		WALL(x8, y4);
+		WALL(x8, y5);
+		WALL(x8, y6);
+		WALL(x8, y7);
+		WALL(x6, y6);
+		WALL(x4, y5);
+		WALL(x5, y5);
+		WALL(x3, y3);
+
+		IX(x1) = 1;
+		IX(x2) = 2;
+		IX(x3) = 3;
+		IX(x4) = 4;
+		IX(x5) = 5;
+		IX(x6) = 6;
+		IX(x7) = 7;
+		IX(x8) = 8;
+		IY(y1) = 1;
+		IY(y2) = 2;
+		IY(y3) = 3;
+		IY(y4) = 4;
+		IY(y5) = 5;
+		IY(y6) = 6;
+		IY(y7) = 7;
+		IY(y8) = 8;
+    };
+}
+
+instance sokoban_inst_1 {
+
+    domain = sokoban;
+
+    non-fluents = nf_sokoban_1;
+
+    init-state {
+		box(x3, y6);
+		box(x5, y4);
+		box(x4, y2);
+
+		man(x3, y4);
+    };
+
+    max-nondef-actions = 1;
+    horizon = 60;
+    discount = 1.0;
+}

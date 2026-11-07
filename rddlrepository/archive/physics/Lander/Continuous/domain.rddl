@@ -1,0 +1,248 @@
+////////////////////////////////////////////////////////////////////
+// A rigid lander flies in a vertical plane under gravity, using a main
+// engine along its body and a side engine that both pushes it sideways
+// and turns it. The goal is to come to rest on a landing pad.
+//
+// The terrain is a chain of points joined by NEXT, with X increasing
+// along the chain, so any height profile and any number of pads can be
+// described. The body is a set of probes: leg tips carry the lander on
+// spring and damper contacts along the normal of the terrain, with
+// friction along it, so that it can rock, slide and tip over. Hull
+// probes are used only to detect the hull touching the ground.
+//
+// The lander crashes if its hull touches the ground, if a leg arrives
+// faster than the break speed, or if a probe leaves the terrain. It
+// settles once it is resting on all of its legs.
+//
+// The reward is the change in a potential of the distance to the nearest
+// pad, the speed and the tilt, which needs no memory since both the state
+// and next state are available, plus a bonus for settling on a pad, a
+// cost for crashing and a cost for using the engines.
+//
+// Stiffer springs and heavier damping need a smaller time step: keep
+// DT * sqrt(2 * STIFFNESS / MASS) and 2 * DT * DAMPING / MASS well below 2.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain lander_continuous {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		point : object;		// a vertex of the terrain
+		probe : object;		// a point fixed on the body: a leg tip or a corner of the hull
+	};
+
+	pvariables {
+
+		// terrain
+		X(point) 				: { non-fluent, real, default = 0.0 };
+		Y(point) 				: { non-fluent, real, default = 0.0 };
+		NEXT(point, point) 		: { non-fluent, bool, default = false };	// the two points are joined by a segment
+		PAD(point, point) 		: { non-fluent, bool, default = false };	// the segment between the two points is a pad
+
+		// body, with probes relative to the center of mass in the frame of the body
+		PX(probe) 				: { non-fluent, real, default = 0.0 };
+		PY(probe) 				: { non-fluent, real, default = 0.0 };
+		IS-LEG(probe) 			: { non-fluent, bool, default = false };
+		MASS 					: { non-fluent, real, default = 1.0 };
+		INERTIA 				: { non-fluent, real, default = 0.4 };
+
+		// flight
+		DT 						: { non-fluent, real, default = 0.05 };
+		GRAVITY 				: { non-fluent, real, default = 1.62 };
+		WIND-VAR 				: { non-fluent, real, default = 0.0 };		// variance of the sideways force of the wind
+		MAIN-THRUST 			: { non-fluent, real, default = 4.0 };
+		SIDE-THRUST 			: { non-fluent, real, default = 0.8 };
+		SIDE-ARM 				: { non-fluent, real, default = 0.5 };		// height of the side engine above the center of mass
+
+		// contact
+		STIFFNESS 				: { non-fluent, real, default = 40.0 };
+		DAMPING 				: { non-fluent, real, default = 4.0 };
+		FRICTION 				: { non-fluent, real, default = 0.8 };		// the most friction as a fraction of the normal force
+		GRIP 					: { non-fluent, real, default = 8.0 };		// friction force per unit of sliding speed
+		BREAK-SPEED 			: { non-fluent, real, default = 2.0 };		// a leg breaks if it arrives faster than this
+
+		// the end of an episode
+		SETTLE-SPEED 			: { non-fluent, real, default = 0.1 };
+		SETTLE-ACCEL 			: { non-fluent, real, default = 0.5 };
+
+		// reward
+		LAND-REWARD 			: { non-fluent, real, default = 100.0 };
+		CRASH-COST 				: { non-fluent, real, default = 100.0 };
+		MAIN-COST 				: { non-fluent, real, default = 0.3 };
+		SIDE-COST 				: { non-fluent, real, default = 0.03 };
+		DIST-WEIGHT 			: { non-fluent, real, default = 10.0 };
+		SPEED-WEIGHT 			: { non-fluent, real, default = 10.0 };
+		ANGLE-WEIGHT 			: { non-fluent, real, default = 10.0 };
+
+		// engines, limited to what they can do
+		main-power 				: { interm-fluent, real };
+		side-power 				: { interm-fluent, real };
+
+		// probes in the world
+		tip-x(probe) 			: { interm-fluent, real };
+		tip-y(probe) 			: { interm-fluent, real };
+		tip-vx(probe) 			: { interm-fluent, real };
+		tip-vy(probe) 			: { interm-fluent, real };
+
+		// the terrain under each probe
+		over(probe, point, point) : { interm-fluent, bool };
+		covered(probe) 			: { interm-fluent, bool };
+		slope(probe) 			: { interm-fluent, real };
+		ground(probe) 			: { interm-fluent, real };
+		nx(probe) 				: { interm-fluent, real };
+		ny(probe) 				: { interm-fluent, real };
+		depth(probe) 			: { interm-fluent, real };
+		vn(probe) 				: { interm-fluent, real };
+		vt(probe) 				: { interm-fluent, real };
+
+		// contact forces, which are zero unless a leg tip is in the ground
+		normal(probe) 			: { interm-fluent, real };
+		grip(probe) 			: { interm-fluent, real };
+		load-x(probe) 			: { interm-fluent, real };
+		load-y(probe) 			: { interm-fluent, real };
+
+		// total load
+		wind 					: { interm-fluent, real };
+		fx 						: { interm-fluent, real };
+		fy 						: { interm-fluent, real };
+		torque 					: { interm-fluent, real };
+
+		// state of the body
+		x 						: { state-fluent, real, default = 0.0 };
+		y 						: { state-fluent, real, default = 5.0 };
+		vx 						: { state-fluent, real, default = 0.0 };
+		vy 						: { state-fluent, real, default = 0.0 };
+		ang 					: { state-fluent, real, default = 0.0 };	// counter-clockwise from upright
+		omega 					: { state-fluent, real, default = 0.0 };
+
+		// how the episode went, and the engines in the last step
+		crashed 				: { state-fluent, bool, default = false };
+		settled 				: { state-fluent, bool, default = false };
+		on-pad 					: { state-fluent, bool, default = false };	// all legs are over a pad
+		main-level 				: { state-fluent, real, default = 0.0 };
+		side-level 				: { state-fluent, real, default = 0.0 };
+
+		// the main engine as a fraction of its thrust, and the side engine as a fraction of its
+		// thrust with positive values pushing the body to its right
+		main 					: { action-fluent, real, default = 0.0 };
+		side 					: { action-fluent, real, default = 0.0 };
+	};
+
+	cpfs {
+
+		main-power = max[min[main, 1.0], 0.0];
+		side-power = max[min[side, 1.0], -1.0];
+
+		tip-x(?r) = x + PX(?r) * cos[ang] - PY(?r) * sin[ang];
+		tip-y(?r) = y + PX(?r) * sin[ang] + PY(?r) * cos[ang];
+		tip-vx(?r) = vx - omega * (tip-y(?r) - y);
+		tip-vy(?r) = vy + omega * (tip-x(?r) - x);
+
+		// the segment that each probe is over
+		over(?r, ?p, ?q) = NEXT(?p, ?q) ^ (tip-x(?r) >= X(?p)) ^ (tip-x(?r) < X(?q));
+		covered(?r) = exists_{?p : point, ?q : point} [over(?r, ?p, ?q)];
+
+		// the guard keeps the width of the pairs that are not segments away from zero, since
+		// both sides of the if are evaluated
+		slope(?r) = sum_{?p : point, ?q : point} [
+			if (over(?r, ?p, ?q))
+				then (Y(?q) - Y(?p)) / (if (NEXT(?p, ?q)) then X(?q) - X(?p) else 1.0)
+				else 0.0];
+		ground(?r) = sum_{?p : point, ?q : point} [
+			if (over(?r, ?p, ?q))
+				then Y(?p) + slope(?r) * (tip-x(?r) - X(?p))
+				else 0.0];
+
+		// the unit normal of the terrain under the probe, with the tangent being (ny, -nx)
+		nx(?r) = -slope(?r) / sqrt[1 + pow[slope(?r), 2]];
+		ny(?r) = 1 / sqrt[1 + pow[slope(?r), 2]];
+		depth(?r) = if (covered(?r)) then max[(ground(?r) - tip-y(?r)) * ny(?r), 0.0] else 0.0;
+		vn(?r) = tip-vx(?r) * nx(?r) + tip-vy(?r) * ny(?r);
+		vt(?r) = tip-vx(?r) * ny(?r) - tip-vy(?r) * nx(?r);
+
+		// a spring and damper along the normal that can only push, and friction along the tangent
+		normal(?r) = if (IS-LEG(?r) ^ (depth(?r) > 0))
+						then max[STIFFNESS * depth(?r) - DAMPING * vn(?r), 0.0]
+						else 0.0;
+		grip(?r) = max[min[-GRIP * vt(?r), FRICTION * normal(?r)], -FRICTION * normal(?r)];
+		load-x(?r) = normal(?r) * nx(?r) + grip(?r) * ny(?r);
+		load-y(?r) = normal(?r) * ny(?r) - grip(?r) * nx(?r);
+
+		wind = Normal(0.0, WIND-VAR);
+		fx = -main-power * MAIN-THRUST * sin[ang] + side-power * SIDE-THRUST * cos[ang] + wind
+			 + sum_{?r : probe} [load-x(?r)];
+		fy = main-power * MAIN-THRUST * cos[ang] + side-power * SIDE-THRUST * sin[ang] - MASS * GRAVITY
+			 + sum_{?r : probe} [load-y(?r)];
+		torque = -side-power * SIDE-THRUST * SIDE-ARM
+				 + sum_{?r : probe} [(tip-x(?r) - x) * load-y(?r) - (tip-y(?r) - y) * load-x(?r)];
+
+		// velocities first and then positions from the new velocities, which is what keeps stiff
+		// springs stable with a simple integrator
+		vx' = vx + DT * fx / MASS;
+		vy' = vy + DT * fy / MASS;
+		omega' = omega + DT * torque / INERTIA;
+		x' = x + DT * vx';
+		y' = y + DT * vy';
+		ang' = ang + DT * omega';
+
+		// these are in parentheses since an aggregation takes in everything that follows it
+		crashed' = crashed
+				   | (exists_{?r : probe} [~IS-LEG(?r) ^ (depth(?r) > 0)])
+				   | (exists_{?r : probe} [IS-LEG(?r) ^ (depth(?r) > 0) ^ (vn(?r) < -BREAK-SPEED)])
+				   | (exists_{?r : probe} [~covered(?r)]);
+
+		// the acceleration rules out the bottom of a bounce, where the velocity is zero for a moment
+		settled' = settled
+				   | ((forall_{?r : probe} [~IS-LEG(?r) | (depth(?r) > 0)])
+					  ^ (sqrt[pow[vx', 2] + pow[vy', 2] + 0.000001] < SETTLE-SPEED)
+					  ^ (abs[omega'] < SETTLE-SPEED)
+					  ^ (sqrt[pow[fx, 2] + pow[fy, 2] + 0.000001] / MASS < SETTLE-ACCEL)
+					  ^ (abs[torque] / INERTIA < SETTLE-ACCEL));
+
+		on-pad' = forall_{?r : probe} [~IS-LEG(?r)
+									   | exists_{?p : point, ?q : point} [over(?r, ?p, ?q) ^ PAD(?p, ?q)]];
+
+		main-level' = main-power;
+		side-level' = side-power;
+	};
+
+	// distance is to the middle of the nearest pad, and pairs of points that are not a pad are
+	// never the nearest: without any pad both distances are equal and the term is zero
+	reward = -MAIN-COST * main-power - SIDE-COST * abs[side-power]
+			 + DIST-WEIGHT * (
+				(min_{?p : point, ?q : point} [
+					if (PAD(?p, ?q))
+						then sqrt[pow[x - (X(?p) + X(?q)) / 2, 2] + pow[y - (Y(?p) + Y(?q)) / 2, 2] + 0.000001]
+						else 1000000.0])
+				- (min_{?p : point, ?q : point} [
+					if (PAD(?p, ?q))
+						then sqrt[pow[x' - (X(?p) + X(?q)) / 2, 2] + pow[y' - (Y(?p) + Y(?q)) / 2, 2] + 0.000001]
+						else 1000000.0]))
+			 + SPEED-WEIGHT * (sqrt[pow[vx, 2] + pow[vy, 2] + 0.000001]
+							   - sqrt[pow[vx', 2] + pow[vy', 2] + 0.000001])
+			 + ANGLE-WEIGHT * (abs[ang] - abs[ang'])
+			 + (if (settled' ^ ~settled ^ on-pad' ^ ~crashed') then LAND-REWARD else 0.0)
+			 - (if (crashed' ^ ~crashed) then CRASH-COST else 0.0);
+
+	action-preconditions {
+		main >= 0.0;
+		main <= 1.0;
+		side >= -1.0;
+		side <= 1.0;
+	};
+
+	state-invariants {
+		forall_{?p : point, ?q : point} [~NEXT(?p, ?q) | (X(?p) < X(?q))];
+	};
+
+	termination {
+		crashed;
+		settled;
+	};
+}
