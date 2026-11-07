@@ -1,0 +1,48 @@
+non-fluents lander_continuous_nf2 {
+	domain = lander_continuous;
+
+	objects {
+		point : {p0, p1, p2, p3, p4, p5};
+		probe : {left_leg, right_leg, hull_lower_left, hull_lower_right, hull_upper_left, hull_upper_right};
+	};
+
+	non-fluents {
+		// a pad on a plateau reached in a light wind
+		X(p0) = -10.0; Y(p0) = 0.0;
+		X(p1) = -4.0; Y(p1) = 0.5;
+		X(p2) = -1.0; Y(p2) = 2.0;
+		X(p3) = 3.0; Y(p3) = 2.0;
+		X(p4) = 7.0; Y(p4) = 0.0;
+		X(p5) = 10.0; Y(p5) = 0.0;
+		NEXT(p0, p1);
+		NEXT(p1, p2);
+		NEXT(p2, p3);
+		NEXT(p3, p4);
+		NEXT(p4, p5);
+		PAD(p2, p3);
+
+		// the body
+		PX(left_leg) = -0.5; PY(left_leg) = -0.5; IS-LEG(left_leg);
+		PX(right_leg) = 0.5; PY(right_leg) = -0.5; IS-LEG(right_leg);
+		PX(hull_lower_left) = -0.35; PY(hull_lower_left) = -0.3;
+		PX(hull_lower_right) = 0.35; PY(hull_lower_right) = -0.3;
+		PX(hull_upper_left) = -0.35; PY(hull_upper_left) = 0.3;
+		PX(hull_upper_right) = 0.35; PY(hull_upper_right) = 0.3;
+		WIND-VAR = 0.05;
+	};
+}
+
+instance lander_continuous_inst2 {
+	domain = lander_continuous;
+	non-fluents = lander_continuous_nf2;
+
+	init-state {
+		x = -7.0;
+		y = 6.0;
+		ang = 0.2;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 600;
+	discount = 1.0;
+}
