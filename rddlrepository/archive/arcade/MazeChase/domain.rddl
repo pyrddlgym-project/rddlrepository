@@ -1,0 +1,201 @@
+////////////////////////////////////////////////////////////////////
+// A forager gathers every berry in a hedge maze while wolves roam it. Every
+// step the forager walks one cell or stays, with a chance that the choice is
+// replaced by a random one, and being bitten by a wolf ends the episode.
+//
+// The wolves wander at random. A wolf cannot stay, and cannot turn back
+// unless nothing else is open. Taking a torch frightens all of them for a
+// while. A frightened wolf moves at half speed, so it can end a step between
+// two cells, where it can only carry on and where it reaches the forager from
+// half a cell away. Touching it drives it back to its den and it is no longer
+// frightened.
+//
+// The maze is a graph, in which NEXT gives the cell that a heading leads to,
+// or the cell itself if a hedge is in the way, so any maze can be described.
+// A walk into a hedge is the same as staying. X and Y place the cells on a
+// grid, with north as the larger Y, and are only used to draw the maze.
+//
+// Each step, the forager moves, and then the wolves move in the order of ORDER
+// until one of them bites. The forager cannot swap cells with a wolf, since it
+// then walks into the cell that the wolf has not yet left.
+//
+// The rules and rewards follow the Pacman domain of RLPy:
+//
+// [1] Geramifard, Alborz, et al. "RLPy: a value-function-based reinforcement
+// learning framework for education and research." Journal of Machine Learning
+// Research 16.1 (2015): 1573-1578.
+//
+// which wraps the Pacman project of the CS188 course at UC Berkeley:
+// http://inst.eecs.berkeley.edu/~cs188/pacman/pacman.html
+//
+// The theme and the mazes are original to this domain.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain maze_chase {
+
+	types {
+		cell : object;
+		wolf : object;
+		heading : { @stay, @north, @east, @south, @west };
+	};
+
+	pvariables {
+
+		// the maze
+		NEXT(cell, heading) : { non-fluent, cell };			// where a heading leads, the cell itself if blocked
+		X(cell) : { non-fluent, int, default = 0 };			// column of the cell, to draw it
+		Y(cell) : { non-fluent, int, default = 0 };			// row of the cell, to draw it
+
+		// the wolves
+		DEN(wolf) : { non-fluent, cell };					// where a wolf goes when it is driven back
+		ORDER(wolf) : { non-fluent, int, default = 0 };		// the wolves with a smaller order move first
+		FEAR-TIME : { non-fluent, int, default = 40 };		// how many moves a torch frightens the wolves for
+
+		// the chance that the choice of the forager is replaced by a random one
+		NOISE : { non-fluent, real, default = 0.1 };
+
+		// the rewards
+		STEP-COST : { non-fluent, real, default = 1.0 };
+		BERRY-REWARD : { non-fluent, real, default = 10.0 };
+		CLEAR-REWARD : { non-fluent, real, default = 500.0 };
+		WOLF-REWARD : { non-fluent, real, default = 200.0 };
+		BITE-COST : { non-fluent, real, default = 500.0 };
+
+		// the state
+		forager : { state-fluent, cell };
+		at(wolf) : { state-fluent, cell };							// the cell a wolf is on, or has just left
+		going(wolf) : { state-fluent, heading, default = @stay };	// the way a wolf last moved
+		between(wolf) : { state-fluent, bool, default = false };	// halfway from at to the next cell in going
+		fear(wolf) : { state-fluent, int, default = 0 };			// moves left of being frightened
+		berry(cell) : { state-fluent, bool, default = false };
+		torch(cell) : { state-fluent, bool, default = false };
+		finished : { state-fluent, bool, default = false };
+
+		// the action
+		walk : { action-fluent, heading, default = @stay };
+
+		// the turn of the forager
+		open(heading) : { interm-fluent, bool };
+		chosen : { interm-fluent, heading };
+		arrived : { interm-fluent, cell };
+		gathered : { interm-fluent, bool };
+		cleared : { interm-fluent, bool };
+		fear1(wolf) : { interm-fluent, int };
+		touch1(wolf) : { interm-fluent, bool };
+		driven1(wolf) : { interm-fluent, bool };
+		bitten1(wolf) : { interm-fluent, bool };
+		ended1 : { interm-fluent, bool };
+
+		// a wolf after the turn of the forager
+		at1(wolf) : { interm-fluent, cell };
+		going1(wolf) : { interm-fluent, heading };
+		between1(wolf) : { interm-fluent, bool };
+		fear2(wolf) : { interm-fluent, int };
+
+		// the move of a wolf
+		behind(wolf) : { interm-fluent, heading };
+		exit(wolf, heading) : { interm-fluent, bool };
+		onward(wolf, heading) : { interm-fluent, bool };
+		num-exits(wolf) : { interm-fluent, int };
+		num-onward(wolf) : { interm-fluent, int };
+		weight(wolf, heading) : { interm-fluent, real };
+		pick(wolf) : { interm-fluent, heading };
+		halfway(wolf) : { interm-fluent, bool };
+		at2(wolf) : { interm-fluent, cell };
+		fear3(wolf) : { interm-fluent, int };
+		touch2(wolf) : { interm-fluent, bool };
+		would-bite(wolf) : { interm-fluent, bool };
+		moves(wolf) : { interm-fluent, bool };
+		driven2(wolf) : { interm-fluent, bool };
+		bitten2(wolf) : { interm-fluent, bool };
+	};
+
+	cpfs {
+
+		// ============================== the turn of the forager ==============================
+
+		// a random choice is uniform over the headings that are not blocked
+		open(?h) = (?h == @stay) | (NEXT(forager, ?h) ~= forager);
+		chosen = if (Bernoulli(NOISE))
+					then Discrete_{?h : heading}[(if (open(?h)) then 1.0 else 0.0) / (sum_{?k : heading} [if (open(?k)) then 1.0 else 0.0])]
+				 else walk;
+		arrived = NEXT(forager, chosen);
+
+		// the maze is only cleared by taking a berry, so it is not cleared at the start if it has none
+		gathered = berry(arrived);
+		cleared = gathered ^ ~(exists_{?c : cell} [berry(?c) ^ (?c ~= arrived)]);
+
+		// a torch takes effect before anything else happens
+		fear1(?w) = if (torch(arrived)) then FEAR-TIME else fear(?w);
+
+		// a wolf between cells is half a cell from both of them, the only cells within reach of it
+		touch1(?w) = (arrived == at(?w)) | (between(?w) ^ (arrived == NEXT(at(?w), going(?w))));
+		driven1(?w) = touch1(?w) ^ (fear1(?w) > 0);
+		bitten1(?w) = touch1(?w) ^ (fear1(?w) == 0) ^ ~cleared;
+		ended1 = cleared | (exists_{?w : wolf} [bitten1(?w)]);
+
+		at1(?w) = if (driven1(?w)) then DEN(?w) else at(?w);
+		going1(?w) = if (driven1(?w)) then @stay else going(?w);
+		between1(?w) = ~driven1(?w) ^ between(?w);
+		fear2(?w) = if (driven1(?w)) then 0 else fear1(?w);
+
+		// ============================== the move of a wolf ==============================
+
+		behind(?w) = if (going1(?w) == @north) then @south
+					 else if (going1(?w) == @south) then @north
+					 else if (going1(?w) == @east) then @west
+					 else if (going1(?w) == @west) then @east
+					 else @stay;
+		exit(?w, ?h) = (?h ~= @stay) ^ (NEXT(at1(?w), ?h) ~= at1(?w));
+		onward(?w, ?h) = exit(?w, ?h) ^ (?h ~= behind(?w));
+		num-exits(?w) = (sum_{?k : heading} [if (exit(?w, ?k)) then 1 else 0]);
+		num-onward(?w) = (sum_{?k : heading} [if (onward(?w, ?k)) then 1 else 0]);
+
+		// uniform over the ways onward, else back, and a wolf that is walled in stays
+		weight(?w, ?h) = if (num-onward(?w) > 0) then (if (onward(?w, ?h)) then 1.0 else 0.0)
+						 else if (num-exits(?w) > 0) then (if (exit(?w, ?h)) then 1.0 else 0.0)
+						 else (if (?h == @stay) then 1.0 else 0.0);
+		pick(?w) = if (between1(?w)) then going1(?w)
+				   else Discrete_{?h : heading}[weight(?w, ?h) / (sum_{?k : heading} [weight(?w, ?k)])];
+
+		// a frightened wolf on a cell ends the step between cells. If that was its last frightened
+		// move then it is put on a cell, which is the larger coordinate of the two
+		halfway(?w) = (fear2(?w) > 1) ^ ~between1(?w);
+		at2(?w) = if ((fear2(?w) == 0) | between1(?w)) then NEXT(at1(?w), pick(?w))
+				  else if ((fear2(?w) == 1) ^ ((pick(?w) == @north) | (pick(?w) == @east))) then NEXT(at1(?w), pick(?w))
+				  else at1(?w);
+		fear3(?w) = max[fear2(?w) - 1, 0];
+
+		touch2(?w) = (arrived == at2(?w)) | (halfway(?w) ^ (arrived == NEXT(at2(?w), pick(?w))));
+		would-bite(?w) = touch2(?w) ^ (fear3(?w) == 0);
+
+		// the wolves stop moving at the first bite, and the first is the smallest order that would bite
+		moves(?w) = ~ended1 ^ ~(exists_{?v : wolf} [(ORDER(?v) < ORDER(?w)) ^ would-bite(?v)]);
+		driven2(?w) = moves(?w) ^ touch2(?w) ^ (fear3(?w) > 0);
+		bitten2(?w) = moves(?w) ^ would-bite(?w);
+
+		// ============================== the next state ==============================
+
+		forager' = arrived;
+		at'(?w) = if (driven2(?w)) then DEN(?w) else if (moves(?w)) then at2(?w) else at1(?w);
+		going'(?w) = if (driven2(?w)) then @stay else if (moves(?w)) then pick(?w) else going1(?w);
+		between'(?w) = if (moves(?w)) then (halfway(?w) ^ ~driven2(?w)) else between1(?w);
+		fear'(?w) = if (driven2(?w)) then 0 else if (moves(?w)) then fear3(?w) else fear2(?w);
+		berry'(?c) = berry(?c) ^ (?c ~= arrived);
+		torch'(?c) = torch(?c) ^ (?c ~= arrived);
+		finished' = ended1 | (exists_{?w : wolf} [bitten2(?w)]);
+	};
+
+	reward = -STEP-COST
+			 + (if (gathered) then BERRY-REWARD else 0.0)
+			 + (if (cleared) then CLEAR-REWARD else 0.0)
+			 + (sum_{?w : wolf} [(if (driven1(?w)) then WOLF-REWARD else 0.0) + (if (driven2(?w)) then WOLF-REWARD else 0.0)])
+			 - (sum_{?w : wolf} [(if (bitten1(?w)) then BITE-COST else 0.0) + (if (bitten2(?w)) then BITE-COST else 0.0)]);
+
+	termination {
+		finished;
+	};
+}
