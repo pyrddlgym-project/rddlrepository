@@ -1,0 +1,161 @@
+// A crowded table with a smaller ball, from pinball_hard_single in RLPy.
+
+non-fluents pinball_nf3 {
+	domain = pinball;
+
+	objects {
+		point : {
+			o0p0, o0p1, o0p2, o0p3, o1p0, o1p1, o1p2, o1p3, o2p0, o2p1,
+			o2p2, o2p3, o3p0, o3p1, o3p2, o3p3, o4p0, o4p1, o4p2, o4p3,
+			o4p4, o5p0, o5p1, o5p2, o5p3, o5p4, o6p0, o6p1, o6p2, o6p3,
+			o6p4, o6p5, o7p0, o7p1, o7p2, o7p3, o7p4, o8p0, o8p1, o8p2,
+			o8p3, o9p0, o9p1, o9p2, o9p3, o10p0, o10p1, o10p2, o10p3, o10p4,
+			o10p5, o11p0, o11p1, o11p2, o11p3, o11p4, o12p0, o12p1, o12p2, o13p0,
+			o13p1, o13p2, o14p0, o14p1, o14p2, o14p3, o14p4, o15p0, o15p1, o15p2,
+			o15p3, o16p0, o16p1, o16p2, o16p3, o16p4, o16p5, o17p0, o17p1, o17p2,
+			o17p3, o17p4, o17p5, o17p6, o17p7
+		};
+	};
+
+	non-fluents {
+		BALL-RADIUS = 0.015;
+		TARGET-X = 0.5;
+		TARGET-Y = 0.06;
+		TARGET-RADIUS = 0.04;
+
+		// the bottom wall
+		X(o0p0) = 0.0; Y(o0p0) = 0.0; NEXT(o0p0) = @o0p1;
+		X(o0p1) = 0.0; Y(o0p1) = 0.01; NEXT(o0p1) = @o0p2;
+		X(o0p2) = 1.0; Y(o0p2) = 0.01; NEXT(o0p2) = @o0p3;
+		X(o0p3) = 1.0; Y(o0p3) = 0.0; NEXT(o0p3) = @o0p0;
+
+		// the left wall
+		X(o1p0) = 0.0; Y(o1p0) = 0.0; NEXT(o1p0) = @o1p1;
+		X(o1p1) = 0.01; Y(o1p1) = 0.0; NEXT(o1p1) = @o1p2;
+		X(o1p2) = 0.01; Y(o1p2) = 1.0; NEXT(o1p2) = @o1p3;
+		X(o1p3) = 0.0; Y(o1p3) = 1.0; NEXT(o1p3) = @o1p0;
+
+		// the top wall
+		X(o2p0) = 0.0; Y(o2p0) = 1.0; NEXT(o2p0) = @o2p1;
+		X(o2p1) = 0.0; Y(o2p1) = 0.99; NEXT(o2p1) = @o2p2;
+		X(o2p2) = 1.0; Y(o2p2) = 0.99; NEXT(o2p2) = @o2p3;
+		X(o2p3) = 1.0; Y(o2p3) = 1.0; NEXT(o2p3) = @o2p0;
+
+		// the right wall
+		X(o3p0) = 1.0; Y(o3p0) = 1.0; NEXT(o3p0) = @o3p1;
+		X(o3p1) = 0.99; Y(o3p1) = 1.0; NEXT(o3p1) = @o3p2;
+		X(o3p2) = 0.99; Y(o3p2) = 0.0; NEXT(o3p2) = @o3p3;
+		X(o3p3) = 1.0; Y(o3p3) = 0.0; NEXT(o3p3) = @o3p0;
+
+		// obstacle 1
+		X(o4p0) = 0.034; Y(o4p0) = 0.852; NEXT(o4p0) = @o4p1;
+		X(o4p1) = 0.106; Y(o4p1) = 0.708; NEXT(o4p1) = @o4p2;
+		X(o4p2) = 0.332; Y(o4p2) = 0.674; NEXT(o4p2) = @o4p3;
+		X(o4p3) = 0.176; Y(o4p3) = 0.618; NEXT(o4p3) = @o4p4;
+		X(o4p4) = 0.028; Y(o4p4) = 0.718; NEXT(o4p4) = @o4p0;
+
+		// obstacle 2
+		X(o5p0) = 0.15; Y(o5p0) = 0.756; NEXT(o5p0) = @o5p1;
+		X(o5p1) = 0.142; Y(o5p1) = 0.93; NEXT(o5p1) = @o5p2;
+		X(o5p2) = 0.232; Y(o5p2) = 0.894; NEXT(o5p2) = @o5p3;
+		X(o5p3) = 0.238; Y(o5p3) = 0.99; NEXT(o5p3) = @o5p4;
+		X(o5p4) = 0.498; Y(o5p4) = 0.722; NEXT(o5p4) = @o5p0;
+
+		// obstacle 3
+		X(o6p0) = 0.808; Y(o6p0) = 0.91; NEXT(o6p0) = @o6p1;
+		X(o6p1) = 0.904; Y(o6p1) = 0.784; NEXT(o6p1) = @o6p2;
+		X(o6p2) = 0.78; Y(o6p2) = 0.572; NEXT(o6p2) = @o6p3;
+		X(o6p3) = 0.942; Y(o6p3) = 0.562; NEXT(o6p3) = @o6p4;
+		X(o6p4) = 0.952; Y(o6p4) = 0.82; NEXT(o6p4) = @o6p5;
+		X(o6p5) = 0.874; Y(o6p5) = 0.934; NEXT(o6p5) = @o6p0;
+
+		// obstacle 4
+		X(o7p0) = 0.768; Y(o7p0) = 0.814; NEXT(o7p0) = @o7p1;
+		X(o7p1) = 0.692; Y(o7p1) = 0.548; NEXT(o7p1) = @o7p2;
+		X(o7p2) = 0.594; Y(o7p2) = 0.47; NEXT(o7p2) = @o7p3;
+		X(o7p3) = 0.606; Y(o7p3) = 0.804; NEXT(o7p3) = @o7p4;
+		X(o7p4) = 0.648; Y(o7p4) = 0.626; NEXT(o7p4) = @o7p0;
+
+		// obstacle 5
+		X(o8p0) = 0.228; Y(o8p0) = 0.576; NEXT(o8p0) = @o8p1;
+		X(o8p1) = 0.39; Y(o8p1) = 0.322; NEXT(o8p1) = @o8p2;
+		X(o8p2) = 0.34; Y(o8p2) = 0.314; NEXT(o8p2) = @o8p3;
+		X(o8p3) = 0.184; Y(o8p3) = 0.456; NEXT(o8p3) = @o8p0;
+
+		// obstacle 6
+		X(o9p0) = 0.09; Y(o9p0) = 0.228; NEXT(o9p0) = @o9p1;
+		X(o9p1) = 0.242; Y(o9p1) = 0.076; NEXT(o9p1) = @o9p2;
+		X(o9p2) = 0.106; Y(o9p2) = 0.03; NEXT(o9p2) = @o9p3;
+		X(o9p3) = 0.022; Y(o9p3) = 0.178; NEXT(o9p3) = @o9p0;
+
+		// obstacle 7
+		X(o10p0) = 0.11; Y(o10p0) = 0.278; NEXT(o10p0) = @o10p1;
+		X(o10p1) = 0.246; Y(o10p1) = 0.262; NEXT(o10p1) = @o10p2;
+		X(o10p2) = 0.108; Y(o10p2) = 0.454; NEXT(o10p2) = @o10p3;
+		X(o10p3) = 0.16; Y(o10p3) = 0.566; NEXT(o10p3) = @o10p4;
+		X(o10p4) = 0.064; Y(o10p4) = 0.626; NEXT(o10p4) = @o10p5;
+		X(o10p5) = 0.016; Y(o10p5) = 0.438; NEXT(o10p5) = @o10p0;
+
+		// obstacle 8
+		X(o11p0) = 0.772; Y(o11p0) = 0.1; NEXT(o11p0) = @o11p1;
+		X(o11p1) = 0.71; Y(o11p1) = 0.206; NEXT(o11p1) = @o11p2;
+		X(o11p2) = 0.77; Y(o11p2) = 0.322; NEXT(o11p2) = @o11p3;
+		X(o11p3) = 0.894; Y(o11p3) = 0.096; NEXT(o11p3) = @o11p4;
+		X(o11p4) = 0.804; Y(o11p4) = 0.176; NEXT(o11p4) = @o11p0;
+
+		// obstacle 9
+		X(o12p0) = 0.698; Y(o12p0) = 0.476; NEXT(o12p0) = @o12p1;
+		X(o12p1) = 0.984; Y(o12p1) = 0.272; NEXT(o12p1) = @o12p2;
+		X(o12p2) = 0.908; Y(o12p2) = 0.512; NEXT(o12p2) = @o12p0;
+
+		// obstacle 10
+		X(o13p0) = 0.45; Y(o13p0) = 0.392; NEXT(o13p0) = @o13p1;
+		X(o13p1) = 0.614; Y(o13p1) = 0.258; NEXT(o13p1) = @o13p2;
+		X(o13p2) = 0.734; Y(o13p2) = 0.438; NEXT(o13p2) = @o13p0;
+
+		// obstacle 11
+		X(o14p0) = 0.476; Y(o14p0) = 0.868; NEXT(o14p0) = @o14p1;
+		X(o14p1) = 0.552; Y(o14p1) = 0.812; NEXT(o14p1) = @o14p2;
+		X(o14p2) = 0.62; Y(o14p2) = 0.902; NEXT(o14p2) = @o14p3;
+		X(o14p3) = 0.626; Y(o14p3) = 0.972; NEXT(o14p3) = @o14p4;
+		X(o14p4) = 0.49; Y(o14p4) = 0.958; NEXT(o14p4) = @o14p0;
+
+		// obstacle 12
+		X(o15p0) = 0.61; Y(o15p0) = 0.014; NEXT(o15p0) = @o15p1;
+		X(o15p1) = 0.58; Y(o15p1) = 0.094; NEXT(o15p1) = @o15p2;
+		X(o15p2) = 0.774; Y(o15p2) = 0.05; NEXT(o15p2) = @o15p3;
+		X(o15p3) = 0.63; Y(o15p3) = 0.054; NEXT(o15p3) = @o15p0;
+
+		// obstacle 13
+		X(o16p0) = 0.334; Y(o16p0) = 0.014; NEXT(o16p0) = @o16p1;
+		X(o16p1) = 0.278; Y(o16p1) = 0.038; NEXT(o16p1) = @o16p2;
+		X(o16p2) = 0.368; Y(o16p2) = 0.254; NEXT(o16p2) = @o16p3;
+		X(o16p3) = 0.7; Y(o16p3) = 0.2; NEXT(o16p3) = @o16p4;
+		X(o16p4) = 0.764; Y(o16p4) = 0.108; NEXT(o16p4) = @o16p5;
+		X(o16p5) = 0.526; Y(o16p5) = 0.158; NEXT(o16p5) = @o16p0;
+
+		// obstacle 14
+		X(o17p0) = 0.294; Y(o17p0) = 0.584; NEXT(o17p0) = @o17p1;
+		X(o17p1) = 0.478; Y(o17p1) = 0.626; NEXT(o17p1) = @o17p2;
+		X(o17p2) = 0.482; Y(o17p2) = 0.574; NEXT(o17p2) = @o17p3;
+		X(o17p3) = 0.324; Y(o17p3) = 0.434; NEXT(o17p3) = @o17p4;
+		X(o17p4) = 0.35; Y(o17p4) = 0.39; NEXT(o17p4) = @o17p5;
+		X(o17p5) = 0.572; Y(o17p5) = 0.52; NEXT(o17p5) = @o17p6;
+		X(o17p6) = 0.588; Y(o17p6) = 0.722; NEXT(o17p6) = @o17p7;
+		X(o17p7) = 0.456; Y(o17p7) = 0.668; NEXT(o17p7) = @o17p0;
+	};
+}
+
+instance pinball_inst3 {
+	domain = pinball;
+	non-fluents = pinball_nf3;
+
+	init-state {
+		x = 0.055;
+		y = 0.95;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}

@@ -1,0 +1,274 @@
+////////////////////////////////////////////////////////////////////
+// A ball is pushed around a table of polygonal obstacles to reach a target.
+// Every step it is pushed once in one of four directions or coasts, with
+// a chance that the push is replaced by a random one. Drag slows the ball,
+// and pushing costs more than coasting, so that a good policy uses the
+// bounces and carries its speed.
+//
+// Each obstacle is a closed ring of points, in which NEXT gives the point
+// that follows, so any number of polygons of any shape can be described.
+// The table is the unit square, and a ball that leaves it is put back
+// inside with its velocity unchanged: instances close the table with walls.
+//
+// A ball hits an edge if its center is within its radius of the edge and
+// it is moving towards the edge. A hit on one edge mirrors the velocity in
+// that edge, and a hit on two or more edges at once, such as at a corner,
+// reverses it. Neither changes the speed.
+//
+// RDDL cannot loop within a step, so the substeps are written out. The ball
+// moves at most MAX-SPEED * sqrt(2) * BALL-RADIUS / 4 in a substep, which must
+// stay below BALL-RADIUS for no hit to be missed, so keep MAX-SPEED below 2.8.
+//
+// Adapted from the description of Pinball in:
+//
+// [1] Konidaris, George, and Andrew Barto. "Skill discovery in continuous
+// reinforcement learning domains using skill chaining." Advances in neural
+// information processing systems 22 (2009).
+//
+// The rules follow the implementation in RLPy, and the instances are its
+// levels. It uses 20 substeps where this uses 4, so that a bounce can happen
+// slightly later here, but the reward is the same.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain pinball {
+
+	types {
+		point : object;		// a corner of an obstacle
+		direction : { @none, @left, @right, @up, @down };
+	};
+
+	pvariables {
+
+		// obstacles
+		X(point) 				: { non-fluent, real, default = 0.0 };
+		Y(point) 				: { non-fluent, real, default = 0.0 };
+		NEXT(point) 			: { non-fluent, point };					// the corner that follows in the ring
+
+		// target
+		TARGET-X 				: { non-fluent, real, default = 0.9 };
+		TARGET-Y 				: { non-fluent, real, default = 0.2 };
+		TARGET-RADIUS 			: { non-fluent, real, default = 0.04 };
+
+		// ball
+		BALL-RADIUS 			: { non-fluent, real, default = 0.02 };		// the ball moves its velocity times this in a step
+		IMPULSE 				: { non-fluent, real, default = 0.2 };		// change of the velocity by one push
+		MAX-SPEED 				: { non-fluent, real, default = 2.0 };		// limit of the velocity along each axis
+		DRAG 					: { non-fluent, real, default = 0.995 };	// fraction of the velocity kept in a step
+		NOISE 					: { non-fluent, real, default = 0.1 };		// chance that a push is replaced by a random one
+
+		// reward
+		TARGET-REWARD 			: { non-fluent, real, default = 10000.0 };
+		COAST-COST 				: { non-fluent, real, default = 1.0 };
+		PUSH-COST 				: { non-fluent, real, default = 5.0 };
+
+		// the edge from each point to the one that follows
+		edge-x(point) 			: { interm-fluent, real };
+		edge-y(point) 			: { interm-fluent, real };
+		edge-sq(point) 			: { interm-fluent, real };
+
+		// the push that happens, and the velocity it leaves
+		pushed 					: { interm-fluent, direction };
+		vx0 					: { interm-fluent, real };
+		vy0 					: { interm-fluent, real };
+
+		// the velocity, position and whether the target has been reached after each substep
+
+		// substep 1: from the ball to the nearest point of each edge, which edges it hits and how many
+		x1 					: { interm-fluent, real };
+		y1 					: { interm-fluent, real };
+		along1(point) 			: { interm-fluent, real };
+		gap-x1(point) 			: { interm-fluent, real };
+		gap-y1(point) 			: { interm-fluent, real };
+		hit1(point) 			: { interm-fluent, bool };
+		hits1 					: { interm-fluent, int };
+		vx1 					: { interm-fluent, real };
+		vy1 					: { interm-fluent, real };
+		reached1 				: { interm-fluent, bool };
+
+		// substep 2: from the ball to the nearest point of each edge, which edges it hits and how many
+		x2 					: { interm-fluent, real };
+		y2 					: { interm-fluent, real };
+		along2(point) 			: { interm-fluent, real };
+		gap-x2(point) 			: { interm-fluent, real };
+		gap-y2(point) 			: { interm-fluent, real };
+		hit2(point) 			: { interm-fluent, bool };
+		hits2 					: { interm-fluent, int };
+		vx2 					: { interm-fluent, real };
+		vy2 					: { interm-fluent, real };
+		reached2 				: { interm-fluent, bool };
+
+		// substep 3: from the ball to the nearest point of each edge, which edges it hits and how many
+		x3 					: { interm-fluent, real };
+		y3 					: { interm-fluent, real };
+		along3(point) 			: { interm-fluent, real };
+		gap-x3(point) 			: { interm-fluent, real };
+		gap-y3(point) 			: { interm-fluent, real };
+		hit3(point) 			: { interm-fluent, bool };
+		hits3 					: { interm-fluent, int };
+		vx3 					: { interm-fluent, real };
+		vy3 					: { interm-fluent, real };
+		reached3 				: { interm-fluent, bool };
+
+		// substep 4: from the ball to the nearest point of each edge, which edges it hits and how many
+		x4 					: { interm-fluent, real };
+		y4 					: { interm-fluent, real };
+		along4(point) 			: { interm-fluent, real };
+		gap-x4(point) 			: { interm-fluent, real };
+		gap-y4(point) 			: { interm-fluent, real };
+		hit4(point) 			: { interm-fluent, bool };
+		hits4 					: { interm-fluent, int };
+		vx4 					: { interm-fluent, real };
+		vy4 					: { interm-fluent, real };
+		reached4 				: { interm-fluent, bool };
+
+		// state of the ball, and the push of the last step
+		x 						: { state-fluent, real, default = 0.2 };
+		y 						: { state-fluent, real, default = 0.9 };
+		vx 						: { state-fluent, real, default = 0.0 };
+		vy 						: { state-fluent, real, default = 0.0 };
+		reached 				: { state-fluent, bool, default = false };
+		last-push 				: { state-fluent, direction, default = @none };
+
+		// the push to try
+		push 					: { action-fluent, direction, default = @none };
+	};
+
+	cpfs {
+
+		edge-x(?p) = X(NEXT(?p)) - X(?p);
+		edge-y(?p) = Y(NEXT(?p)) - Y(?p);
+		edge-sq(?p) = pow[edge-x(?p), 2] + pow[edge-y(?p), 2];
+
+		pushed = if (Bernoulli(NOISE))
+					then Discrete(direction, @none : 0.2, @left : 0.2, @right : 0.2, @up : 0.2, @down : 0.2)
+					else push;
+
+		vx0 = max[min[vx + IMPULSE * ((if (pushed == @right) then 1.0 else 0.0)
+									  - (if (pushed == @left) then 1.0 else 0.0)), MAX-SPEED], -MAX-SPEED];
+		vy0 = max[min[vy + IMPULSE * ((if (pushed == @up) then 1.0 else 0.0)
+									  - (if (pushed == @down) then 1.0 else 0.0)), MAX-SPEED], -MAX-SPEED];
+
+		// substep 1
+		x1 = if (reached) then x else x + vx0 * BALL-RADIUS / 4;
+		y1 = if (reached) then y else y + vy0 * BALL-RADIUS / 4;
+		along1(?p) = max[min[((x1 - X(?p)) * edge-x(?p) + (y1 - Y(?p)) * edge-y(?p)) / edge-sq(?p), 1.0], 0.0];
+		gap-x1(?p) = X(?p) + along1(?p) * edge-x(?p) - x1;
+		gap-y1(?p) = Y(?p) + along1(?p) * edge-y(?p) - y1;
+		hit1(?p) = (pow[gap-x1(?p), 2] + pow[gap-y1(?p), 2] <= pow[BALL-RADIUS, 2])
+					 ^ (gap-x1(?p) * vx0 + gap-y1(?p) * vy0 > 0);
+		hits1 = sum_{?p : point} [hit1(?p)];
+		vx1 = if (reached | (hits1 == 0)) then vx0
+				else if (hits1 > 1) then -vx0
+				else sum_{?p : point} [
+					if (hit1(?p))
+						then 2 * (vx0 * edge-x(?p) + vy0 * edge-y(?p)) * edge-x(?p) / edge-sq(?p) - vx0
+						else 0.0];
+		vy1 = if (reached | (hits1 == 0)) then vy0
+				else if (hits1 > 1) then -vy0
+				else sum_{?p : point} [
+					if (hit1(?p))
+						then 2 * (vx0 * edge-x(?p) + vy0 * edge-y(?p)) * edge-y(?p) / edge-sq(?p) - vy0
+						else 0.0];
+		reached1 = reached | (pow[x1 - TARGET-X, 2] + pow[y1 - TARGET-Y, 2] < pow[TARGET-RADIUS, 2]);
+
+		// substep 2
+		x2 = if (reached1) then x1 else x1 + vx1 * BALL-RADIUS / 4;
+		y2 = if (reached1) then y1 else y1 + vy1 * BALL-RADIUS / 4;
+		along2(?p) = max[min[((x2 - X(?p)) * edge-x(?p) + (y2 - Y(?p)) * edge-y(?p)) / edge-sq(?p), 1.0], 0.0];
+		gap-x2(?p) = X(?p) + along2(?p) * edge-x(?p) - x2;
+		gap-y2(?p) = Y(?p) + along2(?p) * edge-y(?p) - y2;
+		hit2(?p) = (pow[gap-x2(?p), 2] + pow[gap-y2(?p), 2] <= pow[BALL-RADIUS, 2])
+					 ^ (gap-x2(?p) * vx1 + gap-y2(?p) * vy1 > 0);
+		hits2 = sum_{?p : point} [hit2(?p)];
+		vx2 = if (reached1 | (hits2 == 0)) then vx1
+				else if (hits2 > 1) then -vx1
+				else sum_{?p : point} [
+					if (hit2(?p))
+						then 2 * (vx1 * edge-x(?p) + vy1 * edge-y(?p)) * edge-x(?p) / edge-sq(?p) - vx1
+						else 0.0];
+		vy2 = if (reached1 | (hits2 == 0)) then vy1
+				else if (hits2 > 1) then -vy1
+				else sum_{?p : point} [
+					if (hit2(?p))
+						then 2 * (vx1 * edge-x(?p) + vy1 * edge-y(?p)) * edge-y(?p) / edge-sq(?p) - vy1
+						else 0.0];
+		reached2 = reached1 | (pow[x2 - TARGET-X, 2] + pow[y2 - TARGET-Y, 2] < pow[TARGET-RADIUS, 2]);
+
+		// substep 3
+		x3 = if (reached2) then x2 else x2 + vx2 * BALL-RADIUS / 4;
+		y3 = if (reached2) then y2 else y2 + vy2 * BALL-RADIUS / 4;
+		along3(?p) = max[min[((x3 - X(?p)) * edge-x(?p) + (y3 - Y(?p)) * edge-y(?p)) / edge-sq(?p), 1.0], 0.0];
+		gap-x3(?p) = X(?p) + along3(?p) * edge-x(?p) - x3;
+		gap-y3(?p) = Y(?p) + along3(?p) * edge-y(?p) - y3;
+		hit3(?p) = (pow[gap-x3(?p), 2] + pow[gap-y3(?p), 2] <= pow[BALL-RADIUS, 2])
+					 ^ (gap-x3(?p) * vx2 + gap-y3(?p) * vy2 > 0);
+		hits3 = sum_{?p : point} [hit3(?p)];
+		vx3 = if (reached2 | (hits3 == 0)) then vx2
+				else if (hits3 > 1) then -vx2
+				else sum_{?p : point} [
+					if (hit3(?p))
+						then 2 * (vx2 * edge-x(?p) + vy2 * edge-y(?p)) * edge-x(?p) / edge-sq(?p) - vx2
+						else 0.0];
+		vy3 = if (reached2 | (hits3 == 0)) then vy2
+				else if (hits3 > 1) then -vy2
+				else sum_{?p : point} [
+					if (hit3(?p))
+						then 2 * (vx2 * edge-x(?p) + vy2 * edge-y(?p)) * edge-y(?p) / edge-sq(?p) - vy2
+						else 0.0];
+		reached3 = reached2 | (pow[x3 - TARGET-X, 2] + pow[y3 - TARGET-Y, 2] < pow[TARGET-RADIUS, 2]);
+
+		// substep 4
+		x4 = if (reached3) then x3 else x3 + vx3 * BALL-RADIUS / 4;
+		y4 = if (reached3) then y3 else y3 + vy3 * BALL-RADIUS / 4;
+		along4(?p) = max[min[((x4 - X(?p)) * edge-x(?p) + (y4 - Y(?p)) * edge-y(?p)) / edge-sq(?p), 1.0], 0.0];
+		gap-x4(?p) = X(?p) + along4(?p) * edge-x(?p) - x4;
+		gap-y4(?p) = Y(?p) + along4(?p) * edge-y(?p) - y4;
+		hit4(?p) = (pow[gap-x4(?p), 2] + pow[gap-y4(?p), 2] <= pow[BALL-RADIUS, 2])
+					 ^ (gap-x4(?p) * vx3 + gap-y4(?p) * vy3 > 0);
+		hits4 = sum_{?p : point} [hit4(?p)];
+		vx4 = if (reached3 | (hits4 == 0)) then vx3
+				else if (hits4 > 1) then -vx3
+				else sum_{?p : point} [
+					if (hit4(?p))
+						then 2 * (vx3 * edge-x(?p) + vy3 * edge-y(?p)) * edge-x(?p) / edge-sq(?p) - vx3
+						else 0.0];
+		vy4 = if (reached3 | (hits4 == 0)) then vy3
+				else if (hits4 > 1) then -vy3
+				else sum_{?p : point} [
+					if (hit4(?p))
+						then 2 * (vx3 * edge-x(?p) + vy3 * edge-y(?p)) * edge-y(?p) / edge-sq(?p) - vy3
+						else 0.0];
+		reached4 = reached3 | (pow[x4 - TARGET-X, 2] + pow[y4 - TARGET-Y, 2] < pow[TARGET-RADIUS, 2]);
+
+		// the ball stops at the target, and otherwise drag acts once per step
+		x' = if (reached4) then x4
+			 else if (x4 > 1.0) then 0.95
+			 else if (x4 < 0.0) then 0.05
+			 else x4;
+		y' = if (reached4) then y4
+			 else if (y4 > 1.0) then 0.95
+			 else if (y4 < 0.0) then 0.05
+			 else y4;
+		vx' = if (reached4) then vx4 else DRAG * vx4;
+		vy' = if (reached4) then vy4 else DRAG * vy4;
+		reached' = reached4;
+		last-push' = pushed;
+	};
+
+	// the target pays once, and nothing is charged for the step that reaches it
+	reward = if (reached) then 0.0
+			 else if (reached') then TARGET-REWARD
+			 else if (pushed == @none) then -COAST-COST
+			 else -PUSH-COST;
+
+	state-invariants {
+		forall_{?p : point} [(X(NEXT(?p)) ~= X(?p)) | (Y(NEXT(?p)) ~= Y(?p))];
+	};
+
+	termination {
+		reached;
+	};
+}
