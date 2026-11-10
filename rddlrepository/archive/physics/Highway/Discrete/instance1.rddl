@@ -1,0 +1,70 @@
+// Three lanes, as in highway-fast-v0, over 30 seconds.
+// The initial state is that of highway-env 2.2.6 highway-v0 after reset(seed=12)
+// with lanes_count=3, vehicles_count=20 and vehicles_density=1.0.
+
+non-fluents highway_discrete_nf1 {
+	domain = highway_discrete;
+
+	objects {
+		car : {ego, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20};
+	};
+
+	non-fluents {
+		NUM-LANES = 3;
+
+		EGO(ego); ORDER(ego) = 0;
+		ORDER(c1) = 1; DELTA(c1) = 3.8498892405959575;
+		ORDER(c2) = 2; DELTA(c2) = 4.39630937370468;
+		ORDER(c3) = 3; DELTA(c3) = 4.041466161718795;
+		ORDER(c4) = 4; DELTA(c4) = 3.9536161218532766;
+		ORDER(c5) = 5; DELTA(c5) = 3.7587710894221504;
+		ORDER(c6) = 6; DELTA(c6) = 4.422810875443751;
+		ORDER(c7) = 7; DELTA(c7) = 4.436696124929133;
+		ORDER(c8) = 8; DELTA(c8) = 3.7193899345083383;
+		ORDER(c9) = 9; DELTA(c9) = 4.278840092022072;
+		ORDER(c10) = 10; DELTA(c10) = 3.5202287237100864;
+		ORDER(c11) = 11; DELTA(c11) = 4.100110285529601;
+		ORDER(c12) = 12; DELTA(c12) = 4.280382801293105;
+		ORDER(c13) = 13; DELTA(c13) = 4.100284787567054;
+		ORDER(c14) = 14; DELTA(c14) = 4.406083870149576;
+		ORDER(c15) = 15; DELTA(c15) = 4.446968204727187;
+		ORDER(c16) = 16; DELTA(c16) = 4.243249975336401;
+		ORDER(c17) = 17; DELTA(c17) = 4.398157197508679;
+		ORDER(c18) = 18; DELTA(c18) = 4.116476821940209;
+		ORDER(c19) = 19; DELTA(c19) = 4.418663926218991;
+		ORDER(c20) = 20; DELTA(c20) = 4.263402163780221;
+	};
+}
+
+instance highway_discrete_inst1 {
+	domain = highway_discrete;
+	non-fluents = highway_discrete_nf1;
+
+	init-state {
+		x(ego) = 207.98194443898265; y(ego) = 4.0; speed(ego) = 25.0; target-lane(ego) = 1; target-speed(ego) = 25.0;
+		x(c1) = 229.57303710293445; y(c1) = 0.0; speed(c1) = 21.567961153619283; target-speed(c1) = 21.567961153619283; timer(c1) = 0.22496682487587805;
+		x(c2) = 251.7834912622647; y(c2) = 4.0; speed(c2) = 23.011337228318354; target-lane(c2) = 1; target-speed(c2) = 23.011337228318354; timer(c2) = 0.5675370590798821;
+		x(c3) = 273.80222346136344; y(c3) = 0.0; speed(c3) = 23.574391467251726; target-speed(c3) = 23.574391467251726; timer(c3) = 0.17505376277028972;
+		x(c4) = 296.6288299717048; y(c4) = 4.0; speed(c4) = 21.77386487628297; target-lane(c4) = 1; target-speed(c4) = 21.77386487628297; timer(c4) = 0.45332369640289016;
+		x(c5) = 322.2964276736747; y(c5) = 0.0; speed(c5) = 22.4044397728317; target-speed(c5) = 22.4044397728317; timer(c5) = 0.5240894578505504;
+		x(c6) = 348.5088795082432; y(c6) = 4.0; speed(c6) = 23.0115314221635; target-lane(c6) = 1; target-speed(c6) = 23.0115314221635; timer(c6) = 0.4393061882663005;
+		x(c7) = 370.87011939378976; y(c7) = 0.0; speed(c7) = 23.64074999977042; target-speed(c7) = 23.64074999977042; timer(c7) = 0.12284252349945746;
+		x(c8) = 394.8977931546635; y(c8) = 0.0; speed(c8) = 23.61466753657589; target-speed(c8) = 23.61466753657589; timer(c8) = 0.6080058935124271;
+		x(c9) = 419.9993849246385; y(c9) = 4.0; speed(c9) = 23.378910230684077; target-lane(c9) = 1; target-speed(c9) = 23.378910230684077; timer(c9) = 0.03335280583519307;
+		x(c10) = 444.1673845042127; y(c10) = 8.0; speed(c10) = 21.40305521189518; target-lane(c10) = 2; target-speed(c10) = 21.40305521189518; timer(c10) = 0.5257333513459344;
+		x(c11) = 467.00005891259; y(c11) = 0.0; speed(c11) = 23.83680204389582; target-speed(c11) = 23.83680204389582; timer(c11) = 0.12395430579340427;
+		x(c12) = 488.8085911618408; y(c12) = 0.0; speed(c12) = 21.971685156402227; target-speed(c12) = 21.971685156402227; timer(c12) = 0.6374790056156598;
+		x(c13) = 514.4992650793073; y(c13) = 4.0; speed(c13) = 23.743573761766775; target-lane(c13) = 1; target-speed(c13) = 23.743573761766775; timer(c13) = 0.9134820648584991;
+		x(c14) = 538.5623337374528; y(c14) = 4.0; speed(c14) = 22.60826581953347; target-lane(c14) = 1; target-speed(c14) = 22.60826581953347; timer(c14) = 0.5098417841154514;
+		x(c15) = 560.5332020824342; y(c15) = 8.0; speed(c15) = 21.847921231632984; target-lane(c15) = 2; target-speed(c15) = 21.847921231632984; timer(c15) = 0.09973098405657765;
+		x(c16) = 585.6185926223642; y(c16) = 8.0; speed(c16) = 22.42799138193757; target-lane(c16) = 2; target-speed(c16) = 22.42799138193757; timer(c16) = 0.9078096167315834;
+		x(c17) = 608.19521733981; y(c17) = 8.0; speed(c17) = 23.84779836347091; target-lane(c17) = 2; target-speed(c17) = 23.84779836347091; timer(c17) = 0.834367971913025;
+		x(c18) = 632.683207860404; y(c18) = 8.0; speed(c18) = 22.346890144719644; target-lane(c18) = 2; target-speed(c18) = 22.346890144719644; timer(c18) = 0.7656590925876117;
+		x(c19) = 655.2786694045058; y(c19) = 4.0; speed(c19) = 22.309608965868506; target-lane(c19) = 1; target-speed(c19) = 22.309608965868506; timer(c19) = 0.1850244696493064;
+		x(c20) = 677.7331239865679; y(c20) = 8.0; speed(c20) = 21.307390744425536; target-lane(c20) = 2; target-speed(c20) = 21.307390744425536; timer(c20) = 0.29414463938019253;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 450;
+	discount = 1.0;
+}

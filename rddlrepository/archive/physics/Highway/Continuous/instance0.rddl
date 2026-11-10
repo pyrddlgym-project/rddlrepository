@@ -1,0 +1,42 @@
+// Two lanes and a few cars, over 20 seconds.
+// The initial state is that of highway-env 2.2.6 highway-v0 after reset(seed=11)
+// with lanes_count=2, vehicles_count=6 and vehicles_density=1.0.
+
+non-fluents highway_continuous_nf0 {
+	domain = highway_continuous;
+
+	objects {
+		car : {ego, c1, c2, c3, c4, c5, c6};
+	};
+
+	non-fluents {
+		NUM-LANES = 2;
+
+		EGO(ego); ORDER(ego) = 0;
+		ORDER(c1) = 1; DELTA(c1) = 3.647926084577456;
+		ORDER(c2) = 2; DELTA(c2) = 4.448328453291775;
+		ORDER(c3) = 3; DELTA(c3) = 4.011390021803263;
+		ORDER(c4) = 4; DELTA(c4) = 4.288039594503992;
+		ORDER(c5) = 5; DELTA(c5) = 4.316736435969658;
+		ORDER(c6) = 6; DELTA(c6) = 4.0537303628652275;
+	};
+}
+
+instance highway_continuous_inst0 {
+	domain = highway_continuous;
+	non-fluents = highway_continuous_nf0;
+
+	init-state {
+		x(ego) = 230.51670824993843; y(ego) = 0.0; speed(ego) = 25.0;
+		x(c1) = 255.06742698649333; y(c1) = 0.0; speed(c1) = 22.804495072870072; target-speed(c1) = 22.804495072870072; timer(c1) = 0.3179547908183622;
+		x(c2) = 279.01720747818445; y(c2) = 0.0; speed(c2) = 21.211261728462592; target-speed(c2) = 21.211261728462592; timer(c2) = 0.5584092386033035;
+		x(c3) = 305.4591472853035; y(c3) = 4.0; speed(c3) = 22.86565077838915; target-lane(c3) = 1; target-speed(c3) = 22.86565077838915; timer(c3) = 0.19458369767130534;
+		x(c4) = 329.89535623548795; y(c4) = 0.0; speed(c4) = 21.825926447283386; target-speed(c4) = 21.825926447283386; timer(c4) = 0.39682760279674767;
+		x(c5) = 357.2295389814757; y(c5) = 4.0; speed(c5) = 23.01108175230745; target-lane(c5) = 1; target-speed(c5) = 23.01108175230745; timer(c5) = 0.8360659238317112;
+		x(c6) = 383.56748564775705; y(c6) = 4.0; speed(c6) = 23.942740917891918; target-lane(c6) = 1; target-speed(c6) = 23.942740917891918; timer(c6) = 0.5791656812612018;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 300;
+	discount = 1.0;
+}
