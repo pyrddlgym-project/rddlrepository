@@ -1,0 +1,21 @@
+// The CSTR example of pc-gym: 25 minutes in steps of 0.25 minutes, starting
+// below both setpoints, with the setpoint stepping from 0.85 to 0.9 mol/L halfway.
+
+non-fluents reactor_nf0 {
+	domain = reactor;
+}
+
+instance reactor_inst0 {
+	domain = reactor;
+	non-fluents = reactor_nf0;
+
+	init-state {
+		conc = 0.8;
+		temp = 330.0;
+		step = 0;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 1.0;
+}

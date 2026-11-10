@@ -1,0 +1,152 @@
+////////////////////////////////////////////////////////////////////
+// Control of a continuous stirred-tank reactor (CSTR), as in the
+// CSTR benchmark of pc-gym.
+//
+// A tank is fed with a solution of a chemical A, which reacts to a
+// product B. The reaction gives off heat, and is faster when hotter,
+// following the Arrhenius law. A jacket around the tank, whose coolant
+// temperature is the action, takes heat out of the tank. The well
+// mixed contents leave the tank at the rate at which the feed comes in.
+// The goal is to hold the concentration of A in the tank at a setpoint,
+// which steps from SETPOINT-START to SETPOINT-END at step
+// SETPOINT-SWITCH. A colder coolant slows the reaction and raises the
+// concentration, and a hotter one does the opposite.
+//
+// The concentration c (mol/L) and temperature T (K) of the tank follow
+//   dc/dt = (FLOW / VOLUME) (FEED-CONC - c) - r
+//   dT/dt = (FLOW / VOLUME) (FEED-TEMP - T)
+//           + HEAT-OF-REACTION r / (DENSITY HEAT-CAPACITY)
+//           + HEAT-TRANSFER (coolant - T) / (DENSITY HEAT-CAPACITY VOLUME)
+// where r = RATE-FACTOR exp(-ACTIVATION-TEMP / T) c is the rate of the
+// reaction (mol/L/min). Each step of TIME-STEP minutes is one step of
+// 4th order Runge-Kutta, which is accurate to about 0.001 K against an
+// exact solution for coolant temperatures up to about 303 K. Hotter
+// coolant ignites the reactor into a runaway reaction, which needs a
+// smaller step.
+//
+// The reward is minus the squared difference of the concentration and
+// the setpoint, both at the end of the step.
+//
+// The parameters, initial state, coolant range, setpoints, time step
+// and reward are those of the CSTR example of pc-gym, which solves the
+// ODE exactly, scales the actions and observations to [-1, 1], and
+// ends the episode one step early.
+//
+// References:
+//
+//		Tom Bloor et al. PC-Gym: Benchmark Environments for Process
+//		Control Problems. arXiv:2410.22093, 2024.
+//
+//		John Hedengren. Stirred Reactor. Process Dynamics and Control,
+//		https://apmonitor.com/pdc/index.php/Main/StirredReactor, 2022.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain reactor {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	pvariables {
+
+		// tank and feed
+		FLOW 				: { non-fluent, real, default = 100.0 };		// flow rate in and out (L/min)
+		VOLUME 				: { non-fluent, real, default = 100.0 };		// volume of the tank (L)
+		FEED-CONC 			: { non-fluent, real, default = 1.0 };			// concentration of A in the feed (mol/L)
+		FEED-TEMP 			: { non-fluent, real, default = 350.0 };		// temperature of the feed (K)
+		DENSITY 			: { non-fluent, real, default = 1000.0 };		// density of the contents (g/L)
+		HEAT-CAPACITY 		: { non-fluent, real, default = 0.239 };		// heat capacity of the contents (J/g/K)
+
+		// reaction and cooling
+		RATE-FACTOR 		: { non-fluent, real, default = 72000000000.0 };	// pre-exponential factor of the reaction (1/min)
+		ACTIVATION-TEMP 	: { non-fluent, real, default = 8750.0 };		// activation energy over the gas constant (K)
+		HEAT-OF-REACTION 	: { non-fluent, real, default = 50000.0 };		// heat given off by the reaction (J/mol)
+		HEAT-TRANSFER 		: { non-fluent, real, default = 50000.0 };		// heat transfer of the jacket, U A (J/min/K)
+		COOLANT-MIN 		: { non-fluent, real, default = 295.0 };		// range of the coolant temperature (K)
+		COOLANT-MAX 		: { non-fluent, real, default = 302.0 };
+
+		// time and setpoint
+		TIME-STEP 			: { non-fluent, real, default = 0.25 };			// minutes per step
+		SETPOINT-START 		: { non-fluent, real, default = 0.85 };			// setpoint of the concentration of A (mol/L)
+		SETPOINT-END 		: { non-fluent, real, default = 0.9 };
+		SETPOINT-SWITCH 	: { non-fluent, int, default = 50 };			// step at which the setpoint changes
+
+		// the four stages of Runge-Kutta: the state at which each stage is
+		// evaluated, the reaction rate there, and the rates of change there
+		conc-2 		: { interm-fluent, real };
+		conc-3 		: { interm-fluent, real };
+		conc-4 		: { interm-fluent, real };
+		temp-2 		: { interm-fluent, real };
+		temp-3 		: { interm-fluent, real };
+		temp-4 		: { interm-fluent, real };
+		rate-1 		: { interm-fluent, real };
+		rate-2 		: { interm-fluent, real };
+		rate-3 		: { interm-fluent, real };
+		rate-4 		: { interm-fluent, real };
+		dconc-1 	: { interm-fluent, real };
+		dconc-2 	: { interm-fluent, real };
+		dconc-3 	: { interm-fluent, real };
+		dconc-4 	: { interm-fluent, real };
+		dtemp-1 	: { interm-fluent, real };
+		dtemp-2 	: { interm-fluent, real };
+		dtemp-3 	: { interm-fluent, real };
+		dtemp-4 	: { interm-fluent, real };
+
+		// states
+		conc 		: { state-fluent, real, default = 0.8 };		// concentration of A in the tank (mol/L)
+		temp 		: { state-fluent, real, default = 330.0 };		// temperature of the tank (K)
+		step 		: { state-fluent, int, default = 0 };			// number of steps so far
+
+		// actions
+		coolant 	: { action-fluent, real, default = 300.0 };		// temperature of the coolant (K)
+	};
+
+	cpfs {
+
+		// stage 1, at the start of the step
+		rate-1 = RATE-FACTOR * exp[-ACTIVATION-TEMP / temp] * conc;
+		dconc-1 = FLOW / VOLUME * (FEED-CONC - conc) - rate-1;
+		dtemp-1 = FLOW / VOLUME * (FEED-TEMP - temp) + HEAT-OF-REACTION * rate-1 / (DENSITY * HEAT-CAPACITY)
+			+ HEAT-TRANSFER * (coolant - temp) / (DENSITY * HEAT-CAPACITY * VOLUME);
+
+		// stage 2, half a step ahead along stage 1
+		conc-2 = conc + TIME-STEP / 2 * dconc-1;
+		temp-2 = temp + TIME-STEP / 2 * dtemp-1;
+		rate-2 = RATE-FACTOR * exp[-ACTIVATION-TEMP / temp-2] * conc-2;
+		dconc-2 = FLOW / VOLUME * (FEED-CONC - conc-2) - rate-2;
+		dtemp-2 = FLOW / VOLUME * (FEED-TEMP - temp-2) + HEAT-OF-REACTION * rate-2 / (DENSITY * HEAT-CAPACITY)
+			+ HEAT-TRANSFER * (coolant - temp-2) / (DENSITY * HEAT-CAPACITY * VOLUME);
+
+		// stage 3, half a step ahead along stage 2
+		conc-3 = conc + TIME-STEP / 2 * dconc-2;
+		temp-3 = temp + TIME-STEP / 2 * dtemp-2;
+		rate-3 = RATE-FACTOR * exp[-ACTIVATION-TEMP / temp-3] * conc-3;
+		dconc-3 = FLOW / VOLUME * (FEED-CONC - conc-3) - rate-3;
+		dtemp-3 = FLOW / VOLUME * (FEED-TEMP - temp-3) + HEAT-OF-REACTION * rate-3 / (DENSITY * HEAT-CAPACITY)
+			+ HEAT-TRANSFER * (coolant - temp-3) / (DENSITY * HEAT-CAPACITY * VOLUME);
+
+		// stage 4, a full step ahead along stage 3
+		conc-4 = conc + TIME-STEP * dconc-3;
+		temp-4 = temp + TIME-STEP * dtemp-3;
+		rate-4 = RATE-FACTOR * exp[-ACTIVATION-TEMP / temp-4] * conc-4;
+		dconc-4 = FLOW / VOLUME * (FEED-CONC - conc-4) - rate-4;
+		dtemp-4 = FLOW / VOLUME * (FEED-TEMP - temp-4) + HEAT-OF-REACTION * rate-4 / (DENSITY * HEAT-CAPACITY)
+			+ HEAT-TRANSFER * (coolant - temp-4) / (DENSITY * HEAT-CAPACITY * VOLUME);
+
+		// weighted average of the four stages
+		conc' = conc + TIME-STEP / 6 * (dconc-1 + 2 * dconc-2 + 2 * dconc-3 + dconc-4);
+		temp' = temp + TIME-STEP / 6 * (dtemp-1 + 2 * dtemp-2 + 2 * dtemp-3 + dtemp-4);
+		step' = step + 1;
+	};
+
+	// squared error of the concentration from the setpoint, at the end of the step
+	reward = -pow[conc' - (if (step' < SETPOINT-SWITCH) then SETPOINT-START else SETPOINT-END), 2];
+
+	action-preconditions {
+		coolant >= COOLANT-MIN;
+		coolant <= COOLANT-MAX;
+	};
+}
