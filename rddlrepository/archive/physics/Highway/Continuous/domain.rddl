@@ -1,0 +1,618 @@
+////////////////////////////////////////////////////////////////////
+// Highway driving: a reference implementation of the highway-v0
+// environment of highway-env, with its continuous actions.
+//
+// An ego car drives along a straight road of parallel lanes among
+// other cars. The other cars follow the Intelligent Driver Model (IDM)
+// along the road and the MOBIL model to change lanes. The agent sets
+// the acceleration and the steering angle of the ego car directly. All
+// cars move by a kinematic bicycle model and are rectangles that crash
+// when they overlap.
+//
+// The model follows the code of highway-env 2.2.6 step by step:
+//   - the bicycle model and the clipping of actions of Vehicle;
+//   - the speed and the cascaded lateral and heading controllers of
+//     ControlledVehicle that steer the other cars;
+//   - the actions of ContinuousAction, which hold until the next
+//     decision, and which IDM and MOBIL see as a car with a desired
+//     speed of zero that never merges into a lane;
+//   - IDM with a desired speed per car and a random exponent, and
+//     MOBIL with a timer between decisions and the aborting of a lane
+//     change when another car is merging into the same lane, as in
+//     IDMVehicle;
+//   - the search for the cars ahead and behind on a lane of Road;
+//   - the collision test of rectangles by separating axes, including
+//     the test of overlap within the next frame, and the impact that
+//     pushes overlapping cars apart, in the order in which Road checks
+//     pairs of cars;
+//   - the reward, normalization and termination of HighwayEnv.
+//
+// The x axis points along the road and lane i is centered at
+// y = i * LANE-WIDTH, so that lane 0 is the leftmost lane and higher
+// lanes are further to the right. The road starts at x = 0.
+//
+// One step of the RDDL model is one frame of the simulation, of
+// 1 / SIMULATION-FREQUENCY seconds. In highway-env the agent decides
+// once every SIMULATION-FREQUENCY / POLICY-FREQUENCY frames, given
+// here by FRAMES-PER-DECISION. The action is only read on the frames
+// where the frame counter is a multiple of FRAMES-PER-DECISION, and
+// the car keeps the last one on the other frames. The reward of
+// highway-env, which is given once per decision, is given on the last
+// frame of each decision period, and the episode terminates at the
+// end of the period in which the ego car crashed. With
+// FRAMES-PER-DECISION = 1 the agent decides on every frame. The
+// horizon should be the duration of an episode in seconds times
+// SIMULATION-FREQUENCY.
+//
+// The differences from highway-env are:
+//   - the agent observes the full state rather than the kinematics of
+//     the nearest cars;
+//   - the actions are in m/s^2 and radians, within the bounds to which
+//     highway-env maps the interval [-1, 1];
+//   - highway-env decides the lane changes of the cars one after the
+//     other, so that a car can see the lane change another car decided
+//     earlier in the same frame. Here the cars that come earlier in
+//     ORDER see these decisions as well, but a lane change that is
+//     aborted because of a lane change that was itself aborted in the
+//     same frame, a chain of three cars, is not seen until the next
+//     frame;
+//   - when two cars are at exactly the same position along a lane, the
+//     search for the car ahead or behind can pick a different one;
+//   - the road does not continue past ROAD-LENGTH, so ROAD-LENGTH
+//     should be long enough that no car reaches its end.
+//
+// References:
+//
+//   Edouard Leurent. An Environment for Autonomous Driving Decision-Making.
+//   https://github.com/eleurent/highway-env, 2018.
+//
+//   Martin Treiber, Ansgar Hennecke and Dirk Helbing. Congested Traffic
+//   States in Empirical Observations and Microscopic Simulations.
+//   Physical Review E 62(2), 1805-1824, 2000.
+//
+//   Arne Kesting, Martin Treiber and Dirk Helbing. General Lane-Changing
+//   Model MOBIL for Car-Following Models. Transportation Research Record
+//   1999(1), 86-94, 2007.
+//
+//   Jason Kong, Mark Pfeiffer, Georg Schildbach and Francesco Borrelli.
+//   Kinematic and Dynamic Vehicle Models for Autonomous Driving Control
+//   Design. IEEE Intelligent Vehicles Symposium, 1094-1099, 2015.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain highway_continuous {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		car : object;
+
+		// the two lanes next to a car, in the order in which MOBIL considers them
+		side : { @left, @right };
+
+		// the separating axes of a pair of cars a and b, in the order of the edges of
+		// their rectangles in highway-env, where u is the heading of a car and n is u
+		// turned by 90 degrees counterclockwise
+		axis : { @a-minus-u, @a-plus-n, @a-plus-u, @a-minus-n,
+				 @b-minus-u, @b-plus-n, @b-plus-u, @b-minus-n };
+	};
+
+	pvariables {
+
+		// road
+		NUM-LANES 						: { non-fluent, int, default = 4 };
+		LANE-WIDTH 						: { non-fluent, real, default = 4.0 };
+		ROAD-LENGTH 					: { non-fluent, real, default = 10000.0 };
+		SPEED-LIMIT 					: { non-fluent, real, default = 30.0 };
+
+		// cars
+		EGO(car) 						: { non-fluent, bool, default = false };	// the car driven by the agent
+		ORDER(car) 						: { non-fluent, int, default = 0 };		// position in the list of cars of highway-env, starting from the ego car at 0
+		VEHICLE-LENGTH 					: { non-fluent, real, default = 5.0 };
+		VEHICLE-WIDTH 					: { non-fluent, real, default = 2.0 };
+		MAX-SPEED 						: { non-fluent, real, default = 40.0 };
+		MIN-SPEED 						: { non-fluent, real, default = -40.0 };
+
+		// time
+		SIMULATION-FREQUENCY 			: { non-fluent, real, default = 15.0 };	// frames per second
+		FRAMES-PER-DECISION 			: { non-fluent, int, default = 15 };
+
+		// low-level controllers
+		TAU-ACC 						: { non-fluent, real, default = 0.6 };
+		TAU-HEADING 					: { non-fluent, real, default = 0.2 };
+		TAU-LATERAL 					: { non-fluent, real, default = 0.6 };
+		MAX-STEERING-ANGLE 				: { non-fluent, real, default = 1.0471975511965976 };	// pi / 3
+
+		// bounds of the actions of the ego car
+		MAX-ACCELERATION 				: { non-fluent, real, default = 5.0 };
+		MAX-STEERING 					: { non-fluent, real, default = 0.7853981633974483 };	// pi / 4
+
+		// IDM
+		ACC-MAX 						: { non-fluent, real, default = 6.0 };
+		COMFORT-ACC-MAX 				: { non-fluent, real, default = 3.0 };
+		COMFORT-ACC-MIN 				: { non-fluent, real, default = -5.0 };
+		DISTANCE-WANTED 				: { non-fluent, real, default = 10.0 };
+		TIME-WANTED 					: { non-fluent, real, default = 1.5 };
+		DELTA(car) 						: { non-fluent, real, default = 4.0 };		// exponent of the speed term
+
+		// MOBIL
+		POLITENESS 						: { non-fluent, real, default = 0.0 };
+		LANE-CHANGE-MIN-ACC-GAIN 		: { non-fluent, real, default = 0.2 };
+		LANE-CHANGE-MAX-BRAKING-IMPOSED : { non-fluent, real, default = 2.0 };
+		LANE-CHANGE-DELAY 				: { non-fluent, real, default = 1.0 };
+
+		// reward
+		COLLISION-REWARD 				: { non-fluent, real, default = -1.0 };
+		RIGHT-LANE-REWARD 				: { non-fluent, real, default = 0.1 };
+		HIGH-SPEED-REWARD 				: { non-fluent, real, default = 0.4 };
+		REWARD-SPEED-MIN 				: { non-fluent, real, default = 20.0 };
+		REWARD-SPEED-MAX 				: { non-fluent, real, default = 30.0 };
+		NORMALIZE-REWARD 				: { non-fluent, bool, default = true };
+		OFFROAD-TERMINAL 				: { non-fluent, bool, default = false };
+
+		// state of the cars
+		x(car) 							: { state-fluent, real, default = 0.0 };
+		y(car) 							: { state-fluent, real, default = 0.0 };
+		heading(car) 					: { state-fluent, real, default = 0.0 };
+		speed(car) 						: { state-fluent, real, default = 0.0 };
+		target-lane(car) 				: { state-fluent, int, default = 0 };		// of the other cars
+		target-speed(car) 				: { state-fluent, real, default = 0.0 };	// of the other cars
+		timer(car) 						: { state-fluent, real, default = 0.0 };	// time since the last MOBIL decision
+		crashed(car) 					: { state-fluent, bool, default = false };
+		impact(car) 					: { state-fluent, bool, default = false };	// a push is applied in the next frame
+		impact-x(car) 					: { state-fluent, real, default = 0.0 };
+		impact-y(car) 					: { state-fluent, real, default = 0.0 };
+		frame 							: { state-fluent, int, default = 0 };
+		held-acc 						: { state-fluent, real, default = 0.0 };	// the actions of the ego car in force
+		held-steering 					: { state-fluent, real, default = 0.0 };
+
+		// lanes and decisions
+		dt 								: { interm-fluent, real };
+		decide 							: { interm-fluent, bool };					// the action is read in this frame
+		lane(car) 						: { interm-fluent, int };					// the closest lane
+		changing(car) 					: { interm-fluent, bool };					// a lane change is under way
+		side-lane(car, side) 			: { interm-fluent, int };
+		side-reachable(car, side) 		: { interm-fluent, bool };
+
+		// actions of the ego car
+		command-acc 					: { interm-fluent, real };
+		command-steering 				: { interm-fluent, real };
+		idm-target-speed(car) 			: { interm-fluent, real };					// desired speed as IDM sees it
+
+		// cars ahead and behind on the lane of a car and on the lanes next to it
+		on-own-lane(car, car) 			: { interm-fluent, bool };
+		on-side-lane(car, side, car) 	: { interm-fluent, bool };
+		has-front(car) 					: { interm-fluent, bool };
+		front(car) 						: { interm-fluent, car };
+		has-rear(car) 					: { interm-fluent, bool };
+		rear(car) 						: { interm-fluent, car };
+		has-side-front(car, side) 		: { interm-fluent, bool };
+		side-front(car, side) 			: { interm-fluent, car };
+		has-side-rear(car, side) 		: { interm-fluent, bool };
+		side-rear(car, side) 			: { interm-fluent, car };
+
+		// IDM, split into the free road term of a car with the exponent of the deciding car,
+		// and the interaction term of a car with the car ahead of it
+		free-acc(car, car) 				: { interm-fluent, real };
+		desired-gap(car, car) 			: { interm-fluent, real };
+		interaction-acc(car, car) 		: { interm-fluent, real };
+
+		// MOBIL
+		decides(car) 					: { interm-fluent, bool };					// the timer of the car has run out
+		self-acc(car) 					: { interm-fluent, real };
+		old-follower-acc(car) 			: { interm-fluent, real };
+		old-follower-pred-acc(car) 		: { interm-fluent, real };
+		new-follower-acc(car, side) 	: { interm-fluent, real };
+		new-follower-pred-acc(car, side): { interm-fluent, real };
+		self-pred-acc(car, side) 		: { interm-fluent, real };
+		mobil(car, side) 				: { interm-fluent, bool };
+
+		// target lanes, first ignoring and then including aborted lane changes
+		target-lane-1(car) 				: { interm-fluent, int };
+		blocks-1(car, car) 				: { interm-fluent, bool };
+		abort-1(car) 					: { interm-fluent, bool };
+		target-lane-2(car) 				: { interm-fluent, int };
+		blocks-2(car, car) 				: { interm-fluent, bool };
+		abort-2(car) 					: { interm-fluent, bool };
+		new-target-lane(car) 			: { interm-fluent, int };
+
+		// car ahead on the new target lane
+		on-target-lane(car, car) 		: { interm-fluent, bool };
+		has-target-front(car) 			: { interm-fluent, bool };
+		target-front(car) 				: { interm-fluent, car };
+
+		// low-level control
+		lateral-error(car) 				: { interm-fluent, real };
+		heading-ref(car) 				: { interm-fluent, real };
+		heading-rate-command(car) 		: { interm-fluent, real };
+		control-steering(car) 			: { interm-fluent, real };
+		idm-acc(car) 					: { interm-fluent, real };
+		control-acc(car) 				: { interm-fluent, real };
+		steering(car) 					: { interm-fluent, real };
+		acc(car) 						: { interm-fluent, real };
+
+		// bicycle model
+		beta(car) 						: { interm-fluent, real };
+		next-x(car) 					: { interm-fluent, real };
+		next-y(car) 					: { interm-fluent, real };
+		next-heading(car) 				: { interm-fluent, real };
+		next-speed(car) 				: { interm-fluent, real };
+		next-cos(car) 					: { interm-fluent, real };
+		next-sin(car) 					: { interm-fluent, real };
+
+		// collisions between the rectangles of cars a and b, with a before b in ORDER
+		near(car, car) 					: { interm-fluent, bool };
+		axis-x(car, car, axis) 			: { interm-fluent, real };
+		axis-y(car, car, axis) 			: { interm-fluent, real };
+		center-a(car, car, axis) 		: { interm-fluent, real };
+		half-a(car, car, axis) 			: { interm-fluent, real };
+		center-b(car, car, axis) 		: { interm-fluent, real };
+		half-b(car, car, axis) 			: { interm-fluent, real };
+		velocity-projection(car, car, axis) : { interm-fluent, real };
+		gap-now(car, car, axis) 		: { interm-fluent, real };
+		gap-next(car, car, axis) 		: { interm-fluent, real };
+		intersecting(car, car) 			: { interm-fluent, bool };
+		will-intersect(car, car) 		: { interm-fluent, bool };
+		min-axis(car, car) 				: { interm-fluent, axis };
+		axis-sign(car, car) 			: { interm-fluent, real };
+		translation-x(car, car) 		: { interm-fluent, real };
+		translation-y(car, car) 		: { interm-fluent, real };
+		has-later-impact(car) 			: { interm-fluent, bool };
+		later-impact(car) 				: { interm-fluent, car };
+		has-earlier-impact(car) 		: { interm-fluent, bool };
+		earlier-impact(car) 			: { interm-fluent, car };
+		next-crashed(car) 				: { interm-fluent, bool };
+
+		// reward
+		next-lane(car) 					: { interm-fluent, int };
+		on-road(car) 					: { interm-fluent, bool };
+		car-reward(car) 				: { interm-fluent, real };
+
+		// actions
+		acceleration 					: { action-fluent, real, default = 0.0 };
+		steering-angle 					: { action-fluent, real, default = 0.0 };
+	};
+
+	cpfs {
+
+		////////////////////////////////////////////////////////////
+		// lanes and decisions
+		////////////////////////////////////////////////////////////
+
+		dt = 1.0 / SIMULATION-FREQUENCY;
+		decide = (mod[frame, FRAMES-PER-DECISION] == 0);
+
+		// the closest lane, the lower one when halfway between two lanes
+		lane(?c) = max[0, min[NUM-LANES - 1, ceil[y(?c) / LANE-WIDTH - 0.5]]];
+		changing(?c) = (lane(?c) ~= target-lane(?c));
+
+		side-lane(?c, ?s) = lane(?c) + (if (?s == @left) then -1 else 1);
+		side-reachable(?c, ?s) = (side-lane(?c, ?s) >= 0) ^ (side-lane(?c, ?s) < NUM-LANES)
+			^ (abs[y(?c) - LANE-WIDTH * side-lane(?c, ?s)] <= 2.0 * LANE-WIDTH)
+			^ (x(?c) >= 0.0) ^ (x(?c) < ROAD-LENGTH + VEHICLE-LENGTH);
+
+		////////////////////////////////////////////////////////////
+		// actions of the ego car
+		////////////////////////////////////////////////////////////
+
+		command-acc = if (decide) then max[-MAX-ACCELERATION, min[MAX-ACCELERATION, acceleration]] else held-acc;
+		command-steering = if (decide) then max[-MAX-STEERING, min[MAX-STEERING, steering-angle]] else held-steering;
+
+		// IDM limits the desired speed of any car to the speed limit of its lane, and
+		// takes it to be zero for the ego car, which has no desired speed
+		idm-target-speed(?c) = if (EGO(?c)) then 0.0 else max[0.0, min[SPEED-LIMIT, target-speed(?c)]];
+
+		////////////////////////////////////////////////////////////
+		// cars ahead and behind
+		////////////////////////////////////////////////////////////
+
+		// a car ?v is on a lane if it is within a margin of 1 of its width
+		on-own-lane(?c, ?v) = (?v ~= ?c)
+			^ (abs[y(?v) - LANE-WIDTH * lane(?c)] <= LANE-WIDTH / 2.0 + 1.0)
+			^ (x(?v) >= -VEHICLE-LENGTH) ^ (x(?v) < ROAD-LENGTH + VEHICLE-LENGTH);
+		on-side-lane(?c, ?s, ?v) = (?v ~= ?c)
+			^ (abs[y(?v) - LANE-WIDTH * side-lane(?c, ?s)] <= LANE-WIDTH / 2.0 + 1.0)
+			^ (x(?v) >= -VEHICLE-LENGTH) ^ (x(?v) < ROAD-LENGTH + VEHICLE-LENGTH);
+
+		has-front(?c) = exists_{?v : car} [on-own-lane(?c, ?v) ^ (x(?v) >= x(?c))];
+		front(?c) = argmin_{?v : car} [if (on-own-lane(?c, ?v) ^ (x(?v) >= x(?c))) then x(?v) else 1000000000.0];
+		has-rear(?c) = exists_{?v : car} [on-own-lane(?c, ?v) ^ (x(?v) < x(?c))];
+		rear(?c) = argmax_{?v : car} [if (on-own-lane(?c, ?v) ^ (x(?v) < x(?c))) then x(?v) else -1000000000.0];
+
+		has-side-front(?c, ?s) = exists_{?v : car} [on-side-lane(?c, ?s, ?v) ^ (x(?v) >= x(?c))];
+		side-front(?c, ?s) = argmin_{?v : car} [if (on-side-lane(?c, ?s, ?v) ^ (x(?v) >= x(?c))) then x(?v) else 1000000000.0];
+		has-side-rear(?c, ?s) = exists_{?v : car} [on-side-lane(?c, ?s, ?v) ^ (x(?v) < x(?c))];
+		side-rear(?c, ?s) = argmax_{?v : car} [if (on-side-lane(?c, ?s, ?v) ^ (x(?v) < x(?c))) then x(?v) else -1000000000.0];
+
+		////////////////////////////////////////////////////////////
+		// IDM
+		////////////////////////////////////////////////////////////
+
+		// free road acceleration of car ?e, using the exponent of the deciding car ?c
+		free-acc(?e, ?c) = COMFORT-ACC-MAX * (1.0 - pow[max[speed(?e), 0.0]
+			/ (if (abs[idm-target-speed(?e)] > 0.01) then abs[idm-target-speed(?e)] else 0.01), DELTA(?c)]);
+
+		// desired gap of car ?e behind car ?f, from their speeds along the heading of ?e
+		desired-gap(?e, ?f) = DISTANCE-WANTED + speed(?e) * TIME-WANTED
+			+ speed(?e) * (speed(?e) - speed(?f) * cos[heading(?f) - heading(?e)])
+				/ (2.0 * sqrt[-COMFORT-ACC-MAX * COMFORT-ACC-MIN]);
+
+		// interaction with the car ahead, at a distance measured along the road
+		interaction-acc(?e, ?f) = COMFORT-ACC-MAX * pow[desired-gap(?e, ?f)
+			/ (if (abs[x(?f) - x(?e)] > 0.01) then (x(?f) - x(?e))
+			   else if (x(?f) - x(?e) >= 0.0) then 0.01 else -0.01), 2];
+
+		////////////////////////////////////////////////////////////
+		// MOBIL, for a car that is not changing lanes and whose timer has run out
+		////////////////////////////////////////////////////////////
+
+		decides(?c) = ~EGO(?c) ^ ~crashed(?c) ^ ~changing(?c) ^ (timer(?c) > LANE-CHANGE-DELAY);
+
+		// acceleration of the car behind the car on the new lane, before and after the change
+		new-follower-acc(?c, ?s) =
+			if (has-side-rear(?c, ?s)) then free-acc(side-rear(?c, ?s), ?c)
+				- (if (has-side-front(?c, ?s)) then interaction-acc(side-rear(?c, ?s), side-front(?c, ?s)) else 0.0)
+			else 0.0;
+		new-follower-pred-acc(?c, ?s) =
+			if (has-side-rear(?c, ?s)) then free-acc(side-rear(?c, ?s), ?c) - interaction-acc(side-rear(?c, ?s), ?c)
+			else 0.0;
+
+		// acceleration of the car itself, before and after the change
+		self-acc(?c) = free-acc(?c, ?c) - (if (has-front(?c)) then interaction-acc(?c, front(?c)) else 0.0);
+		self-pred-acc(?c, ?s) = free-acc(?c, ?c)
+			- (if (has-side-front(?c, ?s)) then interaction-acc(?c, side-front(?c, ?s)) else 0.0);
+
+		// acceleration of the car behind the car on its old lane, before and after the change
+		old-follower-acc(?c) =
+			if (has-rear(?c)) then free-acc(rear(?c), ?c) - interaction-acc(rear(?c), ?c)
+			else 0.0;
+		old-follower-pred-acc(?c) =
+			if (has-rear(?c)) then free-acc(rear(?c), ?c)
+				- (if (has-front(?c)) then interaction-acc(rear(?c), front(?c)) else 0.0)
+			else 0.0;
+
+		// the change is safe for the new follower and gains enough acceleration
+		mobil(?c, ?s) = decides(?c) ^ side-reachable(?c, ?s) ^ (abs[speed(?c)] >= 1.0)
+			^ (new-follower-pred-acc(?c, ?s) >= -LANE-CHANGE-MAX-BRAKING-IMPOSED)
+			^ (self-pred-acc(?c, ?s) - self-acc(?c)
+				+ POLITENESS * (new-follower-pred-acc(?c, ?s) - new-follower-acc(?c, ?s)
+								+ old-follower-pred-acc(?c) - old-follower-acc(?c))
+				>= LANE-CHANGE-MIN-ACC-GAIN);
+
+		////////////////////////////////////////////////////////////
+		// target lanes
+		////////////////////////////////////////////////////////////
+
+		// the right lane is considered after the left one, so it wins when both qualify
+		target-lane-1(?c) =
+			if (EGO(?c)) then target-lane(?c)
+			else if (mobil(?c, @right)) then side-lane(?c, @right)
+			else if (mobil(?c, @left)) then side-lane(?c, @left)
+			else target-lane(?c);
+
+		// a car changing lanes aborts if another car not yet on the same target lane but
+		// heading for it is ahead within the desired gap; the cars before it in ORDER have
+		// already decided in this frame, so their new target lanes are seen, and the ego car
+		// has no target lane
+		blocks-1(?c, ?v) = (?v ~= ?c) ^ ~EGO(?v) ^ (lane(?v) ~= target-lane(?c))
+			^ ((if (ORDER(?v) < ORDER(?c)) then target-lane-1(?v) else target-lane(?v)) == target-lane(?c))
+			^ (x(?v) - x(?c) > 0.0) ^ (x(?v) - x(?c) < desired-gap(?c, ?v));
+		abort-1(?c) = ~EGO(?c) ^ ~crashed(?c) ^ changing(?c) ^ (exists_{?v : car} [blocks-1(?c, ?v)]);
+		target-lane-2(?c) = if (abort-1(?c)) then lane(?c) else target-lane-1(?c);
+
+		blocks-2(?c, ?v) = (?v ~= ?c) ^ ~EGO(?v) ^ (lane(?v) ~= target-lane(?c))
+			^ ((if (ORDER(?v) < ORDER(?c)) then target-lane-2(?v) else target-lane(?v)) == target-lane(?c))
+			^ (x(?v) - x(?c) > 0.0) ^ (x(?v) - x(?c) < desired-gap(?c, ?v));
+		abort-2(?c) = ~EGO(?c) ^ ~crashed(?c) ^ changing(?c) ^ (exists_{?v : car} [blocks-2(?c, ?v)]);
+		new-target-lane(?c) = if (abort-2(?c)) then lane(?c) else target-lane-1(?c);
+
+		on-target-lane(?c, ?v) = (?v ~= ?c)
+			^ (abs[y(?v) - LANE-WIDTH * new-target-lane(?c)] <= LANE-WIDTH / 2.0 + 1.0)
+			^ (x(?v) >= -VEHICLE-LENGTH) ^ (x(?v) < ROAD-LENGTH + VEHICLE-LENGTH);
+		has-target-front(?c) = exists_{?v : car} [on-target-lane(?c, ?v) ^ (x(?v) >= x(?c))];
+		target-front(?c) = argmin_{?v : car} [if (on-target-lane(?c, ?v) ^ (x(?v) >= x(?c))) then x(?v) else 1000000000.0];
+
+		////////////////////////////////////////////////////////////
+		// low-level control
+		////////////////////////////////////////////////////////////
+
+		// lateral position control gives a lateral speed, turned into a heading reference
+		lateral-error(?c) = y(?c) - LANE-WIDTH * new-target-lane(?c);
+		heading-ref(?c) = max[-0.7853981633974483, min[0.7853981633974483, asin[max[-1.0, min[1.0,
+			-lateral-error(?c) / TAU-LATERAL
+				/ (if (abs[speed(?c)] > 0.01) then speed(?c) else if (speed(?c) >= 0.0) then 0.01 else -0.01)]]]]];
+
+		// heading control gives a heading rate, turned into a steering angle
+		heading-rate-command(?c) = (1.0 / TAU-HEADING) * (fmod[heading-ref(?c) - heading(?c) + 3.141592653589793,
+			6.283185307179586] - 3.141592653589793);
+		control-steering(?c) = max[-MAX-STEERING-ANGLE, min[MAX-STEERING-ANGLE, atan[2.0 * tan[asin[max[-1.0, min[1.0,
+			VEHICLE-LENGTH / 2.0
+				/ (if (abs[speed(?c)] > 0.01) then speed(?c) else if (speed(?c) >= 0.0) then 0.01 else -0.01)
+				* heading-rate-command(?c)]]]]]]];
+
+		// IDM on the current lane, and also on the target lane while changing lanes
+		idm-acc(?c) = max[-ACC-MAX, min[ACC-MAX,
+			if (lane(?c) ~= new-target-lane(?c)) then
+				min[self-acc(?c), free-acc(?c, ?c)
+					- (if (has-target-front(?c)) then interaction-acc(?c, target-front(?c)) else 0.0)]
+			else self-acc(?c)]];
+
+		control-acc(?c) = if (EGO(?c)) then command-acc else idm-acc(?c);
+
+		// a crashed car brakes to a stop, and no car exceeds the speed bounds
+		steering(?c) = if (crashed(?c)) then 0.0 else if (EGO(?c)) then command-steering else control-steering(?c);
+		acc(?c) = if (crashed(?c)) then -speed(?c)
+			else if (speed(?c) > MAX-SPEED) then min[control-acc(?c), MAX-SPEED - speed(?c)]
+			else if (speed(?c) < MIN-SPEED) then max[control-acc(?c), MIN-SPEED - speed(?c)]
+			else control-acc(?c);
+
+		////////////////////////////////////////////////////////////
+		// bicycle model, with the push of an impact from the last frame
+		////////////////////////////////////////////////////////////
+
+		beta(?c) = atan[0.5 * tan[steering(?c)]];
+		next-x(?c) = x(?c) + speed(?c) * cos[heading(?c) + beta(?c)] * dt
+			+ (if (impact(?c)) then impact-x(?c) else 0.0);
+		next-y(?c) = y(?c) + speed(?c) * sin[heading(?c) + beta(?c)] * dt
+			+ (if (impact(?c)) then impact-y(?c) else 0.0);
+		next-heading(?c) = heading(?c) + speed(?c) * sin[beta(?c)] / (VEHICLE-LENGTH / 2.0) * dt;
+		next-speed(?c) = speed(?c) + acc(?c) * dt;
+		next-cos(?c) = cos[next-heading(?c)];
+		next-sin(?c) = sin[next-heading(?c)];
+
+		////////////////////////////////////////////////////////////
+		// collisions, with ?a as the car that checks the pair
+		////////////////////////////////////////////////////////////
+
+		// cars too far apart to touch within the frame are skipped
+		near(?a, ?b) = hypot[next-x(?b) - next-x(?a), next-y(?b) - next-y(?a)]
+			<= sqrt[pow[VEHICLE-LENGTH, 2] + pow[VEHICLE-WIDTH, 2]] + next-speed(?a) * dt;
+
+		axis-x(?a, ?b, ?k) =
+			if (?k == @a-minus-u) then -next-cos(?a)
+			else if (?k == @a-plus-n) then -next-sin(?a)
+			else if (?k == @a-plus-u) then next-cos(?a)
+			else if (?k == @a-minus-n) then next-sin(?a)
+			else if (?k == @b-minus-u) then -next-cos(?b)
+			else if (?k == @b-plus-n) then -next-sin(?b)
+			else if (?k == @b-plus-u) then next-cos(?b)
+			else next-sin(?b);
+		axis-y(?a, ?b, ?k) =
+			if (?k == @a-minus-u) then -next-sin(?a)
+			else if (?k == @a-plus-n) then next-cos(?a)
+			else if (?k == @a-plus-u) then next-sin(?a)
+			else if (?k == @a-minus-n) then -next-cos(?a)
+			else if (?k == @b-minus-u) then -next-sin(?b)
+			else if (?k == @b-plus-n) then next-cos(?b)
+			else if (?k == @b-plus-u) then next-sin(?b)
+			else -next-cos(?b);
+
+		// projections of the rectangles on an axis, as a center and a half length
+		center-a(?a, ?b, ?k) = next-x(?a) * axis-x(?a, ?b, ?k) + next-y(?a) * axis-y(?a, ?b, ?k);
+		half-a(?a, ?b, ?k) = VEHICLE-LENGTH / 2.0 * abs[next-cos(?a) * axis-x(?a, ?b, ?k) + next-sin(?a) * axis-y(?a, ?b, ?k)]
+			+ VEHICLE-WIDTH / 2.0 * abs[next-cos(?a) * axis-y(?a, ?b, ?k) - next-sin(?a) * axis-x(?a, ?b, ?k)];
+		center-b(?a, ?b, ?k) = next-x(?b) * axis-x(?a, ?b, ?k) + next-y(?b) * axis-y(?a, ?b, ?k);
+		half-b(?a, ?b, ?k) = VEHICLE-LENGTH / 2.0 * abs[next-cos(?b) * axis-x(?a, ?b, ?k) + next-sin(?b) * axis-y(?a, ?b, ?k)]
+			+ VEHICLE-WIDTH / 2.0 * abs[next-cos(?b) * axis-y(?a, ?b, ?k) - next-sin(?b) * axis-x(?a, ?b, ?k)];
+
+		// displacement of ?a relative to ?b in one frame, projected on the axis
+		velocity-projection(?a, ?b, ?k) =
+			(next-speed(?a) * next-cos(?a) - next-speed(?b) * next-cos(?b)) * dt * axis-x(?a, ?b, ?k)
+			+ (next-speed(?a) * next-sin(?a) - next-speed(?b) * next-sin(?b)) * dt * axis-y(?a, ?b, ?k);
+
+		// distance between the projections, negative when they overlap, now and with the
+		// projection of ?a stretched over its displacement
+		gap-now(?a, ?b, ?k) =
+			if (center-a(?a, ?b, ?k) - half-a(?a, ?b, ?k) < center-b(?a, ?b, ?k) - half-b(?a, ?b, ?k))
+				then (center-b(?a, ?b, ?k) - half-b(?a, ?b, ?k)) - (center-a(?a, ?b, ?k) + half-a(?a, ?b, ?k))
+			else (center-a(?a, ?b, ?k) - half-a(?a, ?b, ?k)) - (center-b(?a, ?b, ?k) + half-b(?a, ?b, ?k));
+		gap-next(?a, ?b, ?k) =
+			if (center-a(?a, ?b, ?k) - half-a(?a, ?b, ?k) + min[velocity-projection(?a, ?b, ?k), 0.0]
+				< center-b(?a, ?b, ?k) - half-b(?a, ?b, ?k))
+				then (center-b(?a, ?b, ?k) - half-b(?a, ?b, ?k))
+					- (center-a(?a, ?b, ?k) + half-a(?a, ?b, ?k) + max[velocity-projection(?a, ?b, ?k), 0.0])
+			else (center-a(?a, ?b, ?k) - half-a(?a, ?b, ?k) + min[velocity-projection(?a, ?b, ?k), 0.0])
+				- (center-b(?a, ?b, ?k) + half-b(?a, ?b, ?k));
+
+		intersecting(?a, ?b) = near(?a, ?b) ^ (forall_{?k : axis} [gap-now(?a, ?b, ?k) <= 0.0]);
+		will-intersect(?a, ?b) = near(?a, ?b) ^ (forall_{?k : axis} [gap-next(?a, ?b, ?k) <= 0.0]);
+
+		// the push separating the cars is along the axis of least overlap, the first such
+		// axis on ties, pointing from ?b to ?a
+		min-axis(?a, ?b) = argmin_{?k : axis} [abs[gap-next(?a, ?b, ?k)]];
+		axis-sign(?a, ?b) = if ((next-x(?a) - next-x(?b)) * axis-x(?a, ?b, min-axis(?a, ?b))
+			+ (next-y(?a) - next-y(?b)) * axis-y(?a, ?b, min-axis(?a, ?b)) > 0.0) then 1.0 else -1.0;
+		translation-x(?a, ?b) = abs[gap-next(?a, ?b, min-axis(?a, ?b))] * axis-sign(?a, ?b) * axis-x(?a, ?b, min-axis(?a, ?b));
+		translation-y(?a, ?b) = abs[gap-next(?a, ?b, min-axis(?a, ?b))] * axis-sign(?a, ?b) * axis-y(?a, ?b, min-axis(?a, ?b));
+
+		// pairs are checked in ORDER and a later push replaces an earlier one: the last pair
+		// that pushes a car is the one with the latest car after it, or else with the
+		// latest car before it
+		has-later-impact(?c) = exists_{?v : car} [(ORDER(?v) > ORDER(?c)) ^ will-intersect(?c, ?v)];
+		later-impact(?c) = argmax_{?v : car} [if ((ORDER(?v) > ORDER(?c)) ^ will-intersect(?c, ?v)) then ORDER(?v) else -1];
+		has-earlier-impact(?c) = exists_{?v : car} [(ORDER(?v) < ORDER(?c)) ^ will-intersect(?v, ?c)];
+		earlier-impact(?c) = argmax_{?v : car} [if ((ORDER(?v) < ORDER(?c)) ^ will-intersect(?v, ?c)) then ORDER(?v) else -1];
+
+		////////////////////////////////////////////////////////////
+		// next state
+		////////////////////////////////////////////////////////////
+
+		x'(?c) = next-x(?c);
+		y'(?c) = next-y(?c);
+		heading'(?c) = next-heading(?c);
+		speed'(?c) = next-speed(?c);
+		target-lane'(?c) = new-target-lane(?c);
+		target-speed'(?c) = target-speed(?c);
+		timer'(?c) = (if (decides(?c)) then 0.0 else timer(?c)) + dt;
+
+		// a car crashes when pushed, or when it overlaps another car
+		next-crashed(?c) = crashed(?c) | impact(?c)
+			| (exists_{?v : car} [((ORDER(?c) < ORDER(?v)) ^ intersecting(?c, ?v))
+								 | ((ORDER(?v) < ORDER(?c)) ^ intersecting(?v, ?c))]);
+
+		crashed'(?c) = next-crashed(?c);
+		impact'(?c) = has-later-impact(?c) | has-earlier-impact(?c);
+		impact-x'(?c) = if (has-later-impact(?c)) then translation-x(?c, later-impact(?c)) / 2.0
+			else if (has-earlier-impact(?c)) then -translation-x(earlier-impact(?c), ?c) / 2.0
+			else 0.0;
+		impact-y'(?c) = if (has-later-impact(?c)) then translation-y(?c, later-impact(?c)) / 2.0
+			else if (has-earlier-impact(?c)) then -translation-y(earlier-impact(?c), ?c) / 2.0
+			else 0.0;
+
+		frame' = frame + 1;
+
+		// the ego car keeps its actions as they were clipped, until the next decision
+		held-acc' = (sum_{?c : car} [EGO(?c) * acc(?c)]);
+		held-steering' = (sum_{?c : car} [EGO(?c) * steering(?c)]);
+
+		////////////////////////////////////////////////////////////
+		// reward of the ego car, after the frame
+		////////////////////////////////////////////////////////////
+
+		next-lane(?c) = max[0, min[NUM-LANES - 1, ceil[next-y(?c) / LANE-WIDTH - 0.5]]];
+		on-road(?c) = (abs[next-y(?c) - LANE-WIDTH * next-lane(?c)] <= LANE-WIDTH / 2.0)
+			^ (next-x(?c) >= -VEHICLE-LENGTH) ^ (next-x(?c) < ROAD-LENGTH + VEHICLE-LENGTH);
+
+		car-reward(?c) = (if (on-road(?c)) then 1.0 else 0.0) * (
+			if (NORMALIZE-REWARD) then
+				(COLLISION-REWARD * next-crashed(?c)
+				 + RIGHT-LANE-REWARD * next-lane(?c) / max[NUM-LANES - 1, 1]
+				 + HIGH-SPEED-REWARD * max[0.0, min[1.0, (next-speed(?c) * cos[next-heading(?c)] - REWARD-SPEED-MIN)
+												   / (REWARD-SPEED-MAX - REWARD-SPEED-MIN)]]
+				 - COLLISION-REWARD) / (HIGH-SPEED-REWARD + RIGHT-LANE-REWARD - COLLISION-REWARD)
+			else
+				COLLISION-REWARD * next-crashed(?c)
+				+ RIGHT-LANE-REWARD * next-lane(?c) / max[NUM-LANES - 1, 1]
+				+ HIGH-SPEED-REWARD * max[0.0, min[1.0, (next-speed(?c) * cos[next-heading(?c)] - REWARD-SPEED-MIN)
+												  / (REWARD-SPEED-MAX - REWARD-SPEED-MIN)]]);
+	};
+
+	// the reward of a decision is given on the last frame of its period
+	reward = if (mod[frame + 1, FRAMES-PER-DECISION] == 0)
+		then (sum_{?c : car} [EGO(?c) * car-reward(?c)])
+		else 0.0;
+
+	action-preconditions {
+		acceleration >= -MAX-ACCELERATION;
+		acceleration <= MAX-ACCELERATION;
+		steering-angle >= -MAX-STEERING;
+		steering-angle <= MAX-STEERING;
+	};
+
+	state-invariants {
+		(sum_{?c : car} [EGO(?c)]) == 1;
+		forall_{?c : car, ?v : car} [(?c == ?v) | (ORDER(?c) ~= ORDER(?v))];
+	};
+
+	// the episode ends after the period in which the ego car crashed, or left the road
+	termination {
+		(mod[frame, FRAMES-PER-DECISION] == 0) ^ (exists_{?c : car} [EGO(?c) ^ crashed(?c)]);
+		OFFROAD-TERMINAL ^ (mod[frame, FRAMES-PER-DECISION] == 0) ^ (exists_{?c : car} [EGO(?c)
+			^ ((abs[y(?c) - LANE-WIDTH * max[0, min[NUM-LANES - 1, ceil[y(?c) / LANE-WIDTH - 0.5]]]] > LANE-WIDTH / 2.0)
+			   | (x(?c) < -VEHICLE-LENGTH) | (x(?c) >= ROAD-LENGTH + VEHICLE-LENGTH))]);
+	};
+}
