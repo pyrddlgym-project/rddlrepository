@@ -1,0 +1,43 @@
+// The court of MinAtar: 10 x 10 cells with three rows of ten bricks below the
+// top row. The ball starts in the left column, on the lowest row of bricks,
+// heading down and to the right.
+
+non-fluents brick_breaker_nf0 {
+	domain = brick_breaker;
+
+	objects {
+		brick : {
+			b0_1, b1_1, b2_1, b3_1, b4_1, b5_1, b6_1, b7_1, b8_1, b9_1,
+			b0_2, b1_2, b2_2, b3_2, b4_2, b5_2, b6_2, b7_2, b8_2, b9_2,
+			b0_3, b1_3, b2_3, b3_3, b4_3, b5_3, b6_3, b7_3, b8_3, b9_3
+		};
+	};
+
+	non-fluents {
+		WIDTH = 10;
+		HEIGHT = 10;
+		X(b0_1) = 0; Y(b0_1) = 1; X(b1_1) = 1; Y(b1_1) = 1; X(b2_1) = 2; Y(b2_1) = 1; X(b3_1) = 3; Y(b3_1) = 1; X(b4_1) = 4; Y(b4_1) = 1;
+		X(b5_1) = 5; Y(b5_1) = 1; X(b6_1) = 6; Y(b6_1) = 1; X(b7_1) = 7; Y(b7_1) = 1; X(b8_1) = 8; Y(b8_1) = 1; X(b9_1) = 9; Y(b9_1) = 1;
+		X(b0_2) = 0; Y(b0_2) = 2; X(b1_2) = 1; Y(b1_2) = 2; X(b2_2) = 2; Y(b2_2) = 2; X(b3_2) = 3; Y(b3_2) = 2; X(b4_2) = 4; Y(b4_2) = 2;
+		X(b5_2) = 5; Y(b5_2) = 2; X(b6_2) = 6; Y(b6_2) = 2; X(b7_2) = 7; Y(b7_2) = 2; X(b8_2) = 8; Y(b8_2) = 2; X(b9_2) = 9; Y(b9_2) = 2;
+		X(b0_3) = 0; Y(b0_3) = 3; X(b1_3) = 1; Y(b1_3) = 3; X(b2_3) = 2; Y(b2_3) = 3; X(b3_3) = 3; Y(b3_3) = 3; X(b4_3) = 4; Y(b4_3) = 3;
+		X(b5_3) = 5; Y(b5_3) = 3; X(b6_3) = 6; Y(b6_3) = 3; X(b7_3) = 7; Y(b7_3) = 3; X(b8_3) = 8; Y(b8_3) = 3; X(b9_3) = 9; Y(b9_3) = 3;
+	};
+}
+
+instance brick_breaker_inst0 {
+	domain = brick_breaker;
+	non-fluents = brick_breaker_nf0;
+
+	init-state {
+		paddle = 4;
+		ball-x = 0;
+		ball-y = 3;
+		dir-x = 1;
+		dir-y = 1;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}
