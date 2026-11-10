@@ -1,0 +1,39 @@
+// The grid of MinAtar: 10 x 10 cells, with a wave of 4 rows of 6 aliens in the
+// middle columns of the top rows, marching left, and the cannon in column 5.
+
+non-fluents space_shooter_nf0 {
+	domain = space_shooter;
+
+	objects {
+		xpos : { x0, x1, x2, x3, x4, x5, x6, x7, x8, x9 };
+		ypos : { y0, y1, y2, y3, y4, y5, y6, y7, y8, y9 };
+	};
+
+	non-fluents {
+		WIDTH = 10;
+		HEIGHT = 10;
+		X(x0) = 0; X(x1) = 1; X(x2) = 2; X(x3) = 3; X(x4) = 4; X(x5) = 5; X(x6) = 6; X(x7) = 7; X(x8) = 8; X(x9) = 9;
+		Y(y0) = 0; Y(y1) = 1; Y(y2) = 2; Y(y3) = 3; Y(y4) = 4; Y(y5) = 5; Y(y6) = 6; Y(y7) = 7; Y(y8) = 8; Y(y9) = 9;
+		WAVE(x2, y0) = true; WAVE(x3, y0) = true; WAVE(x4, y0) = true; WAVE(x5, y0) = true; WAVE(x6, y0) = true; WAVE(x7, y0) = true;
+		WAVE(x2, y1) = true; WAVE(x3, y1) = true; WAVE(x4, y1) = true; WAVE(x5, y1) = true; WAVE(x6, y1) = true; WAVE(x7, y1) = true;
+		WAVE(x2, y2) = true; WAVE(x3, y2) = true; WAVE(x4, y2) = true; WAVE(x5, y2) = true; WAVE(x6, y2) = true; WAVE(x7, y2) = true;
+		WAVE(x2, y3) = true; WAVE(x3, y3) = true; WAVE(x4, y3) = true; WAVE(x5, y3) = true; WAVE(x6, y3) = true; WAVE(x7, y3) = true;
+	};
+}
+
+instance space_shooter_inst0 {
+	domain = space_shooter;
+	non-fluents = space_shooter_nf0;
+
+	init-state {
+		cannon = 5;
+		alien(x2, y0) = true; alien(x3, y0) = true; alien(x4, y0) = true; alien(x5, y0) = true; alien(x6, y0) = true; alien(x7, y0) = true;
+		alien(x2, y1) = true; alien(x3, y1) = true; alien(x4, y1) = true; alien(x5, y1) = true; alien(x6, y1) = true; alien(x7, y1) = true;
+		alien(x2, y2) = true; alien(x3, y2) = true; alien(x4, y2) = true; alien(x5, y2) = true; alien(x6, y2) = true; alien(x7, y2) = true;
+		alien(x2, y3) = true; alien(x3, y3) = true; alien(x4, y3) = true; alien(x5, y3) = true; alien(x6, y3) = true; alien(x7, y3) = true;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}
