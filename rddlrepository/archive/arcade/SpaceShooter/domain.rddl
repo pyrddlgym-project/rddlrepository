@@ -1,0 +1,189 @@
+////////////////////////////////////////////////////////////////////
+// A space shooter on a grid, with the rules of the Space Invaders
+// game of MinAtar.
+//
+// A cannon moves left and right along the bottom row and fires
+// bullets up at a wave of aliens, which marches sideways and drops a
+// row and turns around whenever it reaches a side. The aliens drop
+// bombs on the cannon. The game ends when a bomb or an alien reaches
+// the cannon, or an alien on the bottom row drops another row. The
+// wave marches faster as fewer aliens are left, and when all of them
+// are shot the next wave starts at the top, marching faster than the
+// one before until MIN-MARCH-TIME.
+//
+// Columns are counted from the left and rows from the top, so the
+// cannon is on row HEIGHT - 1. Each step:
+//   1. the cannon moves one column, or stays, or fires a bullet from
+//      its cell if it has cooled down since the last one;
+//   2. the bullets move up a row and the bombs down a row, and a bomb
+//      on the cannon ends the game;
+//   3. an alien on the cannon ends the game. If the march timer is
+//      up, the wave moves one column in its direction, or drops a row
+//      and turns around if an alien is in the column at that side, and
+//      an alien on the bottom row then ends the game. The timer is
+//      reset to the number of aliens or the march time of the wave,
+//      whichever is smaller. An alien on the cannon ends the game;
+//   4. if the bomb timer is up, the lowest alien in the column nearest
+//      the cannon drops a bomb in its cell, and the timer is reset.
+//      Of two columns as near, the one to the left is chosen;
+//   5. a bullet and an alien in the same cell destroy each other;
+//   6. the timers count down, and once the wave is shot the next one
+//      starts.
+// Bullets and bombs leave at the top and the bottom, and a bullet
+// and an alien that swap cells pass each other. With chance
+// STICKY-PROB the command of the cannon is the previous one instead
+// of the one chosen.
+//
+// The reward is the number of aliens shot.
+//
+// The rules, initial state and sticky commands are those of MinAtar on
+// a 10 x 10 grid with a wave of 4 rows of 6 aliens, including the
+// difficulty ramp that MinAtar turns on by default. MinAtar moves the
+// aliens on the bottom row to the top row when the wave drops, which
+// only matters on the step that ends the game, and here they are lost.
+//
+// References:
+//
+//		Kenny Young and Tian Tian. MinAtar: An Atari-Inspired Testbed
+//		for Thorough and Reproducible Reinforcement Learning
+//		Experiments. arXiv:1903.03176, 2019.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain space_shooter {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		xpos : object;
+		ypos : object;
+		order : { @stay, @left, @right, @fire };
+	};
+
+	pvariables {
+
+		// the grid and the waves
+		WIDTH 				: { non-fluent, int, default = 10 };		// number of columns
+		HEIGHT 				: { non-fluent, int, default = 10 };		// number of rows
+		X(xpos) 			: { non-fluent, int, default = 0 };			// index of a column
+		Y(ypos) 			: { non-fluent, int, default = 0 };			// index of a row
+		WAVE(xpos, ypos) 	: { non-fluent, bool, default = false };	// where the aliens of a new wave start
+
+		// timing, in steps
+		COOL-DOWN 			: { non-fluent, int, default = 5 };			// steps between two bullets
+		BOMB-TIME 			: { non-fluent, int, default = 10 };		// steps between two bombs
+		MIN-MARCH-TIME 		: { non-fluent, int, default = 6 };			// a new wave no longer marches faster than this
+
+		// chance that the cannon repeats its previous command
+		STICKY-PROB 		: { non-fluent, real, default = 0.1 };
+
+		// 1. the cannon
+		done 				: { interm-fluent, order };					// the command carried out
+		fires 				: { interm-fluent, bool };
+		cannon-at 			: { interm-fluent, int };					// column of the cannon after the command
+
+		// 2. the bullets and bombs
+		loaded(xpos, ypos) 	: { interm-fluent, bool };					// the bullets with the new one
+		bullet-at(xpos, ypos) : { interm-fluent, bool };				// the bullets after they move
+		bomb-at(xpos, ypos) : { interm-fluent, bool };					// the bombs after they move
+		bombed 				: { interm-fluent, bool };
+
+		// 3. the aliens
+		reached 			: { interm-fluent, bool };					// an alien is on the cannon before the march
+		marches 			: { interm-fluent, bool };
+		at-side 			: { interm-fluent, bool };
+		drops 				: { interm-fluent, bool };					// the wave drops a row
+		steps-aside 		: { interm-fluent, bool };					// the wave moves a column
+		alien-at(xpos, ypos) : { interm-fluent, bool };					// the aliens after they march
+		landed 				: { interm-fluent, bool };
+
+		// 4. the bombers
+		bombs 				: { interm-fluent, bool };
+		occupied(xpos) 		: { interm-fluent, bool };					// a column with an alien
+		nearest(xpos) 		: { interm-fluent, bool };					// the occupied column nearest the cannon
+		bomber(xpos, ypos) 	: { interm-fluent, bool };
+
+		// 5. the hits
+		hit(xpos, ypos) 	: { interm-fluent, bool };
+		cleared 			: { interm-fluent, bool };
+
+		// states
+		cannon 				: { state-fluent, int, default = 5 };		// column of the cannon
+		last-order 			: { state-fluent, order, default = @stay };	// previous command
+		alien(xpos, ypos) 	: { state-fluent, bool, default = false };
+		bullet(xpos, ypos) 	: { state-fluent, bool, default = false };
+		bomb(xpos, ypos) 	: { state-fluent, bool, default = false };
+		dir 				: { state-fluent, int, default = -1 };		// way the wave marches, -1 (left) or 1 (right)
+		march-time 			: { state-fluent, int, default = 12 };		// most steps between two moves of the wave
+		march-timer 		: { state-fluent, int, default = 12 };		// steps until the wave moves
+		bomb-timer 			: { state-fluent, int, default = 10 };		// steps until the next bomb
+		heat 				: { state-fluent, int, default = 0 };		// steps until the cannon can fire
+		lost 				: { state-fluent, bool, default = false };
+
+		// action
+		command 			: { action-fluent, order, default = @stay };
+	};
+
+	cpfs {
+
+		// 1. the cannon
+		done = if (Bernoulli(STICKY-PROB)) then last-order else command;
+		fires = (done == @fire) ^ (heat == 0);
+		cannon-at = if (done == @left) then max[0, cannon - 1]
+					else if (done == @right) then min[WIDTH - 1, cannon + 1]
+					else cannon;
+
+		// 2. the bullets and bombs
+		loaded(?x, ?y) = bullet(?x, ?y) | (fires ^ (X(?x) == cannon-at) ^ (Y(?y) == HEIGHT - 1));
+		bullet-at(?x, ?y) = (exists_{?y2 : ypos} [loaded(?x, ?y2) ^ (Y(?y2) == Y(?y) + 1)]);
+		bomb-at(?x, ?y) = (exists_{?y2 : ypos} [bomb(?x, ?y2) ^ (Y(?y2) == Y(?y) - 1)]);
+		bombed = (exists_{?x : xpos, ?y : ypos} [bomb-at(?x, ?y) ^ (X(?x) == cannon-at) ^ (Y(?y) == HEIGHT - 1)]);
+
+		// 3. the aliens
+		reached = (exists_{?x : xpos, ?y : ypos} [alien(?x, ?y) ^ (X(?x) == cannon-at) ^ (Y(?y) == HEIGHT - 1)]);
+		marches = march-timer == 0;
+		at-side = (exists_{?x : xpos, ?y : ypos} [alien(?x, ?y) ^ (X(?x) == (if (dir < 0) then 0 else WIDTH - 1))]);
+		drops = marches ^ at-side;
+		steps-aside = marches ^ ~at-side;
+		alien-at(?x, ?y) = if (drops) then (exists_{?y2 : ypos} [alien(?x, ?y2) ^ (Y(?y2) + 1 == Y(?y))])
+						   else if (steps-aside) then (exists_{?x2 : xpos} [alien(?x2, ?y) ^ (X(?x2) + dir == X(?x))])
+						   else alien(?x, ?y);
+		landed = (drops ^ (exists_{?x : xpos, ?y : ypos} [alien(?x, ?y) ^ (Y(?y) == HEIGHT - 1)]))
+				 | (exists_{?x : xpos, ?y : ypos} [alien-at(?x, ?y) ^ (X(?x) == cannon-at) ^ (Y(?y) == HEIGHT - 1)]);
+
+		// 4. the bombers
+		bombs = bomb-timer == 0;
+		occupied(?x) = (exists_{?y : ypos} [alien-at(?x, ?y)]);
+		nearest(?x) = occupied(?x) ^ ~(exists_{?x2 : xpos} [occupied(?x2)
+						^ ((abs[X(?x2) - cannon-at] < abs[X(?x) - cannon-at])
+						   | ((abs[X(?x2) - cannon-at] == abs[X(?x) - cannon-at]) ^ (X(?x2) < X(?x))))]);
+		bomber(?x, ?y) = nearest(?x) ^ alien-at(?x, ?y) ^ ~(exists_{?y2 : ypos} [alien-at(?x, ?y2) ^ (Y(?y2) > Y(?y))]);
+
+		// 5. the hits
+		hit(?x, ?y) = alien-at(?x, ?y) ^ bullet-at(?x, ?y);
+		cleared = ~(exists_{?x : xpos, ?y : ypos} [alien-at(?x, ?y) ^ ~hit(?x, ?y)]);
+
+		// 6. the next state
+		cannon' = cannon-at;
+		last-order' = done;
+		bullet'(?x, ?y) = bullet-at(?x, ?y) ^ ~hit(?x, ?y);
+		bomb'(?x, ?y) = bomb-at(?x, ?y) | (bombs ^ bomber(?x, ?y));
+		alien'(?x, ?y) = if (cleared) then WAVE(?x, ?y) else alien-at(?x, ?y) ^ ~hit(?x, ?y);
+		dir' = if (drops) then -dir else dir;
+		march-time' = if (cleared ^ (march-time > MIN-MARCH-TIME)) then march-time - 1 else march-time;
+		march-timer' = (if (marches) then min[march-time, (sum_{?x : xpos, ?y : ypos} [alien(?x, ?y)])] else march-timer) - 1;
+		bomb-timer' = (if (bombs) then BOMB-TIME else bomb-timer) - 1;
+		heat' = max[0, (if (fires) then COOL-DOWN else heat) - 1];
+		lost' = bombed | reached | landed;
+	};
+
+	reward = (sum_{?x : xpos, ?y : ypos} [hit(?x, ?y)]);
+
+	termination {
+		lost;
+	};
+}
