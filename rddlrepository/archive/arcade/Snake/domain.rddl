@@ -1,0 +1,127 @@
+////////////////////////////////////////////////////////////////////
+// The game of Snake on a grid, with the rules of the Snake
+// environment of Jumanji.
+//
+// A snake crawls around a walled grid and eats the fruit on it, and
+// grows by one cell for each fruit it eats. A new fruit then appears
+// in a free cell. The game ends when the snake crawls into a wall or
+// into itself, or fills the grid.
+//
+// Columns are counted from the left and rows from the top. The body
+// is stored as an age in each cell: the head has the length of the
+// snake, the cells behind it count down to the tail, which has age 1,
+// and free cells have age 0. Each step:
+//   1. the head moves one cell up, right, down or left. The snake
+//      crashes into a wall when the cell is outside the grid, and into
+//      itself when the cell has an age above 1; the tail is free to
+//      enter, since it moves away in the same step;
+//   2. if the cell has the fruit, the snake eats it and grows by one,
+//      so the tail stays. Otherwise every body cell ages by one and the
+//      tail cell becomes free. The new head cell gets the new length;
+//   3. if the fruit was eaten, a new one appears in a cell chosen
+//      uniformly among the free ones.
+// A snake that crashes stays where it was. A snake of length 2 can
+// turn back on itself, since its neck is its tail.
+//
+// The reward is the number of fruits eaten.
+//
+// The rules are those of Jumanji on a 12 x 12 grid, with the time
+// limit of 4000 steps as the horizon. Jumanji places the head and the
+// first fruit at random cells, and the instance fixes them.
+//
+// References:
+//
+//		Clément Bonnet et al. Jumanji: a Diverse Suite of Scalable
+//		Reinforcement Learning Environments in JAX. ICLR, 2024.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain snake {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		xpos : object;
+		ypos : object;
+		heading : { @up, @right, @down, @left };
+	};
+
+	pvariables {
+
+		// the grid
+		WIDTH 				: { non-fluent, int, default = 12 };		// number of columns
+		HEIGHT 				: { non-fluent, int, default = 12 };		// number of rows
+		X(xpos) 			: { non-fluent, int, default = 0 };			// index of a column
+		Y(ypos) 			: { non-fluent, int, default = 0 };			// index of a row
+
+		// 1. the head
+		ahead-x 			: { interm-fluent, int };					// cell the head moves to
+		ahead-y 			: { interm-fluent, int };
+		ahead(xpos, ypos) 	: { interm-fluent, bool };
+		crash 				: { interm-fluent, bool };
+
+		// 2. the body
+		eats 				: { interm-fluent, bool };
+		grown 				: { interm-fluent, int };					// length after eating
+		aged(xpos, ypos) 	: { interm-fluent, int };					// ages after the move
+
+		// 3. the new fruit
+		draw(xpos, ypos) 	: { interm-fluent, real };					// a random number for each cell
+		best 				: { interm-fluent, real };					// the largest one of a free cell
+		spot 				: { interm-fluent, int };					// index of the cell with it
+
+		// states
+		head-x 				: { state-fluent, int, default = 0 };		// column of the head
+		head-y 				: { state-fluent, int, default = 0 };		// row of the head
+		length 				: { state-fluent, int, default = 1 };
+		age(xpos, ypos) 	: { state-fluent, int, default = 0 };		// 0 for a free cell
+		fruit(xpos, ypos) 	: { state-fluent, bool, default = false };
+		lost 				: { state-fluent, bool, default = false };
+
+		// action
+		move 				: { action-fluent, heading, default = @up };
+	};
+
+	cpfs {
+
+		// 1. the head
+		ahead-x = head-x + (if (move == @right) then 1 else if (move == @left) then -1 else 0);
+		ahead-y = head-y + (if (move == @down) then 1 else if (move == @up) then -1 else 0);
+		ahead(?x, ?y) = (X(?x) == ahead-x) ^ (Y(?y) == ahead-y);
+		crash = (ahead-x < 0) | (ahead-x >= WIDTH) | (ahead-y < 0) | (ahead-y >= HEIGHT)
+				| (exists_{?x : xpos, ?y : ypos} [ahead(?x, ?y) ^ (age(?x, ?y) > 1)]);
+
+		// 2. the body
+		eats = (exists_{?x : xpos, ?y : ypos} [ahead(?x, ?y) ^ fruit(?x, ?y)]);
+		grown = if (eats) then length + 1 else length;
+		aged(?x, ?y) = if (ahead(?x, ?y)) then grown
+					   else if (eats) then age(?x, ?y)
+					   else max[0, age(?x, ?y) - 1];
+
+		// 3. the new fruit: the free cell with the largest random number, and of two with the
+		// same number the one with the smaller index
+		draw(?x, ?y) = Uniform(0, 1);
+		best = (max_{?x : xpos, ?y : ypos} [if (aged(?x, ?y) == 0) then draw(?x, ?y) else -1]);
+		spot = (min_{?x : xpos, ?y : ypos} [if ((aged(?x, ?y) == 0) ^ (draw(?x, ?y) == best))
+											then WIDTH * Y(?y) + X(?x) else WIDTH * HEIGHT]);
+
+		// the next state, which a crash leaves as it was
+		head-x' = if (crash) then head-x else ahead-x;
+		head-y' = if (crash) then head-y else ahead-y;
+		length' = grown;
+		age'(?x, ?y) = if (crash) then age(?x, ?y) else aged(?x, ?y);
+		fruit'(?x, ?y) = if (eats) then (WIDTH * Y(?y) + X(?x) == spot) else fruit(?x, ?y);
+		lost' = crash;
+	};
+
+	reward = if (eats) then 1 else 0;
+
+	termination {
+		lost;
+		length == WIDTH * HEIGHT;
+	};
+}
