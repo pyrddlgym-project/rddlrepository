@@ -1,0 +1,149 @@
+////////////////////////////////////////////////////////////////////
+// A brick breaker game on a grid, with the rules of the Breakout game
+// of MinAtar.
+//
+// A paddle moves left and right along the bottom row of a walled
+// court, and a ball moves one cell along a diagonal every step. The
+// ball bounces off the side walls and the ceiling, and breaks a
+// brick by moving into it, which bounces it back to the row it came
+// from. When the ball reaches the bottom row, it bounces off the
+// paddle if the paddle is below it or one cell ahead of it, and
+// otherwise the ball is lost and the game ends. When it reaches the
+// bottom row with every brick broken, the whole wall is rebuilt.
+//
+// Columns are counted from the left and rows from the top, so the
+// ceiling is row 0 and the paddle is on row HEIGHT - 1. Each step:
+//   1. the paddle moves one cell, or stays;
+//   2. the ball takes a diagonal step, and a side wall turns it back
+//      sideways without moving it sideways;
+//   3. above the top row, the ball stays on row 0 and turns down;
+//   4. otherwise, a brick ahead is broken, and the ball stays on its
+//      row and turns back vertically. A ball that met a brick on the
+//      step before moves into the brick ahead without breaking it;
+//   5. otherwise, on the bottom row, a paddle under the ball turns it
+//      back up, a paddle one cell ahead sends it back the way it came,
+//      and in both cases the ball stays on its row.
+// With chance STICKY-PROB the move of the paddle is the previous
+// move instead of the one chosen.
+//
+// The reward is the number of bricks broken.
+//
+// The rules, initial state and sticky moves are those of MinAtar on a
+// 10 x 10 court with three rows of bricks. MinAtar starts the ball in
+// the left or the right corner at random, and the instance starts it in
+// the left one.
+//
+// References:
+//
+//		Kenny Young and Tian Tian. MinAtar: An Atari-Inspired Testbed
+//		for Thorough and Reproducible Reinforcement Learning
+//		Experiments. arXiv:1903.03176, 2019.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain brick_breaker {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		brick : object;
+	};
+
+	pvariables {
+
+		// the court and the bricks
+		WIDTH 			: { non-fluent, int, default = 10 };		// number of columns
+		HEIGHT 			: { non-fluent, int, default = 10 };		// number of rows
+		X(brick) 		: { non-fluent, int, default = 0 };			// column of a brick
+		Y(brick) 		: { non-fluent, int, default = 0 };			// row of a brick
+
+		// chance that the paddle repeats its previous move
+		STICKY-PROB 	: { non-fluent, real, default = 0.1 };
+
+		// the paddle
+		moved 			: { interm-fluent, int };				// the move made
+		paddle-at 		: { interm-fluent, int };				// column of the paddle after the move
+
+		// the ball against the walls and the ceiling
+		ahead-x 		: { interm-fluent, int };				// the cell the ball heads for
+		ahead-y 		: { interm-fluent, int };
+		side-wall 		: { interm-fluent, bool };				// a side wall is ahead
+		new-x 			: { interm-fluent, int };				// the column the ball moves to
+		ceiling 		: { interm-fluent, bool };				// the ceiling is ahead
+
+		// the ball against the bricks
+		hit(brick) 		: { interm-fluent, bool };				// an unbroken brick is ahead
+		brick-ahead 	: { interm-fluent, bool };
+		breaks 			: { interm-fluent, bool };				// the brick ahead is broken
+
+		// the ball on the bottom row
+		bottom 			: { interm-fluent, bool };
+		bounce-up 		: { interm-fluent, bool };				// the paddle is under the ball
+		bounce-back 	: { interm-fluent, bool };				// the paddle is one cell ahead
+		rebuild 		: { interm-fluent, bool };				// every brick is broken
+
+		// states
+		paddle 			: { state-fluent, int, default = 4 };		// column of the paddle
+		last-move 		: { state-fluent, int, default = 0 };		// previous move of the paddle
+		ball-x 			: { state-fluent, int, default = 0 };		// column of the ball
+		ball-y 			: { state-fluent, int, default = 3 };		// row of the ball
+		dir-x 			: { state-fluent, int, default = 1 };		// sideways direction of the ball, -1 or 1
+		dir-y 			: { state-fluent, int, default = 1 };		// vertical direction of the ball, -1 (up) or 1 (down)
+		struck 			: { state-fluent, bool, default = false };	// the ball has just met a brick
+		broken(brick) 	: { state-fluent, bool, default = false };
+		lost 			: { state-fluent, bool, default = false };	// the ball has been lost
+
+		// action
+		move 			: { action-fluent, int, default = 0 };		// -1 (left), 0 (stay) or 1 (right)
+	};
+
+	cpfs {
+
+		// 1. the paddle
+		moved = if (Bernoulli(STICKY-PROB)) then last-move else move;
+		paddle-at = max[0, min[WIDTH - 1, paddle + moved]];
+
+		// 2. and 3. the walls and the ceiling
+		ahead-x = ball-x + dir-x;
+		ahead-y = ball-y + dir-y;
+		side-wall = (ahead-x < 0) | (ahead-x >= WIDTH);
+		new-x = max[0, min[WIDTH - 1, ahead-x]];
+		ceiling = ahead-y < 0;
+
+		// 4. the bricks
+		hit(?b) = ~broken(?b) ^ (X(?b) == new-x) ^ (Y(?b) == ahead-y);
+		brick-ahead = exists_{?b : brick} [hit(?b)];
+		breaks = brick-ahead ^ ~struck;
+
+		// 5. the bottom row
+		bottom = (ahead-y == HEIGHT - 1) ^ ~brick-ahead;
+		bounce-up = bottom ^ (ball-x == paddle-at);
+		bounce-back = bottom ^ ~bounce-up ^ (new-x == paddle-at);
+		rebuild = bottom ^ (forall_{?b : brick} [broken(?b)]);
+
+		// the next state
+		paddle' = paddle-at;
+		last-move' = moved;
+		ball-x' = new-x;
+		ball-y' = if (ceiling | breaks | bounce-up | bounce-back) then ball-y else ahead-y;
+		dir-x' = if (side-wall == bounce-back) then dir-x else -dir-x;
+		dir-y' = if (ceiling | breaks | bounce-up | bounce-back) then -dir-y else dir-y;
+		struck' = brick-ahead;
+		broken'(?b) = ~rebuild ^ (broken(?b) | (breaks ^ hit(?b)));
+		lost' = bottom ^ ~bounce-up ^ ~bounce-back;
+	};
+
+	reward = if (breaks) then 1 else 0;
+
+	termination {
+		lost;
+	};
+
+	action-preconditions {
+		move >= -1 ^ move <= 1;
+	};
+}
