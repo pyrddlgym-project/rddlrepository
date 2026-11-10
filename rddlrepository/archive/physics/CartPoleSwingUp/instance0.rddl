@@ -1,0 +1,22 @@
+// The pole starts hanging down, with the initial state of the DeepMind Control
+// Suite cartpole swingup task after a reset with random=0. The episode lasts 10 s.
+
+non-fluents cart_pole_swing_up_nf0 {
+	domain = cart_pole_swing_up;
+}
+
+instance cart_pole_swing_up_inst0 {
+	domain = cart_pole_swing_up;
+	non-fluents = cart_pole_swing_up_nf0;
+
+	init-state {
+		pos = 0.017640523459676642;
+		vel = 0.009787379841057393;
+		ang = 3.1455942256734652;
+		ang-vel = 0.022408931992014578;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}

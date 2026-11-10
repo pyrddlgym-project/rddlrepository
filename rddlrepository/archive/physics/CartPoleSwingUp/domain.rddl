@@ -1,0 +1,127 @@
+////////////////////////////////////////////////////////////////////
+// Cart-pole swing-up, as in the cartpole swingup task of the
+// DeepMind Control Suite.
+//
+// A cart slides along a rail and is pushed left or right by a motor.
+// A pole hangs from the cart on a free hinge. The goal is to swing the
+// pole up from hanging down, then balance it upright with the cart
+// near the middle of the rail, using little force and keeping the pole
+// slow. Unlike the balancing cart-pole, the pole may go all the way
+// around, the episode never ends early, and the motor is too weak to
+// lift the pole directly, so the cart must pump energy into the swing.
+//
+// The reward of each step is the product of four terms, each between
+// 0 and 1, and is 1 when the pole is upright, still, the cart is at the
+// middle and no force is applied:
+//   - upright:  (1 + cos(angle)) / 2;
+//   - force:    (4 + max(0, 1 - (force / FORCE-MAX)^2)) / 5;
+//   - slow:     (1 + VALUE-AT-MARGIN^((angular velocity / VEL-MARGIN)^2)) / 2;
+//   - centered: (1 + VALUE-AT-MARGIN^((position / POS-MARGIN)^2)) / 2.
+//
+// The angle is 0 when the pole points up and pi when it hangs down, and
+// grows as the pole tilts towards positive positions. Past the ends of
+// the rail, a stiff spring and damper push the cart back. The state is
+// integrated with semi-implicit Euler: velocities first, then positions
+// with the new velocities, which unlike explicit Euler does not add
+// energy to the swing.
+//
+// The parameters, initial state and reward are those of the control
+// suite. It integrates the same dynamics with 4th order Runge-Kutta,
+// stops the cart with a soft joint limit, and adds small joint damping.
+//
+// References:
+//
+//		Kenji Doya. Reinforcement learning in continuous time and space.
+//		Neural Computation 12(1), 219-245, 2000.
+//
+//		Yuval Tassa et al. DeepMind Control Suite. arXiv:1801.00690, 2018.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain cart_pole_swing_up {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	pvariables {
+
+		// physics
+		GRAVITY 		: { non-fluent, real, default = 9.81 };
+		TIME-STEP 		: { non-fluent, real, default = 0.01 };		// seconds per step
+		FORCE-MAX 		: { non-fluent, real, default = 10.0 };		// strongest force of the motor
+
+		// cart and pole
+		CART-MASS 		: { non-fluent, real, default = 1.0 };
+		POLE-MASS 		: { non-fluent, real, default = 0.1 };
+		POLE-LEN 		: { non-fluent, real, default = 1.0 };		// length of the pole, whose center of mass is at the middle
+		POLE-INERTIA 	: { non-fluent, real, default = 0.0094246 };	// moment of inertia about the center of mass
+
+		// rail
+		RAIL-MIN 		: { non-fluent, real, default = -1.8 };
+		RAIL-MAX 		: { non-fluent, real, default = 1.8 };
+		RAIL-STIFFNESS 	: { non-fluent, real, default = 2000.0 };	// spring and damper past the ends of the rail
+		RAIL-DAMPING 	: { non-fluent, real, default = 100.0 };
+
+		// reward
+		POS-MARGIN 		: { non-fluent, real, default = 2.0 };
+		VEL-MARGIN 		: { non-fluent, real, default = 5.0 };
+		VALUE-AT-MARGIN : { non-fluent, real, default = 0.1 };
+
+		// interm fluents
+		rail-force 		: { interm-fluent, real };		// force of the rail ends on the cart
+		determinant 	: { interm-fluent, real };		// determinant of the mass matrix
+		cart-force 		: { interm-fluent, real };		// generalized forces on the cart and the pole
+		pole-torque 	: { interm-fluent, real };
+		acc 			: { interm-fluent, real };
+		ang-acc 		: { interm-fluent, real };
+
+		// states
+		pos 			: { state-fluent, real, default = 0.0 };			// cart position
+		vel 			: { state-fluent, real, default = 0.0 };			// cart velocity
+		ang 			: { state-fluent, real, default = 3.14159265 };	// pole angle from upright
+		ang-vel 		: { state-fluent, real, default = 0.0 };			// pole angular velocity
+
+		// actions
+		force 			: { action-fluent, real, default = 0.0 };		// force of the motor on the cart
+	};
+
+	cpfs {
+
+		// the rail ends can only push the cart back
+		rail-force = if (pos > RAIL-MAX) then -max[0.0, RAIL-STIFFNESS * (pos - RAIL-MAX) + RAIL-DAMPING * vel]
+					 else if (pos < RAIL-MIN) then max[0.0, RAIL-STIFFNESS * (RAIL-MIN - pos) - RAIL-DAMPING * vel]
+					 else 0.0;
+
+		// solve the equations of motion for the accelerations:
+		//   (CART-MASS + POLE-MASS) acc + POLE-MASS (POLE-LEN / 2) cos(ang) ang-acc = cart-force
+		//   POLE-MASS (POLE-LEN / 2) cos(ang) acc + (POLE-INERTIA + POLE-MASS (POLE-LEN / 2)^2) ang-acc = pole-torque
+		cart-force = force + rail-force + POLE-MASS * (POLE-LEN / 2) * sin[ang] * pow[ang-vel, 2];
+		pole-torque = POLE-MASS * (POLE-LEN / 2) * GRAVITY * sin[ang];
+		determinant = (CART-MASS + POLE-MASS) * (POLE-INERTIA + POLE-MASS * pow[POLE-LEN / 2, 2])
+			- pow[POLE-MASS * (POLE-LEN / 2) * cos[ang], 2];
+		acc = ((POLE-INERTIA + POLE-MASS * pow[POLE-LEN / 2, 2]) * cart-force
+			- POLE-MASS * (POLE-LEN / 2) * cos[ang] * pole-torque) / determinant;
+		ang-acc = ((CART-MASS + POLE-MASS) * pole-torque
+			- POLE-MASS * (POLE-LEN / 2) * cos[ang] * cart-force) / determinant;
+
+		// semi-implicit Euler integration
+		vel' = vel + TIME-STEP * acc;
+		ang-vel' = ang-vel + TIME-STEP * ang-acc;
+		pos' = pos + TIME-STEP * vel';
+		ang' = ang + TIME-STEP * ang-vel';
+	};
+
+	// upright * small force * slow * centered, at the next state
+	reward = ((1 + cos[ang']) / 2)
+		* ((4 + max[0.0, 1 - pow[force / FORCE-MAX, 2]]) / 5)
+		* ((1 + pow[VALUE-AT-MARGIN, pow[ang-vel' / VEL-MARGIN, 2]]) / 2)
+		* ((1 + pow[VALUE-AT-MARGIN, pow[pos' / POS-MARGIN, 2]]) / 2);
+
+	action-preconditions {
+		force >= -FORCE-MAX;
+		force <= FORCE-MAX;
+	};
+}
