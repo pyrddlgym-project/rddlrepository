@@ -1,0 +1,145 @@
+////////////////////////////////////////////////////////////////////
+// Management of a fishery of several fish stocks that compete with
+// each other and are eaten by predators, which are not fished, as in
+// the three-species fishery of Montealegre-Mora et al. (2023).
+//
+// Each year the manager picks the fraction of each fish stock to catch.
+// The catch comes first, and then all stocks grow at once from what is
+// left. Each fish stock x grows logistically, loses fish to each
+// predator z through a Holling type III response, to competition with
+// the other fish stocks y, and to and from them by migration:
+//
+//   x' = x + GROWTH(x) x (1 - x / CAPACITY(x))
+//          - sum_z PREY(x, z) ATTACK(z) z x^2 / (HALF-SAT(z)^2 + x^2)
+//          - sum_y COMPETE(x, y) x y
+//          + sum_y MIGRATE(y, x) y - sum_y MIGRATE(x, y) x
+//          + FISH-NOISE(x) x e_x
+//
+// Each predator z grows with the fish it eats, weighted by the same
+// preference PREY, and dies off at a fixed rate:
+//
+//   z' = z + z (CONVERT(z) sum_x PREY(x, z) x - DEATH(z))
+//          + PREDATOR-NOISE(z) z e_z
+//
+// where x and y on the right are the fish left after the catch, and the
+// e are independent standard normal draws. A year of growth is one step
+// of the discrete logistic, which overshoots: its logistic term alone
+// takes a fish stock left above (1 + 1 / GROWTH) CAPACITY below zero.
+//
+// The reward is the total biomass caught. If any stock, fished or not,
+// ends the year at or below THRESHOLD, the fishery has collapsed: the
+// episode ends with a penalty of PENALTY / (t + 1), where t is the
+// number of years played before this one.
+//
+// The default parameters and the instance are those of the authors'
+// code for the paper's two-fishery case (two fished stocks, X and Y, and
+// one predator Z, with the preference D = 1.1 for Y). There the noise
+// is multiplicative with standard deviation 0.1 and the penalty is
+// -100 / (t + 1), where the paper reports additive noise of variance
+// 0.05 and a penalty of -100 / t; the domain follows the code. The code
+// also writes the predator's rates as alpha (f (X + D Y) - dH) with
+// alpha = 1, which is CONVERT = alpha f and DEATH = alpha dH here. The
+// code adds noise to the starting stocks, which the instance fixes.
+//
+// References:
+//
+//		Felipe Montealegre-Mora, Marcus Lapeyrolerie, Melissa Chapman,
+//		Abigail G. Keller, and Carl Boettiger. Pretty Darn Good Control:
+//		When are Approximate Solutions Better than Approximate Models.
+//		Bulletin of Mathematical Biology 85, 2023.
+//
+//		Colin W. Clark. Mathematical Bioeconomics: The Mathematics of
+//		Conservation. Wiley, 3rd edition, 2010.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain fishery {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		fish : object;			// a fished stock
+		predator : object;		// a stock that eats fish and is not fished
+	};
+
+	pvariables {
+
+		// fish stocks
+		GROWTH(fish) 				: { non-fluent, real, default = 1.0 };		// intrinsic growth rate (1/year)
+		CAPACITY(fish) 				: { non-fluent, real, default = 1.0 };		// carrying capacity
+		COMPETE(fish, fish) 		: { non-fluent, real, default = 0.0 };		// loss of the first to competition with the second
+		MIGRATE(fish, fish) 		: { non-fluent, real, default = 0.0 };		// fraction of the first that moves to the second each year
+		FISH-NOISE(fish) 			: { non-fluent, real, default = 0.1 };		// standard deviation of the relative growth
+		MAX-CATCH(fish) 			: { non-fluent, real, default = 1.0 };		// largest fraction that may be caught (0 = not fished)
+
+		// predators
+		ATTACK(predator) 			: { non-fluent, real, default = 0.3 };		// largest catch of fish per predator
+		HALF-SAT(predator) 			: { non-fluent, real, default = 0.3 };		// stock of fish at which the attack is at half its largest
+		PREY(fish, predator) 		: { non-fluent, real, default = 1.0 };		// preference of the predator for the fish
+		CONVERT(predator) 			: { non-fluent, real, default = 0.1 };		// growth of the predator per unit of fish
+		DEATH(predator) 			: { non-fluent, real, default = 0.1 };		// death rate of the predator (1/year)
+		PREDATOR-NOISE(predator) 	: { non-fluent, real, default = 0.1 };		// standard deviation of the relative growth
+
+		// collapse
+		THRESHOLD 					: { non-fluent, real, default = 0.05 };		// a stock at or below this has collapsed
+		PENALTY 					: { non-fluent, real, default = 100.0 };	// penalty for a collapse in the first year
+
+		// the catch, the fish left after it, the stocks after a year of growth, and a collapse
+		caught(fish) 				: { interm-fluent, real };
+		left(fish) 					: { interm-fluent, real };
+		fish-grown(fish) 			: { interm-fluent, real };
+		predator-grown(predator) 	: { interm-fluent, real };
+		collapse 					: { interm-fluent, bool };
+
+		// states
+		fish-stock(fish) 			: { state-fluent, real, default = 0.5 };
+		predator-stock(predator) 	: { state-fluent, real, default = 0.7 };
+		year 						: { state-fluent, int, default = 0 };		// number of years played
+		collapsed 					: { state-fluent, bool, default = false };
+
+		// actions
+		catch(fish) 				: { action-fluent, real, default = 0.0 };	// fraction of the stock caught this year
+	};
+
+	cpfs {
+
+		caught(?x) = fish-stock(?x) * catch(?x);
+		left(?x) = max[fish-stock(?x) - caught(?x), 0];
+
+		fish-grown(?x) = left(?x)
+			+ GROWTH(?x) * left(?x) * (1 - left(?x) / CAPACITY(?x))
+			- (sum_{?z : predator} [PREY(?x, ?z) * ATTACK(?z) * predator-stock(?z) * left(?x) * left(?x)
+				/ (HALF-SAT(?z) * HALF-SAT(?z) + left(?x) * left(?x))])
+			- (sum_{?y : fish} [COMPETE(?x, ?y) * left(?x) * left(?y)])
+			+ (sum_{?y : fish} [MIGRATE(?y, ?x) * left(?y) - MIGRATE(?x, ?y) * left(?x)])
+			+ FISH-NOISE(?x) * left(?x) * Normal(0, 1);
+
+		predator-grown(?z) = predator-stock(?z)
+			+ predator-stock(?z) * (CONVERT(?z) * (sum_{?x : fish} [PREY(?x, ?z) * left(?x)]) - DEATH(?z))
+			+ PREDATOR-NOISE(?z) * predator-stock(?z) * Normal(0, 1);
+
+		collapse = (exists_{?x : fish} [fish-grown(?x) <= THRESHOLD])
+			| (exists_{?z : predator} [predator-grown(?z) <= THRESHOLD]);
+
+		fish-stock'(?x) = fish-grown(?x);
+		predator-stock'(?z) = predator-grown(?z);
+		collapsed' = collapse;
+		year' = year + 1;
+	};
+
+	// the biomass caught, less the penalty for a collapse at the end of the year
+	reward = (sum_{?x : fish} [caught(?x)]) - (if (collapse) then PENALTY / (year + 1) else 0);
+
+	action-preconditions {
+		forall_{?x : fish} [catch(?x) >= 0];
+		forall_{?x : fish} [catch(?x) <= MAX-CATCH(?x)];
+	};
+
+	termination {
+		collapsed;
+	};
+}

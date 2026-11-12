@@ -1,0 +1,33 @@
+// The two-fishery case of Montealegre-Mora et al. (2023): two fished stocks X
+// and Y that compete, and a predator Z that prefers Y, for 200 years, starting
+// from the stocks of the authors' code without its noise.
+
+non-fluents fishery_nf0 {
+	domain = fishery;
+
+	objects {
+		fish : { x, y };
+		predator : { z };
+	};
+
+	non-fluents {
+		COMPETE(x, y) = 0.1;
+		COMPETE(y, x) = 0.1;
+		PREY(y, z) = 1.1;
+	};
+}
+
+instance fishery_inst0 {
+	domain = fishery;
+	non-fluents = fishery_nf0;
+
+	init-state {
+		fish-stock(x) = 0.5;
+		fish-stock(y) = 0.5;
+		predator-stock(z) = 0.7;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 200;
+	discount = 1.0;
+}
