@@ -1,0 +1,107 @@
+////////////////////////////////////////////////////////////////////
+// Jack's Car Rental of Sutton and Barto (Example 4.2 and Exercise 4.7),
+// for any number of locations.
+//
+// Each day customers ask for cars at each location, a Poisson number
+// with mean RENT-RATE, and each car rented earns RENT-PRICE. A customer
+// who finds no car is lost. Cars are returned to each location, a
+// Poisson number with mean RETURN-RATE, and can be rented from the next
+// day on. A location holds at most MAX-CARS cars: any more go back to the
+// nationwide company and leave the problem.
+//
+// Overnight, before the day's rentals, a truck moves cars between the
+// locations: at most MAX-MOVE cars in all, and no more cars out of a
+// location than it has. Each car moved from one location to another
+// costs MOVE-COST, except for the first FREE-MOVES of them. If more than
+// PARKING-LIMIT cars are kept overnight at a location after the moves,
+// a second lot there costs PARKING-COST.
+//
+// The cars at a location after a day, from the cars at the end of the
+// day before, are
+//
+//   after = min(cars - moved out + moved in, MAX-CARS)
+//   rented = min(requests, after)
+//   cars' = min(after - rented + returned, MAX-CARS)
+//
+// and the reward is the rent less the cost of the moves and the lots.
+//
+// The instances are those of the book: two locations of 20 cars with
+// requests of means 3 and 4 and returns of means 3 and 2, $10 per rental,
+// $2 per car moved and at most 5 cars moved, with discount 0.9. In
+// Exercise 4.7, one car moved from the first location to the second each
+// night is free, and a location with more than 10 cars overnight pays $4
+// for a second lot. The book has no starting state; the instances start
+// with 10 cars at each location.
+//
+// References:
+//
+//		Richard S. Sutton and Andrew G. Barto. Reinforcement Learning: An
+//		Introduction. MIT Press, 2nd edition, 2018. Example 4.2 and
+//		Exercise 4.7.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain car_rental {
+
+	requirements = {
+		reward-deterministic,
+		integer-valued
+	};
+
+	types {
+		location : object;
+	};
+
+	pvariables {
+
+		// locations
+		MAX-CARS(location) 				: { non-fluent, int, default = 20 };		// most cars a location holds
+		RENT-RATE(location) 			: { non-fluent, real, default = 3.0 };		// mean requests per day
+		RETURN-RATE(location) 			: { non-fluent, real, default = 3.0 };		// mean returns per day
+		RENT-PRICE(location) 			: { non-fluent, real, default = 10.0 };		// earned per car rented
+		PARKING-LIMIT(location) 		: { non-fluent, int, default = 20 };		// most cars overnight without a second lot
+		PARKING-COST(location) 			: { non-fluent, real, default = 0.0 };		// cost of the second lot for a night
+
+		// moves
+		MAX-MOVE 						: { non-fluent, int, default = 5 };			// most cars moved in a night
+		MOVE-COST(location, location) 	: { non-fluent, real, default = 2.0 };		// cost per car moved from the first to the second
+		FREE-MOVES(location, location) 	: { non-fluent, int, default = 0 };			// cars moved from the first to the second for free
+
+		// the day
+		after(location) 				: { interm-fluent, int };		// cars after the moves
+		requests(location) 				: { interm-fluent, int };
+		rented(location) 				: { interm-fluent, int };
+		returned(location) 				: { interm-fluent, int };
+
+		// states
+		cars(location) 					: { state-fluent, int, default = 10 };		// cars at the end of the day
+
+		// actions
+		move(location, location) 		: { action-fluent, int, default = 0 };		// cars moved from the first to the second
+	};
+
+	cpfs {
+
+		after(?a) = min[cars(?a) - (sum_{?b : location} [move(?a, ?b)]) + (sum_{?b : location} [move(?b, ?a)]),
+						MAX-CARS(?a)];
+		requests(?a) = Poisson(RENT-RATE(?a));
+		rented(?a) = min[requests(?a), after(?a)];
+		returned(?a) = Poisson(RETURN-RATE(?a));
+
+		cars'(?a) = min[after(?a) - rented(?a) + returned(?a), MAX-CARS(?a)];
+	};
+
+	// the rent, less the moves beyond the free ones and the second lots
+	reward = (sum_{?a : location} [RENT-PRICE(?a) * rented(?a)])
+		- (sum_{?a : location, ?b : location} [MOVE-COST(?a, ?b) * max[move(?a, ?b) - FREE-MOVES(?a, ?b), 0]])
+		- (sum_{?a : location} [if (after(?a) > PARKING-LIMIT(?a)) then PARKING-COST(?a) else 0]);
+
+	action-preconditions {
+		forall_{?a : location, ?b : location} [move(?a, ?b) >= 0];
+		forall_{?a : location} [move(?a, ?a) == 0];
+		forall_{?a : location} [(sum_{?b : location} [move(?a, ?b)]) <= cars(?a)];
+		(sum_{?a : location, ?b : location} [move(?a, ?b)]) <= MAX-MOVE;
+	};
+}

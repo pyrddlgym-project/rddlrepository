@@ -1,0 +1,32 @@
+// Example 4.2 of Sutton and Barto: two locations of 20 cars, requests of
+// means 3 and 4, returns of means 3 and 2, at most 5 cars moved at $2 each,
+// starting with 10 cars at each location.
+
+non-fluents car_rental_nf0 {
+	domain = car_rental;
+
+	objects {
+		location : { first, second };
+	};
+
+	non-fluents {
+		RENT-RATE(first) = 3.0;
+		RENT-RATE(second) = 4.0;
+		RETURN-RATE(first) = 3.0;
+		RETURN-RATE(second) = 2.0;
+	};
+}
+
+instance car_rental_inst0 {
+	domain = car_rental;
+	non-fluents = car_rental_nf0;
+
+	init-state {
+		cars(first) = 10;
+		cars(second) = 10;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 0.9;
+}
