@@ -1,0 +1,165 @@
+////////////////////////////////////////////////////////////////////
+// Cart-pole chain swing-up, as in the two_poles and three_poles tasks of
+// the DeepMind Control Suite: physics/CartPoleSwingUp with a chain of
+// poles instead of one.
+//
+// A cart slides along a rail and is pushed left or right by a motor. The
+// first pole hangs from the cart on a free hinge, and each further pole
+// hangs on a free hinge from the tip of the one before. The goal is to
+// swing the whole chain up from hanging down and balance it upright, with
+// the cart near the middle of the rail, using little force and keeping
+// the joints slow. The poles are objects, and INDEX numbers them from the
+// cart up, starting at 1.
+//
+// The angle of a pole is measured from upright, is pi when it hangs down,
+// and grows as the pole tilts towards positive positions. With the lever
+// a(i, j) of pole j on the center of mass of pole i (the length of pole j
+// for a pole j below pole i, half its length for j = i, and 0 above), the
+// equations of motion are
+//
+//   Mt acc + sum_j B(j) (cos(ang j) ang-acc(j) - sin(ang j) ang-vel(j)^2) = force
+//   B(j) cos(ang j) acc + sum_k H(j, k) (cos(ang j - ang k) ang-acc(k)
+//       + sin(ang j - ang k) ang-vel(k)^2) = B(j) GRAVITY sin(ang j)
+//
+// with Mt the total mass, B(j) = sum_i POLE-MASS(i) a(i, j) and
+// H(j, k) = sum_i POLE-MASS(i) a(i, j) a(i, k), plus POLE-INERTIA(j)
+// on the diagonal. Eliminating the cart leaves a pole-by-pole system
+// whose matrix is inverted with inverse[...]. Past the ends of the rail a
+// stiff spring and damper push the cart back, and the state is integrated
+// with semi-implicit Euler: velocities first, then positions with the
+// new velocities.
+//
+// The reward of each step is the product of four terms, each between
+// 0 and 1, and is 1 when the chain is upright, still, the cart is at the
+// middle and no force is applied:
+//   - upright:  the mean over the poles of (1 + cos(angle)) / 2;
+//   - force:    (4 + max(0, 1 - (force / FORCE-MAX)^2)) / 5;
+//   - slow:     (1 + VALUE-AT-MARGIN^((v / VEL-MARGIN)^2)) / 2 for the
+//               fastest joint, v being the angular velocity of a pole
+//               relative to the one below it;
+//   - centered: (1 + VALUE-AT-MARGIN^((position / POS-MARGIN)^2)) / 2.
+//
+// The parameters, initial states and reward are those of the control
+// suite, whose poles are capsules of length 1 and mass 0.1. It integrates
+// the same dynamics with 4th order Runge-Kutta, stops the cart with a soft
+// joint limit, and adds small joint damping. Instance 0 is two_poles and
+// instance 1 is three_poles, each from the initial state of a reset with
+// random=0, for 10 s.
+//
+// References:
+//
+//		Yuval Tassa et al. DeepMind Control Suite. arXiv:1801.00690, 2018.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain cart_pole_chain {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		pole : object;
+	};
+
+	pvariables {
+
+		// physics
+		GRAVITY 					: { non-fluent, real, default = 9.81 };
+		TIME-STEP 					: { non-fluent, real, default = 0.01 };		// seconds per step
+		FORCE-MAX 					: { non-fluent, real, default = 10.0 };		// strongest force of the motor
+
+		// cart and poles
+		CART-MASS 					: { non-fluent, real, default = 1.0 };
+		INDEX(pole) 				: { non-fluent, int, default = 1 };			// place in the chain, 1 on the cart
+		POLE-MASS(pole) 			: { non-fluent, real, default = 0.1 };
+		POLE-LEN(pole) 				: { non-fluent, real, default = 1.0 };		// hinge to hinge, center of mass at the middle
+		POLE-INERTIA(pole) 			: { non-fluent, real, default = 0.0094246 };	// moment of inertia about the center of mass
+
+		// rail
+		RAIL-MIN 					: { non-fluent, real, default = -1.8 };
+		RAIL-MAX 					: { non-fluent, real, default = 1.8 };
+		RAIL-STIFFNESS 				: { non-fluent, real, default = 2000.0 };	// spring and damper past the ends of the rail
+		RAIL-DAMPING 				: { non-fluent, real, default = 100.0 };
+
+		// reward
+		POS-MARGIN 					: { non-fluent, real, default = 2.0 };
+		VEL-MARGIN 					: { non-fluent, real, default = 5.0 };
+		VALUE-AT-MARGIN 			: { non-fluent, real, default = 0.1 };
+
+		// the mass matrix
+		lever(pole, pole) 			: { interm-fluent, real };		// lever of the second pole on the center of mass of the first
+		moment(pole) 				: { interm-fluent, real };		// B
+		coupling(pole, pole) 		: { interm-fluent, real };		// H
+		total-mass 					: { interm-fluent, real };
+
+		// equations of motion, the cart eliminated
+		rail-force 					: { interm-fluent, real };		// force of the rail ends on the cart
+		cart-force 					: { interm-fluent, real };
+		pole-torque(pole) 			: { interm-fluent, real };
+		reduced-mass(pole, pole) 	: { interm-fluent, real };		// matrix of the pole system
+		reduced-torque(pole) 		: { interm-fluent, real };
+		reduced-inverse(pole, pole) : { interm-fluent, real };
+		ang-acc(pole) 				: { interm-fluent, real };
+		acc 						: { interm-fluent, real };
+
+		// states
+		pos 						: { state-fluent, real, default = 0.0 };			// cart position
+		vel 						: { state-fluent, real, default = 0.0 };			// cart velocity
+		ang(pole) 					: { state-fluent, real, default = 3.14159265 };	// pole angle from upright
+		ang-vel(pole) 				: { state-fluent, real, default = 0.0 };			// pole angular velocity
+
+		// actions
+		force 						: { action-fluent, real, default = 0.0 };		// force of the motor on the cart
+	};
+
+	cpfs {
+
+		// the mass matrix, from the shape of the chain
+		lever(?i, ?j) = if (INDEX(?j) < INDEX(?i)) then POLE-LEN(?j)
+						else if (INDEX(?j) == INDEX(?i)) then POLE-LEN(?j) / 2
+						else 0.0;
+		moment(?j) = (sum_{?i : pole} [POLE-MASS(?i) * lever(?i, ?j)]);
+		coupling(?j, ?k) = (sum_{?i : pole} [POLE-MASS(?i) * lever(?i, ?j) * lever(?i, ?k)])
+			+ (if (INDEX(?j) == INDEX(?k)) then POLE-INERTIA(?j) else 0.0);
+		total-mass = CART-MASS + (sum_{?i : pole} [POLE-MASS(?i)]);
+
+		// the rail ends can only push the cart back
+		rail-force = if (pos > RAIL-MAX) then -max[0.0, RAIL-STIFFNESS * (pos - RAIL-MAX) + RAIL-DAMPING * vel]
+					 else if (pos < RAIL-MIN) then max[0.0, RAIL-STIFFNESS * (RAIL-MIN - pos) - RAIL-DAMPING * vel]
+					 else 0.0;
+
+		// generalized forces on the cart and the poles
+		cart-force = force + rail-force + (sum_{?j : pole} [moment(?j) * sin[ang(?j)] * pow[ang-vel(?j), 2]]);
+		pole-torque(?j) = moment(?j) * GRAVITY * sin[ang(?j)]
+			- (sum_{?k : pole} [coupling(?j, ?k) * sin[ang(?j) - ang(?k)] * pow[ang-vel(?k), 2]]);
+
+		// the cart's equation solved for acc and put into the poles' equations
+		reduced-mass(?j, ?k) = coupling(?j, ?k) * cos[ang(?j) - ang(?k)]
+			- moment(?j) * cos[ang(?j)] * moment(?k) * cos[ang(?k)] / total-mass;
+		reduced-torque(?j) = pole-torque(?j) - moment(?j) * cos[ang(?j)] * cart-force / total-mass;
+		reduced-inverse(?j, ?k) = inverse[row=?j, col=?k][reduced-mass(?j, ?k)];
+		ang-acc(?j) = (sum_{?k : pole} [reduced-inverse(?j, ?k) * reduced-torque(?k)]);
+		acc = (cart-force - (sum_{?j : pole} [moment(?j) * cos[ang(?j)] * ang-acc(?j)])) / total-mass;
+
+		// semi-implicit Euler integration
+		vel' = vel + TIME-STEP * acc;
+		ang-vel'(?j) = ang-vel(?j) + TIME-STEP * ang-acc(?j);
+		pos' = pos + TIME-STEP * vel';
+		ang'(?j) = ang(?j) + TIME-STEP * ang-vel'(?j);
+	};
+
+	// upright * small force * slow * centered, at the next state
+	reward = ((sum_{?j : pole} [(1 + cos[ang'(?j)]) / 2]) / (sum_{?j : pole} [1]))
+		* ((4 + max[0.0, 1 - pow[force / FORCE-MAX, 2]]) / 5)
+		* ((1 + (min_{?j : pole} [pow[VALUE-AT-MARGIN, pow[(ang-vel'(?j)
+				- (sum_{?k : pole} [if (INDEX(?k) == INDEX(?j) - 1) then ang-vel'(?k) else 0.0])) / VEL-MARGIN, 2]]])) / 2)
+		* ((1 + pow[VALUE-AT-MARGIN, pow[pos' / POS-MARGIN, 2]]) / 2);
+
+	action-preconditions {
+		force >= -FORCE-MAX;
+		force <= FORCE-MAX;
+	};
+}
