@@ -1,0 +1,37 @@
+// Exercise 4.7 of Sutton and Barto: Example 4.2, where one car moved from the
+// first location to the second each night is free, and keeping more than 10
+// cars overnight at a location costs $4 for a second lot.
+
+non-fluents car_rental_nf1 {
+	domain = car_rental;
+
+	objects {
+		location : { first, second };
+	};
+
+	non-fluents {
+		RENT-RATE(first) = 3.0;
+		RENT-RATE(second) = 4.0;
+		RETURN-RATE(first) = 3.0;
+		RETURN-RATE(second) = 2.0;
+		FREE-MOVES(first, second) = 1;
+		PARKING-LIMIT(first) = 10;
+		PARKING-LIMIT(second) = 10;
+		PARKING-COST(first) = 4.0;
+		PARKING-COST(second) = 4.0;
+	};
+}
+
+instance car_rental_inst1 {
+	domain = car_rental;
+	non-fluents = car_rental_nf1;
+
+	init-state {
+		cars(first) = 10;
+		cars(second) = 10;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 0.9;
+}
