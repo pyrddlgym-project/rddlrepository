@@ -1,0 +1,151 @@
+////////////////////////////////////////////////////////////////////
+// Inspection and maintenance of a k-out-of-n structural system, from
+// the IMP-MARL benchmark: the n components of a structure wear by fatigue
+// cracking, and the structure stands while at least MIN-WORKING of them
+// do. Each year each component can be left alone, inspected or repaired.
+//
+// A crack grows each year by the Paris law over CYCLES load cycles:
+//
+//   d' = ((1 - m/2) C (sqrt(pi) S)^m CYCLES + d^(1 - m/2))^(1 / (1 - m/2))
+//
+// with PARIS-M = m (not 2), a crack d in mm and a stress range S in MPa.
+// A new component starts with a crack drawn from an Exponential of mean
+// CRACK-MEAN, a material constant C with ln C drawn from a Normal of mean
+// LN-C-MEAN and deviation LN-C-STD, and a stress range S drawn from a
+// Normal of mean STRESS-MEAN and deviation STRESS-STD. A crack past
+// CRACK-CRIT, or one that grows without bound within a year, has failed
+// the component, and stays failed (at CRACK-CRIT + 1) until a repair.
+//
+// The cracks, C and S are hidden. An inspection looks at a component at
+// the end of the year and finds its crack d with probability
+// 1 - exp(-d / POD-SCALE). A repair replaces the component with a new one
+// that starts its first year at the next step. Inspecting costs
+// INSPECT-COST and repairing REPAIR-COST, plus CAMPAIGN-COST once in any
+// year with an inspection or repair. When the structure fails during a
+// year (fewer than MIN-WORKING components working, after the repairs of
+// the year and not before), it costs FAILURE-COST.
+//
+// IMP-MARL solves the belief MDP of a 30-bin discretization of this
+// model, and charges FAILURE-COST times the rise in the probability of
+// failure; this domain simulates the cracks themselves and charges the
+// failures that happen. The parameters and costs are those of IMP-MARL:
+// m = 3.5, ln C ~ Normal(-35.2, 0.5), S ~ Normal(70, 10) MPa, initial
+// cracks of mean 1 mm, failure at 20 mm, 10^6 cycles a year, detection
+// scale 8 mm, costs 1, 20 and 10000 (0.2, 20, 10000 and 5 with campaign
+// costs), 30 years and discount 0.95. The instances are its benchmarks:
+// 2 of 3, 4 of 5, 9 of 10, 48 of 50 and 95 of 100 components working.
+//
+// References:
+//
+//		Pascal Leroy, Pablo G. Morato, Jonathan Pisane, Athanasios
+//		Kolios and Damien Ernst. IMP-MARL: a Suite of Environments for
+//		Large-scale Infrastructure Management Planning via MARL. NeurIPS
+//		Datasets and Benchmarks, 2023.
+//		https://github.com/moratodpg/imp_marl
+//
+//		Charalampos P. Andriotis and Konstantinos G. Papakonstantinou.
+//		Managing engineering systems with large state and action spaces
+//		through deep reinforcement learning. Reliability Engineering &
+//		System Safety 191, 106483, 2019.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain structural_maintenance {
+
+	requirements = {
+		reward-deterministic,
+		partially-observed,
+		concurrent,
+		preconditions
+	};
+
+	types {
+		component : object;
+	};
+
+	pvariables {
+
+		// fatigue
+		CYCLES 						: { non-fluent, real, default = 1000000.0 };	// load cycles a year
+		PARIS-M 					: { non-fluent, real, default = 3.5 };			// Paris law exponent
+		LN-C-MEAN 					: { non-fluent, real, default = -35.2 };		// ln of the material constant
+		LN-C-STD 					: { non-fluent, real, default = 0.5 };
+		STRESS-MEAN(component) 		: { non-fluent, real, default = 70.0 };			// stress range (MPa)
+		STRESS-STD(component) 		: { non-fluent, real, default = 10.0 };
+		CRACK-MEAN 					: { non-fluent, real, default = 1.0 };			// mean crack of a new component (mm)
+		CRACK-CRIT 					: { non-fluent, real, default = 20.0 };			// crack that fails a component (mm)
+
+		// inspections
+		POD-SCALE 					: { non-fluent, real, default = 8.0 };			// crack found with probability 1 - exp(-d / POD-SCALE)
+
+		// the structure and costs
+		MIN-WORKING 				: { non-fluent, int, default = 1 };				// fewest working components that keep it standing
+		INSPECT-COST(component) 	: { non-fluent, real, default = 1.0 };
+		REPAIR-COST(component) 		: { non-fluent, real, default = 20.0 };
+		CAMPAIGN-COST 				: { non-fluent, real, default = 0.0 };			// once in a year with any inspection or repair
+		FAILURE-COST 				: { non-fluent, real, default = 10000.0 };
+
+		// the year
+		start-crack(component) 		: { interm-fluent, real };		// crack at the start of the year
+		material-now(component) 	: { interm-fluent, real };
+		stress-now(component) 		: { interm-fluent, real };
+		growth(component) 			: { interm-fluent, real };		// the Paris law before its last power
+		grown(component) 			: { interm-fluent, real };		// crack at the end of the year
+		down-before(component) 		: { interm-fluent, bool };		// failed after the repairs of the year
+		down-after(component) 		: { interm-fluent, bool };		// failed at the end of the year
+		structure-fails 			: { interm-fluent, bool };		// the structure fails during the year
+
+		// states, all hidden
+		crack(component) 			: { state-fluent, real, default = 0.0 };		// mm
+		material(component) 		: { state-fluent, real, default = 0.0 };		// C
+		stress(component) 			: { state-fluent, real, default = 0.0 };		// S (MPa)
+		new(component) 				: { state-fluent, bool, default = true };		// crack, C and S not drawn yet
+
+		// observations
+		crack-found(component) 		: { observ-fluent, bool };
+
+		// actions
+		inspect(component) 			: { action-fluent, bool, default = false };
+		repair(component) 			: { action-fluent, bool, default = false };
+	};
+
+	cpfs {
+
+		// a new component draws its crack, material and stress
+		start-crack(?c) = if (new(?c)) then Exponential(CRACK-MEAN) else crack(?c);
+		material-now(?c) = if (new(?c)) then exp[Normal(LN-C-MEAN, LN-C-STD * LN-C-STD)] else material(?c);
+		stress-now(?c) = if (new(?c)) then Normal(STRESS-MEAN(?c), STRESS-STD(?c) * STRESS-STD(?c)) else stress(?c);
+
+		// a year of Paris law growth
+		growth(?c) = (1 - PARIS-M / 2) * material-now(?c) * pow[sqrt[3.141592653589793] * stress-now(?c), PARIS-M] * CYCLES
+			+ pow[start-crack(?c), 1 - PARIS-M / 2];
+		grown(?c) = if ((start-crack(?c) > CRACK-CRIT) | (growth(?c) <= 0)
+						| (pow[growth(?c), 1 / (1 - PARIS-M / 2)] > CRACK-CRIT)) then CRACK-CRIT + 1
+					else pow[growth(?c), 1 / (1 - PARIS-M / 2)];
+
+		// failures of the structure
+		down-before(?c) = ~new(?c) ^ (crack(?c) > CRACK-CRIT) ^ ~repair(?c);
+		down-after(?c) = ~repair(?c) ^ (grown(?c) > CRACK-CRIT);
+		structure-fails = ((sum_{?c : component} [~down-after(?c)]) < MIN-WORKING)
+						^ ((sum_{?c : component} [~down-before(?c)]) >= MIN-WORKING);
+
+		// a repaired component is new at the next step
+		crack'(?c) = if (repair(?c)) then 0.0 else grown(?c);
+		material'(?c) = material-now(?c);
+		stress'(?c) = stress-now(?c);
+		new'(?c) = repair(?c);
+
+		// inspections at the end of the year
+		crack-found(?c) = inspect(?c) ^ Bernoulli(1 - exp[-grown(?c) / POD-SCALE]);
+	};
+
+	reward = -(sum_{?c : component} [INSPECT-COST(?c) * inspect(?c) + REPAIR-COST(?c) * repair(?c)])
+		- (if (exists_{?c : component} [inspect(?c) | repair(?c)]) then CAMPAIGN-COST else 0.0)
+		- (if (structure-fails) then FAILURE-COST else 0.0);
+
+	action-preconditions {
+		forall_{?c : component} [~(inspect(?c) ^ repair(?c))];
+	};
+}

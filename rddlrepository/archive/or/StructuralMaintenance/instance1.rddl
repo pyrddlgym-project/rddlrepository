@@ -1,0 +1,23 @@
+// IMP-MARL k-out-of-n benchmark struct_uc_5: 5 components, of which 4 must work,
+// 30 years, discount 0.95, no campaign costs.
+
+non-fluents structural_maintenance_nf1 {
+	domain = structural_maintenance;
+
+	objects {
+		component : { c1, c2, c3, c4, c5 };
+	};
+
+	non-fluents {
+		MIN-WORKING = 4;
+	};
+}
+
+instance structural_maintenance_inst1 {
+	domain = structural_maintenance;
+	non-fluents = structural_maintenance_nf1;
+
+	max-nondef-actions = pos-inf;
+	horizon = 30;
+	discount = 0.95;
+}
