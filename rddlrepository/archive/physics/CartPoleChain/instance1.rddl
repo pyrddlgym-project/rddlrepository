@@ -1,0 +1,37 @@
+// The control suite three_poles task: 3 poles hanging down, with the initial state of a reset
+// with random=0 (the poles' hinge angles and velocities summed into absolute ones). The
+// episode lasts 10 s.
+
+non-fluents cart_pole_chain_nf1 {
+	domain = cart_pole_chain;
+
+	objects {
+		pole : { p1, p2, p3 };
+	};
+
+	non-fluents {
+		INDEX(p1) = 1;
+		INDEX(p2) = 2;
+		INDEX(p3) = 3;
+	};
+}
+
+instance cart_pole_chain_inst1 {
+	domain = cart_pole_chain;
+	non-fluents = cart_pole_chain_nf1;
+
+	init-state {
+		pos = 0.017640523459676642;
+		vel = 0.018675579901499675;
+		ang(p1) = 3.1455942256734652;
+		ang(p2) = 3.2434680240840392;
+		ang(p3) = 3.467557344004185;
+		ang-vel(p1) = -0.00977277879876411;
+		ang-vel(p2) = -0.0002718946235082155;
+		ang-vel(p3) = -0.0017854667064851944;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 1.0;
+}
