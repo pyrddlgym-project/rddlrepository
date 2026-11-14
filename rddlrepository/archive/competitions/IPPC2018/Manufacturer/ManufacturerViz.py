@@ -27,6 +27,27 @@ NEEDED_COLOR = '#b0bec5'
 BAR_ON_COLOR = '#37474f'
 BAR_OFF_COLOR = '#cfd8dc'
 DETAIL_COLOR = '#37474f'
+CARD_COLOR = '#fafafa'
+CARD_EDGE_COLOR = '#b0bec5'
+GROUND_COLOR = '#bcaaa4'
+LOG_COLOR = '#d7b48a'
+LOG_EDGE_COLOR = '#8d6e63'
+LOT_COLOR = '#90a4ae'
+WALL_COLOR = '#ffcc80'
+CRANE_COLOR = '#f9a825'
+FACTORY_BODY_COLOR = '#90a4ae'
+FACTORY_DARK_COLOR = '#546e7a'
+WINDOW_COLOR = '#eceff1'
+LIT_COLOR = '#ffd54f'
+SMOKE_COLOR = '#b0bec5'
+CRATE_COLOR = '#c8a165'
+CRATE_EDGE_COLOR = '#8d6e63'
+STAFF_COLOR = '#3949ab'
+APPLYING_COLOR = '#9fa8da'
+VACANT_COLOR = '#cfd8dc'
+HARD_HAT_COLOR = '#fbc02d'
+MEGAPHONE_COLOR = '#ef6c00'
+BRIEFCASE_COLOR = '#6d4c41'
 TREND_MARKS = {'up': ('▲', '#2e7d32'), 'stable': ('▬', '#78909c'), 'down': ('▼', '#c62828')}
 
 # sizes of the graph in inches before it is scaled to fit the figure
@@ -41,17 +62,19 @@ PORT_SPACING = 0.14
 PORT_SPAN = 1.0
 ORDERING_SWEEPS = 8
 
-# where things go on a card, in inches before scaling and from its middle or its sides
+# where things go on a card, in inches before scaling and from its middle or its sides:
+# the name and price on top, and below them the site of the factory, a crate when the
+# good is for sale, its production manager and the price level
 PADDING = 0.06
 PRICE_ROW = 0.19
-GAUGE_BOTTOM = -0.08
-GAUGE_HEIGHT = 0.15
-GAUGE_WIDTH = 0.5
-DETAIL_ROW = -0.2
 TREND_WIDTH = 0.13
 PRICE_ROOM = 0.48
-SALE_WIDTH = 0.48
-SALE_HEIGHT = 0.15
+SITE_BOTTOM = -0.25
+SITE_WIDTH, SITE_HEIGHT = 0.46, 0.3
+CRATE_LEFT, CRATE_SIZE = 0.51, 0.12
+MANAGER_X, MANAGER_HEIGHT = 0.71, 0.26
+GAUGE_HEIGHT = 0.17
+GAUGE_WIDTH = 0.32
 
 # more goods than this at one level continue on another row, as they would not be readable
 MAX_ROW_GOODS = 8
@@ -69,6 +92,8 @@ BOTTOM_MARGIN = 0.62
 TOP_MARGIN = 0.45
 STAFF_HEIGHT = 0.5
 STAFF_PITCH = 2.7
+LEGEND_SPACING = 1.4
+LEGEND_ROW = 0.36
 TILE_GAP = 0.04
 LEVEL_COLOR = '#f5f7f8'
 LEVEL_LABEL_WIDTH = 0.72
@@ -80,10 +105,14 @@ MAX_TILE_NAME = 12
 
 class ManufacturerVisualizer(BaseViz):
     '''Draws the production chain with the raw goods on top. Each good is a card with its
-    price now, the price level and long-term trend, and its factory, and each arrow turns
-    green when the good it starts from is in stock to make the one it points to. A row on
-    top shows the staff, and a chain too large to follow shows the goods as tiles grouped by
-    level instead.
+    price now, the price level and long-term trend, and a picture of where it comes from:
+    a pile of logs for a raw good, an empty lot where a factory could be built, walls
+    rising while one is built, and a factory, which smokes when all its inputs are in
+    stock. A crate shows a good for sale and a worker in a hard hat its production
+    manager. Each arrow turns green when the good it starts from is in stock to make the
+    one it points to. A row of people on top shows the staff, in color when hired, with a
+    raised hand when applying and greyed out otherwise. A chain too large to follow shows
+    the goods as colored tiles grouped by level instead.
 
     The drawing only depends on the current state.
     '''
@@ -137,6 +166,7 @@ class ManufacturerVisualizer(BaseViz):
 
         self._boxes, self._details, self._arrows = {}, {}, {}
         self._prices, self._trends, self._bars, self._sale_marks = {}, {}, {}, {}
+        self._sites, self._managers = {}, {}
         self._has_arrows = DETAIL_FONT_SIZE * min(scale, 1) >= MIN_FONT_SIZE
         if self._has_arrows:
             self._draw_graph(graph_width, graph_height, scale, xs, min_size)
@@ -144,18 +174,14 @@ class ManufacturerVisualizer(BaseViz):
             self._draw_tiles(levels, max_size, min_size)
         height = self._figure_size[1]
 
-        handles = self._legend_handles()
-        self.fig.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, 0.25 / height),
-                        ncol=len(handles), frameon=False, fontsize=8.5, columnspacing=1.0,
-                        handlelength=1.4)
-
-        can_build = any(self._inputs[good] and not initial[fluent('have-factory', [good])]
-                        for good in self._goods)
         if self._has_arrows:
-            caption = 'Numbers and bars are prices now, before staff bonuses.'
-            if can_build:
-                caption += ' Factories cost the amount shown per step while being built.'
+            self._draw_legend()
+            caption = 'Numbers and bars are prices now, before staff bonuses'
         else:
+            handles = self._legend_handles()
+            self.fig.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, 0.25 / height),
+                            ncol=len(handles), frameon=False, fontsize=8.5, columnspacing=1.0,
+                            handlelength=1.4)
             caption = 'Tiles show the price now before staff bonuses, its trend and the inputs in stock.'
         self.fig.text(0.5, 0.1 / height, caption, ha='center', va='bottom', fontsize=9,
                       color=DETAIL_COLOR)
@@ -189,9 +215,20 @@ class ManufacturerVisualizer(BaseViz):
         # title above, then the staff, the goods, the legend and the caption
         self._figure_size = (width, height)
         self.fig = plt.figure(figsize=self._figure_size)
-        self.ax = self.fig.add_axes([0, BOTTOM_MARGIN / height, 1,
-                                     (height - BOTTOM_MARGIN - TOP_MARGIN) / height])
+        self.ax = self.fig.add_axes([0, self._bottom / height, 1,
+                                     (height - self._bottom - TOP_MARGIN) / height])
         self.ax.axis('off')
+
+    def _inch_axes(self, bottom, height):
+
+        # axes across the figure, in inches from their bottom left, for pictures
+        (width, fig_height) = self._figure_size
+        ax = self.fig.add_axes([0, bottom / fig_height, 1, height / fig_height])
+        ax.set_xlim(0, width)
+        ax.set_ylim(0, height)
+        ax.set_aspect('equal')
+        ax.axis('off')
+        return ax
 
     def _add_box(self, good, x, y, width, height, ring):
         self._boxes[good] = self.ax.add_patch(patches.FancyBboxPatch(
@@ -203,6 +240,7 @@ class ManufacturerVisualizer(BaseViz):
         fonts = min(scale, 1)
         left, right = x - NODE_WIDTH / 2 + PADDING, x + NODE_WIDTH / 2 - PADDING
         self._add_box(good, x, y, NODE_WIDTH, NODE_HEIGHT, 1.4)
+        self._boxes[good].set(facecolor=CARD_COLOR, edgecolor=CARD_EDGE_COLOR)
 
         room = (NODE_WIDTH - 2 * PADDING - PRICE_ROOM - TREND_WIDTH) * scale
         (name, size) = self._fit_name(good, room, NAME_FONT_SIZE * fonts)
@@ -219,21 +257,169 @@ class ManufacturerVisualizer(BaseViz):
         count = len(self._price_levels)
         pitch = GAUGE_WIDTH / count
         self._bars[good] = [self.ax.add_patch(patches.Rectangle(
-            (left + i * pitch, y + GAUGE_BOTTOM), 0.75 * pitch, GAUGE_HEIGHT * (i + 2) / (count + 1),
-            edgecolor='none', zorder=3)) for i in range(count)]
+            (right - GAUGE_WIDTH + i * pitch, y + SITE_BOTTOM), 0.75 * pitch,
+            GAUGE_HEIGHT * (i + 2) / (count + 1), edgecolor='none', zorder=3))
+            for i in range(count)]
 
-        pill = self.ax.add_patch(patches.FancyBboxPatch(
-            (right - SALE_WIDTH, y + GAUGE_BOTTOM - 0.01), SALE_WIDTH, SALE_HEIGHT,
-            boxstyle=f'round,pad=0,rounding_size={SALE_HEIGHT / 3:g}', facecolor=GREEN_COLOR,
-            edgecolor='none', zorder=3))
-        label = self.ax.text(right - SALE_WIDTH / 2, y + GAUGE_BOTTOM - 0.01 + SALE_HEIGHT / 2,
-                             'For sale', ha='center', va='center', color='white', zorder=4,
-                             fontsize=max(DETAIL_FONT_SIZE * fonts, MIN_FONT_SIZE))
-        self._sale_marks[good] = [pill, label]
+        # all the pictures are drawn once, and render shows the ones that apply
+        bottom = y + SITE_BOTTOM
+        self._sites[good] = self._site(self.ax, left, bottom, SITE_WIDTH, SITE_HEIGHT)
+        self._sale_marks[good] = self._crate(self.ax, left + CRATE_LEFT, bottom, CRATE_SIZE)
+        self._managers[good] = self._person(self.ax, left + MANAGER_X, bottom, MANAGER_HEIGHT,
+                                            STAFF_COLOR, 'production')
+        for artist in self._sale_marks[good] + self._managers[good]:
+            artist.set_visible(False)
 
-        self._details[good] = self.ax.text(
-            left, y + DETAIL_ROW, '', ha='left', va='center', color=DETAIL_COLOR, zorder=3,
-            fontsize=max(DETAIL_FONT_SIZE * fonts, MIN_FONT_SIZE))
+    # ---------- pictures: each takes the axes, a place and a size, and returns its artists
+
+    @staticmethod
+    def _silhouette(left, bottom, width, height):
+
+        # a factory hall with a sawtooth roof of three teeth
+        points = [(left, bottom), (left, bottom + 0.5 * height)]
+        for k in range(3):
+            points += [(left + (k + 1) * 0.24 * width, bottom + 0.78 * height),
+                       (left + (k + 1) * 0.24 * width, bottom + 0.5 * height)]
+        return points[:-1] + [(left + 0.72 * width, bottom)]
+
+    @classmethod
+    def _site(cls, ax, left, bottom, width, height):
+
+        # the ground, then the pictures for a raw good, an empty lot, a factory being
+        # built and one that is built, the last with smoke and lit windows when working;
+        # all but the ground are hidden, and the walls being built are set by render
+        def add(patch, zorder=3):
+            patch.set_zorder(zorder)
+            return ax.add_patch(patch)
+
+        ax.add_patch(patches.Rectangle((left - 0.02 * width, bottom - 0.03 * height),
+                                       1.04 * width, 0.04 * height, facecolor=GROUND_COLOR,
+                                       edgecolor='none', zorder=3))
+        site = {'wall_height': 0.5 * height}
+
+        # a pile of logs, seen from their ends
+        radius = 0.1 * width
+        site['raw'] = []
+        for (row, count) in enumerate((3, 2, 1)):
+            for k in range(count):
+                cx = left + 0.4 * width + (k - (count - 1) / 2) * 2 * radius
+                cy = bottom + radius + row * 1.72 * radius
+                site['raw'] += [
+                    add(patches.Circle((cx, cy), radius, facecolor=LOG_COLOR,
+                                       edgecolor=LOG_EDGE_COLOR, linewidth=0.8)),
+                    add(patches.Circle((cx, cy), 0.45 * radius, facecolor='none',
+                                       edgecolor=LOG_EDGE_COLOR, linewidth=0.5))]
+
+        outline = cls._silhouette(left, bottom, width, height)
+        site['lot'] = [add(patches.Polygon(outline, closed=True, facecolor='none',
+                                           edgecolor=LOT_COLOR, linewidth=0.9, linestyle='--'))]
+
+        # walls rising inside the outline, next to a crane
+        site['walls'] = add(patches.Rectangle((left, bottom), 0.72 * width, 0, facecolor=WALL_COLOR,
+                                              edgecolor='none'), 2.9)
+        site['building'] = [
+            site['walls'], site['lot'][0],
+            add(patches.Rectangle((left + 0.84 * width, bottom), 0.05 * width, height,
+                                  facecolor=CRANE_COLOR, edgecolor='none')),
+            add(patches.Rectangle((left + 0.45 * width, bottom + 0.95 * height), 0.55 * width,
+                                  0.06 * height, facecolor=CRANE_COLOR, edgecolor='none')),
+            add(patches.Rectangle((left + 0.52 * width, bottom + 0.62 * height), 0.015 * width,
+                                  0.33 * height, facecolor=FACTORY_DARK_COLOR, edgecolor='none'))]
+
+        windows = [(left + (0.06 + 0.23 * k) * width, bottom + 0.14 * height)
+                   for k in range(3)]
+        site['factory'] = [
+            add(patches.Rectangle((left + 0.76 * width, bottom), 0.1 * width, 0.92 * height,
+                                  facecolor=FACTORY_DARK_COLOR, edgecolor='none')),
+            add(patches.Polygon(outline, closed=True, facecolor=FACTORY_BODY_COLOR,
+                                edgecolor=FACTORY_DARK_COLOR, linewidth=0.8))]
+        site['factory'] += [add(patches.Rectangle(xy, 0.12 * width, 0.17 * height,
+                                                  facecolor=WINDOW_COLOR, edgecolor='none'), 3.1)
+                            for xy in windows]
+        site['working'] = [add(patches.Rectangle(xy, 0.12 * width, 0.17 * height,
+                                                 facecolor=LIT_COLOR, edgecolor='none'), 3.2)
+                           for xy in windows]
+        site['working'] += [
+            add(patches.Circle((left + 0.84 * width, bottom + 1.04 * height), 0.1 * height,
+                               facecolor=SMOKE_COLOR, edgecolor='none')),
+            add(patches.Circle((left + 0.96 * width, bottom + 1.2 * height), 0.13 * height,
+                               facecolor=SMOKE_COLOR, edgecolor='none'))]
+        for kind in ('raw', 'lot', 'building', 'factory', 'working'):
+            for artist in site[kind]:
+                artist.set_visible(False)
+        return site
+
+    @staticmethod
+    def _show_site(site, kind, progress=0.0):
+
+        # a factory that is working is one that is built with smoke and lit windows
+        shown = {'working': ('factory', 'working')}.get(kind, (kind,))
+        for other in ('raw', 'lot', 'building', 'factory', 'working'):
+            for artist in site[other]:
+                artist.set_visible(False)
+        for other in shown:
+            for artist in site[other]:
+                artist.set_visible(True)
+        site['walls'].set_height(progress * site['wall_height'])
+
+    @staticmethod
+    def _crate(ax, left, bottom, size):
+
+        # a wooden crate with a green price tag on its corner
+        return [ax.add_patch(patches.Rectangle((left, bottom), size, size, facecolor=CRATE_COLOR,
+                                               edgecolor=CRATE_EDGE_COLOR, linewidth=0.8, zorder=3)),
+                ax.add_patch(patches.Rectangle((left, bottom + 0.45 * size), size, 0.1 * size,
+                                               facecolor=CRATE_EDGE_COLOR, edgecolor='none', zorder=3.1)),
+                ax.add_patch(patches.Circle((left + size, bottom + size), 0.25 * size,
+                                            facecolor=GREEN_COLOR, edgecolor='white',
+                                            linewidth=0.6, zorder=3.2))]
+
+    @staticmethod
+    def _person(ax, x, bottom, height, color, kind, raised=False):
+
+        # a person standing on the given point, with what tells their job: a hard hat,
+        # a megaphone or a briefcase, and an arm raised when applying
+        h = height
+        artists = [
+            ax.add_patch(patches.FancyBboxPatch(
+                (x - 0.2 * h, bottom), 0.4 * h, 0.58 * h,
+                boxstyle=f'round,pad=0,rounding_size={0.15 * h}', facecolor=color,
+                edgecolor='none', zorder=4)),
+            ax.add_patch(patches.Circle((x, bottom + 0.76 * h), 0.15 * h, facecolor=color,
+                                        edgecolor='none', zorder=4))]
+        accessory = VACANT_COLOR if color == VACANT_COLOR else None
+        if kind == 'production':
+            artists += [
+                ax.add_patch(patches.Wedge((x, bottom + 0.8 * h), 0.17 * h, 0, 180,
+                                           facecolor=accessory or HARD_HAT_COLOR,
+                                           edgecolor='none', zorder=4.1)),
+                ax.add_patch(patches.Rectangle((x - 0.22 * h, bottom + 0.78 * h), 0.44 * h,
+                                               0.04 * h, facecolor=accessory or HARD_HAT_COLOR,
+                                               edgecolor='none', zorder=4.1))]
+        elif kind == 'marketing':
+            artists.append(ax.add_patch(patches.Polygon(
+                [(x + 0.12 * h, bottom + 0.74 * h), (x + 0.4 * h, bottom + 0.6 * h),
+                 (x + 0.4 * h, bottom + 0.92 * h)], closed=True,
+                facecolor=accessory or MEGAPHONE_COLOR, edgecolor='none', zorder=4.1)))
+        elif kind == 'lobbyist':
+            artists += [
+                ax.add_patch(patches.Rectangle((x + 0.14 * h, bottom + 0.04 * h), 0.3 * h,
+                                               0.22 * h, facecolor=accessory or BRIEFCASE_COLOR,
+                                               edgecolor='none', zorder=4.1)),
+                ax.add_patch(patches.Rectangle((x + 0.24 * h, bottom + 0.26 * h), 0.1 * h,
+                                               0.05 * h, facecolor=accessory or BRIEFCASE_COLOR,
+                                               edgecolor='none', zorder=4.1))]
+        if raised:
+            (sx, sy), (hx, hy) = (x - 0.14 * h, bottom + 0.48 * h), (x - 0.3 * h, bottom + 0.98 * h)
+            (dx, dy) = (0.045 * h, 0.015 * h)
+            artists += [
+                ax.add_patch(patches.Polygon([(sx - dx, sy - dy), (sx + dx, sy + dy),
+                                              (hx + dx, hy + dy), (hx - dx, hy - dy)],
+                                             closed=True, facecolor=color, edgecolor='none',
+                                             zorder=4)),
+                ax.add_patch(patches.Circle((hx, hy), 0.06 * h, facecolor=color,
+                                            edgecolor='none', zorder=4))]
+        return artists
 
     def _add_tile(self, good, x, y, width, height, name_size, has_detail):
         self._add_box(good, x, y, width, height, 1.2)
@@ -255,12 +441,13 @@ class ManufacturerVisualizer(BaseViz):
 
     def _draw_graph(self, graph_width, graph_height, scale, xs, min_size):
         width = max(graph_width * scale + 0.4, min_size[0])
-        height = max(graph_height * scale + BOTTOM_MARGIN + TOP_MARGIN + self._staff_room, min_size[1])
+        self._bottom = 0.42 + LEGEND_ROW * self._legend_rows(width)[1]
+        height = max(graph_height * scale + self._bottom + TOP_MARGIN + self._staff_room, min_size[1])
         self._open_figure(width, height)
         center_x = (max(xs) + min(xs)) / 2
         center_y = -(len(self._rows) - 1) * ROW_PITCH / 2
         half_width = width / (2 * scale)
-        half_height = (height - BOTTOM_MARGIN - TOP_MARGIN - self._staff_room) / (2 * scale)
+        half_height = (height - self._bottom - TOP_MARGIN - self._staff_room) / (2 * scale)
         self.ax.set_xlim(center_x - half_width, center_x + half_width)
         self.ax.set_ylim(center_y - half_height, center_y + half_height + self._staff_room / scale)
 
@@ -272,6 +459,8 @@ class ManufacturerVisualizer(BaseViz):
             self._add_card(good, scale)
 
     def _draw_tiles(self, levels, max_size, min_size):
+
+        self._bottom = BOTTOM_MARGIN
 
         # a long chain of levels would leave no room for anything but the bands, so past a
         # limit neighbouring levels share a band, which keeps the goods in the same order
@@ -336,49 +525,92 @@ class ManufacturerVisualizer(BaseViz):
         return min(TILE_GAP, cell / 4)
 
     def _legend_handles(self):
+
+        # the tiles of a very large company are colored rather than drawn
         handles = [
             patches.Patch(facecolor=RAW_COLOR, edgecolor=RAW_EDGE_COLOR, label='Raw good'),
             patches.Patch(facecolor=NONE_COLOR, edgecolor=NONE_EDGE_COLOR, label='No factory'),
             patches.Patch(facecolor=BUILDING_COLOR, edgecolor=BUILDING_EDGE_COLOR, label='Building'),
             patches.Patch(facecolor=FACTORY_COLOR, edgecolor=FACTORY_EDGE_COLOR, label='Factory'),
-            patches.Patch(facecolor=READY_COLOR, edgecolor=READY_EDGE_COLOR, label='Ready')
+            patches.Patch(facecolor=READY_COLOR, edgecolor=READY_EDGE_COLOR, label='Ready'),
+            Line2D([], [], marker='o', color='none', markerfacecolor=GREEN_COLOR,
+                   markeredgecolor='none', markersize=7, label='For sale')
         ]
-        if self._has_arrows:
-            handles += [
-                Line2D([], [], color=STOCK_COLOR, marker='>', markersize=4, label='In stock'),
-                Line2D([], [], color=NEEDED_COLOR, marker='>', markersize=4, label='Needed')
-            ]
-        else:
-            handles.append(Line2D([], [], marker='o', color='none', markerfacecolor=GREEN_COLOR,
-                                  markeredgecolor='none', markersize=7, label='For sale'))
         for (label, marker, trend) in (('Rising', '^', 'up'), ('Stable', 's', 'stable'),
                                        ('Falling', 'v', 'down')):
             handles.append(Line2D([], [], marker=marker, color='none', markersize=6, label=label,
                                   markerfacecolor=TREND_MARKS[trend][1], markeredgecolor='none'))
         return handles
 
+    def _legend_entries(self):
+        entries = [('raw', 'Raw good'), ('lot', 'No factory'), ('building', 'Building'),
+                   ('factory', 'Factory'), ('working', 'Inputs ready'), ('sale', 'For sale'),
+                   ('stock', 'In stock'), ('needed', 'Needed')]
+        if self._staff_room:
+            entries += [('hired', 'Hired'), ('applying', 'Applying'), ('vacant', 'Vacant')]
+        return entries
+
+    def _legend_rows(self, width):
+        per_row = max(1, int((width - 0.3) / LEGEND_SPACING))
+        return per_row, math.ceil(len(self._legend_entries()) / per_row)
+
+    def _draw_legend(self):
+
+        # the legend shows the same pictures as the cards, between the graph and the caption
+        (width, _) = self._figure_size
+        (per_row, rows) = self._legend_rows(width)
+        ax = self._inch_axes(0.3, LEGEND_ROW * rows)
+        entries = self._legend_entries()
+        for (k, (kind, label)) in enumerate(entries):
+            r, c = divmod(k, per_row)
+            count = min(per_row, len(entries) - r * per_row)
+            x = (width - count * LEGEND_SPACING) / 2 + c * LEGEND_SPACING + 0.1
+            y = LEGEND_ROW * (rows - r) - 0.3
+            if kind in ('raw', 'lot', 'building', 'factory', 'working'):
+                site = self._site(ax, x, y, 0.34, 0.22)
+                self._show_site(site, kind, 0.5)
+            elif kind == 'sale':
+                self._crate(ax, x + 0.1, y, 0.16)
+            elif kind in ('stock', 'needed'):
+                ax.add_patch(patches.FancyArrowPatch(
+                    (x, y + 0.1), (x + 0.34, y + 0.1), arrowstyle='-|>', mutation_scale=7,
+                    linewidth=1.6 if kind == 'stock' else 0.9,
+                    color=STOCK_COLOR if kind == 'stock' else NEEDED_COLOR))
+            else:
+                color = {'hired': STAFF_COLOR, 'applying': APPLYING_COLOR, 'vacant': VACANT_COLOR}[kind]
+                self._person(ax, x + 0.17, y - 0.02, 0.26, color, None, kind == 'applying')
+            ax.text(x + 0.42, y + 0.1, label, ha='left', va='center', fontsize=8.5,
+                    color=DETAIL_COLOR)
+
     def _add_staff(self):
 
-        # each kind of staff has its own box, with what it does and costs below how it stands
+        # each kind of staff is a person, drawn hired, applying and vacant and shown as it
+        # stands, next to its name and what it does and costs
         terms = {}
         if self._has_production:
             salary = self._nonfluent('SALARY_PRODUCTION_MANAGER')
-            terms['production'] = f'One-step production, pay {salary:g} each'
+            terms['production'] = ('Production managers', f'One-step production, pay {salary:g} each')
         if self._has_marketing:
             bonus = self._nonfluent('MARKETING_MANAGER_BONUS')
-            terms['marketing'] = f'Sales +{bonus:.0%}, pay {self._nonfluent("SALARY_MARKETING_MANAGER"):g}'
+            terms['marketing'] = ('Marketing manager',
+                                  f'Sales +{bonus:.0%}, pay {self._nonfluent("SALARY_MARKETING_MANAGER"):g}')
         if self._has_lobbyist:
             bonus = self._nonfluent('LOBBYIST_BONUS')
-            terms['lobbyist'] = f'Purchases −{bonus:.0%}, pay {self._nonfluent("SALARY_LOBBYIST"):g}'
-        (width, height) = self._figure_size
-        y = (height - TOP_MARGIN - STAFF_HEIGHT / 2) / height
+            terms['lobbyist'] = ('Lobbyist',
+                                 f'Purchases −{bonus:.0%}, pay {self._nonfluent("SALARY_LOBBYIST"):g}')
         self._staff = {}
-        for (i, (kind, term)) in enumerate(terms.items()):
-            self._staff[kind] = (term, self.fig.text(
-                0.5 + (i - (len(terms) - 1) / 2) * STAFF_PITCH / width, y, '', ha='center',
-                va='center', fontsize=7.5,
-                linespacing=1.3, color='black',
-                bbox={'boxstyle': 'round,pad=0.35', 'linewidth': 1}))
+        if not terms:
+            return
+        (width, height) = self._figure_size
+        ax = self._inch_axes(height - TOP_MARGIN - STAFF_HEIGHT, STAFF_HEIGHT)
+        for (i, (kind, (name, term))) in enumerate(terms.items()):
+            x = width / 2 + (i - (len(terms) - 1) / 2) * STAFF_PITCH - 0.75
+            self._staff[kind] = {
+                state: self._person(ax, x, 0.06, 0.38, color, kind, state == 'applying')
+                for (state, color) in (('hired', STAFF_COLOR), ('applying', APPLYING_COLOR),
+                                       ('vacant', VACANT_COLOR))}
+            ax.text(x + 0.25, 0.25, f'{name}\n{term}', ha='left', va='center', fontsize=7.5,
+                    linespacing=1.4, color=DETAIL_COLOR)
 
     def _layout(self, levels):
         self._rows, self._row = [], {}
@@ -518,51 +750,27 @@ class ManufacturerVisualizer(BaseViz):
             return NONE_COLOR, NONE_EDGE_COLOR
         return RAW_COLOR, RAW_EDGE_COLOR
 
-    def _card_detail(self, good, has_factory, stage, has_manager):
-        parts = []
-        if has_factory:
-            parts.append('Factory')
-        if stage != 'not-building':
-            parts.append(f'Building {self._stages.index(stage) + 1}/{len(self._stages)}')
-        if not parts:
-            if self._inputs[good]:
-                delay = self._nonfluent('PROB_CONSTRUCTION_DELAY_FACTORY', good)
-                late = f', delay {delay:.0%}' if delay > 0 else ''
-                parts.append(f'Build {self._nonfluent("BUILD_FACTORY_COST", good):g}{late}')
-            else:
-                parts.append('Raw good')
-        if has_manager:
-            parts.append('manager')
-        return ', '.join(parts)
-
     def _render_staff(self, state):
         fluent = RDDLPlanningModel.ground_var
-        managers = sum(bool(state[fluent('have-production-manager', [good])]) for good in self._goods)
-        kinds = {
-            'production': ('Production managers', managers, 'production-manager-applies'),
-            'marketing': ('Marketing manager', int(bool(state[fluent('have-marketing-manager', [])])),
-                          'marketing-manager-applies'),
-            'lobbyist': ('Lobbyist', int(bool(state[fluent('have-lobbyist', [])])), 'lobbyist-applies')
-        }
-        for (kind, (term, text)) in self._staff.items():
-            (name, hired, applies) = kinds[kind]
-            applying = bool(state[fluent(applies, [])])
-            words = []
-            if kind == 'production' and hired:
-                words.append(f'{hired} hired')
-            elif hired:
-                words.append('hired')
-            if applying and (kind == 'production' or not hired):
-                words.append('applying')
-            status = ', '.join(words) if words else 'none'
-            if hired:
-                fill, edge = HIRED_COLOR, GREEN_COLOR
-            elif applying:
-                fill, edge = READY_COLOR, READY_EDGE_COLOR
+        hired = {
+            'production': any(bool(state[fluent('have-production-manager', [good])])
+                              for good in self._goods),
+            'marketing': bool(state[fluent('have-marketing-manager', [])]),
+            'lobbyist': bool(state[fluent('have-lobbyist', [])])}
+        applies = {'production': 'production-manager-applies',
+                   'marketing': 'marketing-manager-applies', 'lobbyist': 'lobbyist-applies'}
+
+        # production managers are hired for each good and can apply while others work, but
+        # the others can only apply while not hired
+        for (kind, people) in self._staff.items():
+            applying = bool(state[fluent(applies[kind], [])])
+            if applying and (kind == 'production' or not hired[kind]):
+                shown = 'applying'
             else:
-                fill, edge = NONE_COLOR, NONE_EDGE_COLOR
-            text.set_text(f'{name}: {status}\n{term}')
-            text.get_bbox_patch().set(facecolor=fill, edgecolor=edge)
+                shown = 'hired' if hired[kind] else 'vacant'
+            for (other, artists) in people.items():
+                for artist in artists:
+                    artist.set_visible(other == shown)
 
     def convert2img(self, fig):
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
@@ -592,9 +800,6 @@ class ManufacturerVisualizer(BaseViz):
                 for_sale += 1
                 worth += price * (1 + bonus)
 
-            (fill, edge) = self._card_colors(good, has_factory, stage != 'not-building', in_stock)
-            self._boxes[good].set_facecolor(fill)
-            self._boxes[good].set_edgecolor(edge)
             for mark_artist in self._sale_marks[good]:
                 mark_artist.set_visible(selling)
 
@@ -605,9 +810,25 @@ class ManufacturerVisualizer(BaseViz):
                 reached = self._price_levels.index(level)
                 for (i, bar) in enumerate(self._bars[good]):
                     bar.set_facecolor(BAR_ON_COLOR if i <= reached else BAR_OFF_COLOR)
-                self._details[good].set_text(self._card_detail(good, has_factory, stage, has_manager))
-            elif good in self._details:
-                self._details[good].set_text(f'{price:.0f} {mark} {in_stock}/{len(self._inputs[good])}')
+                for artist in self._managers[good]:
+                    artist.set_visible(has_manager)
+
+                # walls rise with each stage of building, short of a whole factory
+                if has_factory:
+                    kind = 'working' if in_stock == len(self._inputs[good]) else 'factory'
+                elif stage != 'not-building':
+                    kind = 'building'
+                else:
+                    kind = 'lot' if self._inputs[good] else 'raw'
+                progress = ((self._stages.index(stage) + 1) / (len(self._stages) + 1)
+                            if stage in self._stages else 0.0)
+                self._show_site(self._sites[good], kind, progress)
+            else:
+                (fill, edge) = self._card_colors(good, has_factory, stage != 'not-building', in_stock)
+                self._boxes[good].set_facecolor(fill)
+                self._boxes[good].set_edgecolor(edge)
+                if good in self._details:
+                    self._details[good].set_text(f'{price:.0f} {mark} {in_stock}/{len(self._inputs[good])}')
 
         # inputs in stock stay on top of the others so that they can be followed
         for ((source, good), arrow) in self._arrows.items():

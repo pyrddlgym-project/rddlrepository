@@ -6,17 +6,26 @@ from PIL import Image
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
-ALIVE_COLOR = '#1565c0'
-DYING_COLOR = '#42a5f5'
-BORN_COLOR = '#bbdefb'
-DEAD_COLOR = '#fafafa'
-GRID_COLOR = '#b0bec5'
+GRASS_COLOR = '#e3f1d4'
+SOIL_COLOR = '#f1e8d8'
+GRID_COLOR = '#d7ccc8'
+TRUNK_COLOR = '#6d4c41'
+LEAF_COLOR = '#43a047'
+LEAF_EDGE_COLOR = '#2e7d32'
+OLD_LEAF_COLORS = ('#f9a825', '#ef6c00')
+SPROUT_COLOR = '#9ccc65'
+DEAD_WOOD_COLOR = '#c9bfb3'
+
+# the phases of a cell, each drawn as a plant
+PHASES = ('tree', 'old', 'sprout', 'dead')
 
 
 class GameOfLifeVisualizer(BaseViz):
-    '''Draws the grid of cells, coloured by whether each one is alive now and whether
-    the rules of the game would keep it alive on the next step, given its neighbors.
-    What actually happens can differ, because of the noise and the cells that are set.
+    '''Draws the grid of cells as plants, by whether each one is alive now and whether
+    the rules of the game would keep it alive on the next step, given its neighbors: a
+    tree lives on, an old tree dies, a sprout is born and a dead tree stays dead. Living
+    cells stand on grass and dead ones on soil. What actually happens can differ,
+    because of the noise and the cells that are set.
 
     The POMDP shows every cell, rather than only what is observed around each one.
     The drawing only depends on the current state.
@@ -59,7 +68,7 @@ class GameOfLifeVisualizer(BaseViz):
         cell_size = min(max_cell_size, max_size / max(len(self._xs), len(self._ys)))
         grid_width = len(self._xs) * cell_size
         grid_height = len(self._ys) * cell_size
-        bottom = 0.95
+        bottom = 1.2
         width = max(grid_width + 0.8, min_width)
         height = bottom + grid_height + 0.45
         self._figure_size = (width, height)
@@ -74,17 +83,20 @@ class GameOfLifeVisualizer(BaseViz):
         self.ax.set_xticks(np.arange(len(self._xs)) + 0.5, self._xs)
         self.ax.set_yticks(np.arange(len(self._ys)) + 0.5, self._ys)
         self.ax.tick_params(length=0, labelsize=9, colors='#616161')
-        self.ax.set_facecolor(DEAD_COLOR)
         for spine in self.ax.spines.values():
             spine.set_color(GRID_COLOR)
 
-        self.fig.legend(handles=[
-            patches.Patch(facecolor=ALIVE_COLOR, edgecolor=GRID_COLOR, label='Alive'),
-            patches.Patch(facecolor=DYING_COLOR, edgecolor=GRID_COLOR, label='Alive, dies next'),
-            patches.Patch(facecolor=BORN_COLOR, edgecolor=GRID_COLOR, label='Dead, born next'),
-            patches.Patch(facecolor=DEAD_COLOR, edgecolor=GRID_COLOR, label='Dead')
-        ], loc='lower center', bbox_to_anchor=(0.5, 0.25 / height), ncol=4,
-           frameon=False, fontsize=8.5, columnspacing=1.0, handlelength=1.4)
+        # every cell has its ground and all four plants, drawn once: render only changes
+        # the color of the ground and which plant shows
+        self._cell_size = cell_size
+        self._ground, self._plants = {}, {}
+        for (col, row, x, y) in self._cells:
+            self._ground[(x, y)] = self.ax.add_patch(patches.Rectangle(
+                (col, row), 1, 1, facecolor=SOIL_COLOR, edgecolor=GRID_COLOR, zorder=1))
+            self._plants[(x, y)] = {phase: self._draw_plant(self.ax, phase, col + 0.5, row, 1.0,
+                                                            cell_size)
+                                    for phase in PHASES}
+        self._draw_legend(width, height)
 
         noise = [self._nonfluents[RDDLPlanningModel.ground_var('NOISE-PROB', [x, y])]
                  for (_, _, x, y) in self._cells]
@@ -92,6 +104,76 @@ class GameOfLifeVisualizer(BaseViz):
         amount = f'{low:.2g}' if low == high else f'{low:.2g} to {high:.2g}'
         self.fig.text(0.5, 0.1 / height, f'Next step ignores actions and noise ({amount} per cell)',
                       ha='center', va='bottom', fontsize=9, color='#37474f')
+
+    @staticmethod
+    def _draw_plant(ax, phase, x, y, size, inches):
+
+        # a plant standing at the bottom middle of a square of the given size, all of it
+        # hidden: lines are as thick as the square is large in inches
+        width = 72 * inches * size
+        artists = []
+
+        def circle(cx, cy, r, color, edge):
+            artists.append(ax.add_patch(patches.Circle(
+                (x + cx * size, y + cy * size), r * size, facecolor=color, edgecolor=edge,
+                linewidth=0.012 * width, zorder=3)))
+
+        def line(xs, ys, color, thickness, zorder=2.5):
+            artists.extend(ax.plot([x + a * size for a in xs], [y + b * size for b in ys],
+                                   color=color, linewidth=thickness * width,
+                                   solid_capstyle='round', zorder=zorder))
+
+        if phase == 'tree':
+            artists.append(ax.add_patch(patches.Rectangle(
+                (x - 0.045 * size, y + 0.1 * size), 0.09 * size, 0.35 * size,
+                facecolor=TRUNK_COLOR, edgecolor='none', zorder=2.5)))
+            for (cx, cy, r) in ((-0.15, 0.48, 0.16), (0.15, 0.48, 0.16), (0.0, 0.62, 0.22)):
+                circle(cx, cy, r, LEAF_COLOR, LEAF_EDGE_COLOR)
+        elif phase == 'old':
+            line([0, 0], [0.1, 0.5], TRUNK_COLOR, 0.07)
+            line([0, -0.14], [0.38, 0.52], TRUNK_COLOR, 0.035)
+            for (cx, cy, r, k) in ((-0.15, 0.54, 0.1, 1), (0.06, 0.6, 0.15, 0), (0.17, 0.48, 0.08, 1)):
+                circle(cx, cy, r, OLD_LEAF_COLORS[k], '#bf6f00')
+            artists.append(ax.add_patch(patches.Ellipse(
+                (x + 0.3 * size, y + 0.22 * size), 0.09 * size, 0.045 * size, angle=-30,
+                facecolor=OLD_LEAF_COLORS[1], edgecolor='none', zorder=3)))
+        elif phase == 'sprout':
+            artists.append(ax.add_patch(patches.Ellipse(
+                (x, y + 0.1 * size), 0.34 * size, 0.08 * size, facecolor='#d7c4a5',
+                edgecolor='none', zorder=2.4)))
+            line([0, 0], [0.1, 0.32], LEAF_EDGE_COLOR, 0.025)
+            for (side, angle) in ((-1, 30), (1, -30)):
+                artists.append(ax.add_patch(patches.Ellipse(
+                    (x + side * 0.08 * size, y + 0.33 * size), 0.16 * size, 0.07 * size,
+                    angle=angle, facecolor=SPROUT_COLOR, edgecolor=LEAF_EDGE_COLOR,
+                    linewidth=0.01 * width, zorder=3)))
+        else:
+            line([0, 0], [0.1, 0.5], DEAD_WOOD_COLOR, 0.025)
+            line([0, -0.12], [0.32, 0.46], DEAD_WOOD_COLOR, 0.017)
+            line([0, 0.11], [0.38, 0.54], DEAD_WOOD_COLOR, 0.017)
+        for artist in artists:
+            artist.set_visible(False)
+        return artists
+
+    def _draw_legend(self, width, height):
+
+        # the legend shows the same plants as the grid
+        ax = self.fig.add_axes([0, 0.3 / height, 1, 0.55 / height])
+        ax.set_xlim(0, width)
+        ax.set_ylim(0, 0.55)
+        ax.set_aspect('equal')
+        ax.axis('off')
+        entries = (('tree', GRASS_COLOR, 'Alive'), ('old', GRASS_COLOR, 'Dies next'),
+                   ('sprout', SOIL_COLOR, 'Born next'), ('dead', SOIL_COLOR, 'Dead'))
+        spacing = min(1.6, (width - 0.2) / len(entries))
+        for (k, (phase, ground, label)) in enumerate(entries):
+            x = (width - len(entries) * spacing) / 2 + k * spacing + 0.1
+            ax.add_patch(patches.Rectangle((x, 0.05), 0.45, 0.45, facecolor=ground,
+                                           edgecolor=GRID_COLOR))
+            for artist in self._draw_plant(ax, phase, x + 0.225, 0.05, 0.45, 0.45):
+                artist.set_visible(True)
+            ax.text(x + 0.55, 0.275, label, ha='left', va='center', fontsize=8.5,
+                    color='#37474f')
 
     def _line_order(self, objects, links):
 
@@ -123,18 +205,19 @@ class GameOfLifeVisualizer(BaseViz):
         return Image.fromarray(data)
 
     def render(self, state):
-        artists = []
         num_alive = 0
         for (col, row, x, y) in self._cells:
             alive = state[RDDLPlanningModel.ground_var('alive', [x, y])]
             will_live = self._will_live(state, x, y)
             num_alive += bool(alive)
             if alive:
-                color = ALIVE_COLOR if will_live else DYING_COLOR
+                phase = 'tree' if will_live else 'old'
             else:
-                color = BORN_COLOR if will_live else DEAD_COLOR
-            artists.append(self.ax.add_patch(patches.Rectangle(
-                (col, row), 1, 1, facecolor=color, edgecolor=GRID_COLOR)))
+                phase = 'sprout' if will_live else 'dead'
+            self._ground[(x, y)].set_facecolor(GRASS_COLOR if alive else SOIL_COLOR)
+            for (other, plant) in self._plants[(x, y)].items():
+                for artist in plant:
+                    artist.set_visible(other == phase)
 
         if num_alive == 0:
             title, color = 'All cells dead', '#c62828'
@@ -145,9 +228,4 @@ class GameOfLifeVisualizer(BaseViz):
         self.ax.set_title(title, fontsize=13, fontweight='bold', color=color)
 
         self.fig.canvas.draw()
-        img = self.convert2img(self.fig)
-        for artist in artists:
-            artist.remove()
-        del artists
-
-        return img
+        return self.convert2img(self.fig)
