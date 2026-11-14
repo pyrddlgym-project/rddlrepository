@@ -26,9 +26,11 @@ BOX = (200, 150)            # every picture is this size (pixels): the visualize
 COLORS = 96                 # colors kept in a picture
 STEPS = 10                  # random steps before the picture is taken
 COLUMNS = 4                 # domains in a row of the list
-SHOWN = 180                 # width at which pictures are shown (pixels); smaller than BOX, so sharp
-LINE = 22                   # longest line of a name (characters), about as wide as a picture in
-                            # GitHub's code font, so that every column of every context is as wide
+SHOWN = 150                 # width at which pictures are shown (pixels); smaller than BOX, so sharp.
+                            # COLUMNS of them must fit GitHub's README column with room to spare, or
+                            # GitHub narrows the columns unevenly and some pictures shrink
+LINE = 18                   # longest line of a name (characters), no wider than a picture in GitHub's
+                            # code font, so that every column of every context is a picture wide
 BLANK = 'docs/thumbnails/_blank.png'    # an empty box for a domain without a visualizer
 TIMEOUT = 300               # seconds to render one domain
 
@@ -170,9 +172,11 @@ def blank():
 
 
 def wrap(name):
-    '''A name in lines of at most LINE characters, broken after underscores.'''
+    '''A name in lines of at most LINE characters, broken after underscores (or in words).'''
     parts = [p + '_' for p in name.split('_')]
     parts[-1] = parts[-1][:-1]
+    # a part that is still too long is broken before its capital letters
+    parts = [q for p in parts for q in (re.findall(r'[A-Z]?[^A-Z]*', p)[:-1] if len(p) > LINE else [p])]
     lines, line = [], ''
     for part in parts:
         if line and len(line + part) > LINE:
