@@ -1,0 +1,28 @@
+// A 16 x 16 board with 40 mines, the size and mines of the intermediate level of the
+// classic game, with the rules of Jumanji.
+
+non-fluents minesweeper_nf1 {
+	domain = minesweeper;
+
+	objects {
+		xpos : { x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14, x15 };
+		ypos : { y00, y01, y02, y03, y04, y05, y06, y07, y08, y09, y10, y11, y12, y13, y14, y15 };
+	};
+
+	non-fluents {
+		WIDTH = 16;
+		HEIGHT = 16;
+		MINES = 40;
+		X(x00) = 0; X(x01) = 1; X(x02) = 2; X(x03) = 3; X(x04) = 4; X(x05) = 5; X(x06) = 6; X(x07) = 7; X(x08) = 8; X(x09) = 9; X(x10) = 10; X(x11) = 11; X(x12) = 12; X(x13) = 13; X(x14) = 14; X(x15) = 15;
+		Y(y00) = 0; Y(y01) = 1; Y(y02) = 2; Y(y03) = 3; Y(y04) = 4; Y(y05) = 5; Y(y06) = 6; Y(y07) = 7; Y(y08) = 8; Y(y09) = 9; Y(y10) = 10; Y(y11) = 11; Y(y12) = 12; Y(y13) = 13; Y(y14) = 14; Y(y15) = 15;
+	};
+}
+
+instance minesweeper_inst1 {
+	domain = minesweeper;
+	non-fluents = minesweeper_nf1;
+
+	max-nondef-actions = 1;
+	horizon = 216;
+	discount = 1.0;
+}
