@@ -159,17 +159,19 @@ def render_one(name):
     env = RDDLEnv(info.get_domain(), info.get_instance(info.list_instances()[0]))
     viz = viz_class(env.model)
     state, _ = env.reset()
-    shown = env.state
+    image = viz.render(env.state)
     try:
         agent = RandomAgent(env, seed=0)
         for _ in range(min(STEPS, env.horizon - 1)):
             _, _, done, truncated, _ = env.step(agent.sample_action(state))
             if done or truncated:
                 break
-            shown = env.state
+
+            # every state is shown, for pictures that draw what happened before, such as a route
+            image = viz.render(env.state)
     except Exception:
         pass                        # a picture of the first state is good enough
-    image = viz.render(shown).convert('RGB')
+    image = image.convert('RGB')
 
     # crop the plain margin around the picture, keeping a little of it
     from PIL import ImageChops
