@@ -1,0 +1,119 @@
+////////////////////////////////////////////////////////////////////
+// The game of Minesweeper on a grid, with the rules of the
+// Minesweeper environment of Jumanji.
+//
+// Mines are hidden in some cells of the grid. Each step the player
+// reveals one cell. A safe cell then shows the number of mines among
+// its (up to 8) neighbors, and a mined one ends the game. The player
+// sees only the numbers on the revealed cells, so the game is
+// partially observed: the observation board(x, y) is -1 for a hidden
+// cell and the number of mines next to it for a revealed one. The game
+// is won when every safe cell is revealed.
+//
+// Columns are counted from the left and rows from the top. The mines
+// are placed on the first step, before the cell chosen in it is
+// revealed: MINES cells chosen uniformly among all, as the cells with
+// the MINES smallest of a random number drawn for each cell (and of
+// two with the same number, the one with the smaller index first).
+// Each step:
+//   1. revealing a hidden safe cell earns 1;
+//   2. revealing a mine, or a cell that is already revealed, ends the
+//      game and earns nothing. A mine that is revealed shows the number
+//      of mines next to it, as in Jumanji;
+//   3. revealing no cell does nothing (Jumanji has no such action).
+// There is no cascade: a cell with no mine next to it reveals only
+// itself, as in Jumanji. The reward of a game is the number of safe
+// cells revealed.
+//
+// Jumanji places the mines when it resets, on a 10 x 10 grid with 10
+// mines by default, and has no time limit: a game lasts at most one
+// step for each safe cell, which is the horizon of the instances.
+//
+// References:
+//
+//		Clément Bonnet et al. Jumanji: a Diverse Suite of Scalable
+//		Reinforcement Learning Environments in JAX. ICLR, 2024.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain minesweeper {
+
+	requirements = {
+		reward-deterministic,
+		partially-observed
+	};
+
+	types {
+		xpos : object;
+		ypos : object;
+	};
+
+	pvariables {
+
+		// the grid
+		WIDTH 					: { non-fluent, int, default = 10 };		// number of columns
+		HEIGHT 					: { non-fluent, int, default = 10 };		// number of rows
+		MINES 					: { non-fluent, int, default = 10 };		// number of mines
+		X(xpos) 				: { non-fluent, int, default = 0 };			// index of a column
+		Y(ypos) 				: { non-fluent, int, default = 0 };			// index of a row
+
+		// the mines, placed on the first step
+		draw(xpos, ypos) 		: { interm-fluent, real };					// a random number for each cell
+		mined(xpos, ypos) 		: { interm-fluent, bool };
+		near(xpos, ypos) 		: { interm-fluent, int };					// mines next to a cell
+
+		// the cell revealed
+		safe-pick 				: { interm-fluent, bool };					// a hidden safe cell
+		bad-pick 				: { interm-fluent, bool };					// a mine or a revealed cell
+
+		// states, all hidden
+		placed 					: { state-fluent, bool, default = false };	// the mines are placed
+		mine(xpos, ypos) 		: { state-fluent, bool, default = false };
+		revealed(xpos, ypos) 	: { state-fluent, bool, default = false };
+		lost 					: { state-fluent, bool, default = false };
+
+		// observation
+		board(xpos, ypos) 		: { observ-fluent, int };					// -1 if hidden, else the mines next to it
+
+		// action
+		reveal(xpos, ypos) 		: { action-fluent, bool, default = false };
+	};
+
+	cpfs {
+
+		// the mines: the MINES cells with the smallest random numbers, placed on the first step
+		draw(?x, ?y) = Uniform(0, 1);
+		mined(?x, ?y) = if (placed) then mine(?x, ?y)
+						else ((sum_{?x2 : xpos, ?y2 : ypos} [(draw(?x2, ?y2) < draw(?x, ?y))
+							| ((draw(?x2, ?y2) == draw(?x, ?y)) ^ (WIDTH * Y(?y2) + X(?x2) < WIDTH * Y(?y) + X(?x)))]) < MINES);
+		near(?x, ?y) = (sum_{?x2 : xpos, ?y2 : ypos} [mined(?x2, ?y2)
+						^ (abs[X(?x2) - X(?x)] <= 1) ^ (abs[Y(?y2) - Y(?y)] <= 1)
+						^ ((X(?x2) ~= X(?x)) | (Y(?y2) ~= Y(?y)))]);
+
+		// the cell revealed
+		safe-pick = (exists_{?x : xpos, ?y : ypos} [reveal(?x, ?y) ^ ~revealed(?x, ?y) ^ ~mined(?x, ?y)]);
+		bad-pick = (exists_{?x : xpos, ?y : ypos} [reveal(?x, ?y) ^ (revealed(?x, ?y) | mined(?x, ?y))]);
+
+		// the next state
+		placed' = true;
+		mine'(?x, ?y) = mined(?x, ?y);
+		revealed'(?x, ?y) = revealed(?x, ?y) | reveal(?x, ?y);
+		lost' = bad-pick;
+
+		// what the player sees
+		board(?x, ?y) = if (revealed'(?x, ?y)) then near(?x, ?y) else -1;
+	};
+
+	reward = if (safe-pick) then 1 else 0;
+
+	termination {
+		lost;
+		(sum_{?x : xpos, ?y : ypos} [revealed(?x, ?y)]) == WIDTH * HEIGHT - MINES;
+	};
+
+	action-preconditions {
+		(sum_{?x : xpos, ?y : ypos} [reveal(?x, ?y)]) <= 1;
+	};
+}
