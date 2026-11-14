@@ -185,7 +185,15 @@ def wrap(name):
         else:
             line += part
     lines.append(line)
-    return '<br>'.join(f'<code>{line}</code>' for line in lines)
+
+    # every line is padded to LINE characters with non-breaking spaces, centered: in the code font they
+    # make every cell equally wide and unsqueezable, so that on a narrow screen GitHub scrolls the table
+    # instead of narrowing the columns with short names and shrinking their pictures
+    def pad(line):
+        left = (LINE - len(line)) // 2
+        return '&nbsp;' * left + line + '&nbsp;' * (LINE - len(line) - left)
+
+    return '<br>'.join(f'<code>{pad(line)}</code>' for line in lines)
 
 
 def filler():
