@@ -1,64 +1,68 @@
 // ////////////////////////////////////////////////////////////////////
-// The travelling salesman problem involves finding a least cost route
+// The travelling salesman problem involves finding a shortest route
 // that visits each city exactly once and returns to the origin. The
-// reward includes a fuel cost of traversing from one city to another
-// and a bonus for completing the route. The bonus should exceed the
-// cost of a route, so that completing a route beats never leaving.
-// 
+// cities are points on a map, with coordinates X and Y in km, and
+// travel between two cities follows the straight line between them.
+// The reward includes a fuel cost per km travelled and a bonus for
+// completing the route. The bonus should exceed the cost of a route,
+// so that completing a route beats never leaving.
+//
 // Author(s):
 // 		Mike Gimelfarb (mgimelfarb@yahoo.ca)
 //
 // ////////////////////////////////////////////////////////////////////
 
 domain travelling_salesman {
-        
+
     types {
-		node : object;
+		city : object;
     };
-            
+
     pvariables {
-		COST(node, node) : { non-fluent, real, default = 0.0 };
-		ORIGIN(node) : { non-fluent, bool, default = false };
+		X(city) : { non-fluent, real, default = 0.0 };
+		Y(city) : { non-fluent, real, default = 0.0 };
+		ORIGIN(city) : { non-fluent, bool, default = false };
+		COST-PER-KM : { non-fluent, real, default = 1.0 };
 		COMPLETION-BONUS : { non-fluent, real, default = 1000.0 };
 
-		current(node) : { state-fluent, bool, default = false };
-		visited(node) : { state-fluent, bool, default = false };
+		current(city) : { state-fluent, bool, default = false };
+		visited(city) : { state-fluent, bool, default = false };
 
-		move(node) : { action-fluent, bool, default = false };
+		move(city) : { action-fluent, bool, default = false };
     };
-        
+
     cpfs {
-		current'(?n) = if (exists_{?n2: node}[move(?n2)]) then move(?n) else current(?n);
-		visited'(?n) = visited(?n) | move(?n);
+		current'(?c) = if (exists_{?c2: city}[move(?c2)]) then move(?c) else current(?c);
+		visited'(?c) = visited(?c) | move(?c);
     };
-                
-    reward = -(sum_{?n: node, ?n2: node}[COST(?n, ?n2) * current(?n) * current'(?n2)])
-			 + (if (forall_{?n: node}[visited'(?n) ^ (ORIGIN(?n) => current'(?n))]) then COMPLETION-BONUS else 0.0);
+
+    reward = -(COST-PER-KM * (sum_{?c: city, ?c2: city}[
+				current(?c) * current'(?c2) * sqrt[pow[X(?c) - X(?c2), 2] + pow[Y(?c) - Y(?c2), 2]]]))
+			 + (if (forall_{?c: city}[visited'(?c) ^ (ORIGIN(?c) => current'(?c))]) then COMPLETION-BONUS else 0.0);
 
 	termination {
-		forall_{?n: node}[visited(?n) ^ (ORIGIN(?n) => current(?n))];
+		forall_{?c: city}[visited(?c) ^ (ORIGIN(?c) => current(?c))];
 	};
-	
-    state-invariants { 
-		
+
+    state-invariants {
+
 		// one origin
-		(sum_{?n: node} ORIGIN(?n)) == 1;
-		
-		// current node exists
-		(sum_{?n: node} current(?n)) == 1;
-		
+		(sum_{?c: city} ORIGIN(?c)) == 1;
+
+		// current city exists
+		(sum_{?c: city} current(?c)) == 1;
+
 		// origin is visited
-		forall_{?n: node}[ORIGIN(?n) => visited(?n)];
-    }; 
-	
+		forall_{?c: city}[ORIGIN(?c) => visited(?c)];
+    };
+
 	action-preconditions {
-		
+
 		// move somewhere
-		(sum_{?n: node} move(?n)) == 1;
-		
-		// move to an unvisited node, or back to the origin once all nodes are visited
-		(exists_{?n: node}[~visited(?n)]) ^ (forall_{?n: node}[move(?n) => ~visited(?n)])
-			| (forall_{?n: node}[visited(?n)]) ^ (forall_{?n: node}[move(?n) <=> ORIGIN(?n)]);
+		(sum_{?c: city} move(?c)) == 1;
+
+		// move to an unvisited city, or back to the origin once all cities are visited
+		(exists_{?c: city}[~visited(?c)]) ^ (forall_{?c: city}[move(?c) => ~visited(?c)])
+			| (forall_{?c: city}[visited(?c)]) ^ (forall_{?c: city}[move(?c) <=> ORIGIN(?c)]);
 	};
 }
-

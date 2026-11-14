@@ -1,0 +1,39 @@
+non-fluents nf_tsp_1 {
+
+	domain = travelling_salesman;
+
+	objects {
+		city : { c1, c2, c3, c4, c5, c6, c7, c8, c9, c10 };
+	};
+
+	non-fluents {
+		ORIGIN(c1);
+		COMPLETION-BONUS = 1500;
+		X(c1) = 47;	Y(c1) = 51;
+		X(c2) = 76;	Y(c2) = 95;
+		X(c3) = 3;	Y(c3) = 14;
+		X(c4) = 25;	Y(c4) = 31;
+		X(c5) = 87;	Y(c5) = 42;
+		X(c6) = 27;	Y(c6) = 83;
+		X(c7) = 65;	Y(c7) = 55;
+		X(c8) = 87;	Y(c8) = 76;
+		X(c9) = 45;	Y(c9) = 79;
+		X(c10) = 12;	Y(c10) = 45;
+	};
+}
+
+instance tsp_inst_1 {
+
+	domain = travelling_salesman;
+
+	non-fluents = nf_tsp_1;
+
+	init-state {
+		current(c1);
+		visited(c1);
+	};
+
+	max-nondef-actions = 1;
+	horizon = 10;
+	discount = 1.0;
+}

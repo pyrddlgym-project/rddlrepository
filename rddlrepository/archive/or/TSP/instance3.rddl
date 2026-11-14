@@ -1,0 +1,64 @@
+non-fluents nf_tsp_3 {
+
+	domain = travelling_salesman;
+
+	objects {
+		city : { c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35 };
+	};
+
+	non-fluents {
+		ORIGIN(c1);
+		COMPLETION-BONUS = 5000;
+		X(c1) = 81;	Y(c1) = 8;
+		X(c2) = 18;	Y(c2) = 23;
+		X(c3) = 18;	Y(c3) = 80;
+		X(c4) = 87;	Y(c4) = 58;
+		X(c5) = 3;	Y(c5) = 9;
+		X(c6) = 33;	Y(c6) = 43;
+		X(c7) = 62;	Y(c7) = 48;
+		X(c8) = 26;	Y(c8) = 16;
+		X(c9) = 69;	Y(c9) = 74;
+		X(c10) = 45;	Y(c10) = 39;
+		X(c11) = 67;	Y(c11) = 59;
+		X(c12) = 76;	Y(c12) = 96;
+		X(c13) = 79;	Y(c13) = 28;
+		X(c14) = 32;	Y(c14) = 65;
+		X(c15) = 94;	Y(c15) = 0;
+		X(c16) = 7;	Y(c16) = 98;
+		X(c17) = 95;	Y(c17) = 30;
+		X(c18) = 14;	Y(c18) = 31;
+		X(c19) = 4;	Y(c19) = 90;
+		X(c20) = 24;	Y(c20) = 47;
+		X(c21) = 47;	Y(c21) = 3;
+		X(c22) = 25;	Y(c22) = 71;
+		X(c23) = 61;	Y(c23) = 66;
+		X(c24) = 52;	Y(c24) = 94;
+		X(c25) = 93;	Y(c25) = 20;
+		X(c26) = 25;	Y(c26) = 30;
+		X(c27) = 49;	Y(c27) = 74;
+		X(c28) = 66;	Y(c28) = 22;
+		X(c29) = 39;	Y(c29) = 83;
+		X(c30) = 0;	Y(c30) = 68;
+		X(c31) = 92;	Y(c31) = 43;
+		X(c32) = 96;	Y(c32) = 76;
+		X(c33) = 32;	Y(c33) = 88;
+		X(c34) = 38;	Y(c34) = 10;
+		X(c35) = 59;	Y(c35) = 85;
+	};
+}
+
+instance tsp_inst_3 {
+
+	domain = travelling_salesman;
+
+	non-fluents = nf_tsp_3;
+
+	init-state {
+		current(c1);
+		visited(c1);
+	};
+
+	max-nondef-actions = 1;
+	horizon = 35;
+	discount = 1.0;
+}

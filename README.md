@@ -216,7 +216,7 @@ Operations research.
 | <img src="docs/thumbnails/Option_or.png" width="64" alt=""> | <code>Option_<wbr>or</code> | 0, 1 | Exercise an American option |
 | <img src="docs/thumbnails/StructuralMaintenance_or.png" width="64" alt=""> | <code>StructuralMaintenance_<wbr>or</code> | 0&ndash;4 | Inspect and repair a cracking structure |
 | <img src="docs/thumbnails/SupplyChain_or.png" width="64" alt=""> | <code>SupplyChain_<wbr>or</code> | 0 | Ship stock from a factory to warehouses |
-| <img src="docs/thumbnails/TSP_or.png" width="64" alt=""> | <code>TSP_<wbr>or</code> | 0 | Travelling salesman tour |
+| <img src="docs/thumbnails/TSP_or.png" width="64" alt=""> | <code>TSP_<wbr>or</code> | 0&ndash;4 | Travelling salesman tour |
 
 <sub>[back to contexts](#domain-gallery)</sub>
 

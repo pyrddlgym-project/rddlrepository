@@ -1,38 +1,34 @@
-non-fluents nf_tsp {
+non-fluents nf_tsp_0 {
 
-    domain = travelling_salesman;
-    
-    objects {
-	node : { a, b, c };
-    };
-    
-    non-fluents {
-	ORIGIN(a);
-	COST(a, a) = 10;
-	COST(a, b) = 7;
-	COST(b, a) = 4;
-	COST(b, b) = 10;
-	COST(a, c) = 2;
-	COST(c, a) = 2;
-	COST(b, c) = 3;
-	COST(c, b) = 3;
-	COST(c, c) = 10;
-    };
+	domain = travelling_salesman;
+
+	objects {
+		city : { c1, c2, c3, c4, c5 };
+	};
+
+	non-fluents {
+		ORIGIN(c1);
+		COMPLETION-BONUS = 800;
+		X(c1) = 85;	Y(c1) = 64;
+		X(c2) = 51;	Y(c2) = 27;
+		X(c3) = 31;	Y(c3) = 4;
+		X(c4) = 7;	Y(c4) = 1;
+		X(c5) = 17;	Y(c5) = 82;
+	};
 }
 
-instance tsp_inst {
+instance tsp_inst_0 {
 
-    domain = travelling_salesman;
+	domain = travelling_salesman;
 
-    non-fluents = nf_tsp;
-    
-    init-state {
-	current(a);
-	visited(a);
-    };
+	non-fluents = nf_tsp_0;
 
-    max-nondef-actions = 1;
-    horizon = 40;
-    discount = 1.0;
+	init-state {
+		current(c1);
+		visited(c1);
+	};
+
+	max-nondef-actions = 1;
+	horizon = 5;
+	discount = 1.0;
 }
-
