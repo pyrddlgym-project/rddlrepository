@@ -6,51 +6,150 @@ from PIL import Image
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
-STOCK_COLOR = '#42a5f5'
-OWED_COLOR = '#e57373'
-OWED_ZONE_COLOR = '#ffebee'
-EMPTY_COLOR = '#eceff1'
+GROUND_COLOR = '#eef1e6'
+ROAD_COLOR = '#78909c'
+ROAD_LINE_COLOR = '#eceff1'
+FACTORY_COLOR = '#90a4ae'
+FACTORY_DARK_COLOR = '#546e7a'
+WINDOW_COLOR = '#ffe082'
+SMOKE_COLOR = '#b0bec5'
+WALL_COLOR = '#d7ccc8'
+ROOF_COLOR = '#8d6e63'
+DOOR_COLOR = '#a1887f'
+DOOR_LINE_COLOR = '#795548'
+RACK_COLOR = '#607d8b'
+CRATE_COLOR = '#d4a35f'
+CRATE_EDGE_COLOR = '#8d6e63'
+EMPTY_SLOT_COLOR = '#e0e4e6'
+OWED_COLOR = '#c62828'
+OWED_FILL_COLOR = '#ffebee'
 LAST_COLOR = '#455a64'
 BEFORE_COLOR = '#b0bec5'
-LINE_COLOR = '#90a4ae'
-CARD_COLOR = '#f5f7f8'
+BAR_TRACK_COLOR = '#e3e7ea'
+TEXT_COLOR = '#37474f'
 LOSING_COLOR = '#c62828'
-DETAIL_COLOR = '#37474f'
 
-# sizes in inches
-BOTTOM_MARGIN = 0.62
+# sizes in inches: the factory, the road between it and the warehouses, and a row of a
+# warehouse at full size, which shrinks with many warehouses
+MAX_SIZE = (9.0, 5.6)
 TOP_MARGIN = 0.45
-MAX_SIZE = (9.0, 5.5)
-MIN_WIDTH = 8.6
-HEADER_HEIGHT = 0.26
-MAX_ROW_HEIGHT = 1.0
-FACTORY_WIDTH = 1.75
-FACTORY_HEIGHT = 1.6
-BUS_WIDTH = 0.45
-NAME_WIDTH = 0.7
-GAUGE_WIDTH = 2.95
-COLUMN_GAP = 0.25
-DEMAND_LABEL_WIDTH = 0.5
-DEMAND_BAR_WIDTH = 1.6
-DEMAND_VALUE_WIDTH = 0.35
-GAUGE_HEIGHT = 0.14
-MEDIUM_GAUGE_HEIGHT = 0.22
-DEMAND_BAR_HEIGHT = 0.15
+LEGEND_HEIGHT = 0.5
+FACTORY_WIDTH = 2.0
+ROAD_WIDTH = 0.9
+MAX_ROW = 1.1
+WAREHOUSE_WIDTH = 1.0
+RACK_WIDTH = 2.0
+DEMAND_WIDTH = 1.3
+GAP = 0.2
 
-# the part of a warehouse's gauge left of zero, which fills up with the items owed
-OWED_SHARE = 0.25
+# crates on a rack and in the factory yard
+RACK_SLOTS = (10, 2)
+YARD_SLOTS = (6, 4)
 
-# what fits in a row of each height
-FULL_ROW = 0.8
-MEDIUM_ROW = 0.42
-ARROW_ROW = 0.3
-MIN_TEXT_ROW = 0.16
-CHAR_WIDTH = 0.8
+
+# ---------- pictures: each takes the axes and a place and size in inches
+
+def _factory(ax, left, bottom, width, height):
+
+    # a hall with a sawtooth roof, lit windows and a smoking chimney
+    (w, h) = (width, height)
+    points = [(left, bottom), (left, bottom + 0.55 * h)]
+    for k in range(3):
+        points += [(left + (k + 1) * 0.25 * w, bottom + 0.8 * h), (left + (k + 1) * 0.25 * w, bottom + 0.55 * h)]
+    points = points[:-1] + [(left + 0.75 * w, bottom)]
+    ax.add_patch(patches.Rectangle((left + 0.8 * w, bottom), 0.1 * w, 0.95 * h, facecolor=FACTORY_DARK_COLOR,
+                                   edgecolor='none', zorder=2))
+    ax.add_patch(patches.Polygon(points, closed=True, facecolor=FACTORY_COLOR, edgecolor=FACTORY_DARK_COLOR,
+                                 linewidth=1, zorder=2.1))
+    for k in range(3):
+        ax.add_patch(patches.Rectangle((left + (0.05 + 0.24 * k) * w, bottom + 0.15 * h), 0.14 * w, 0.18 * h,
+                                       facecolor=WINDOW_COLOR, edgecolor='none', zorder=2.2))
+    for (dx, dy, r) in ((0.85, 1.02, 0.05), (0.92, 1.1, 0.065), (1.0, 1.17, 0.08)):
+        ax.add_patch(plt.Circle((left + dx * w, bottom + dy * h), r * h, facecolor=SMOKE_COLOR,
+                                edgecolor='none', zorder=2))
+
+
+def _warehouse(ax, left, bottom, width, height):
+
+    # a warehouse with a gabled roof and a roll-up door
+    (w, h) = (width, height)
+    ax.add_patch(patches.Rectangle((left, bottom), w, 0.62 * h, facecolor=WALL_COLOR,
+                                   edgecolor=ROOF_COLOR, linewidth=1, zorder=2))
+    ax.add_patch(patches.Polygon([(left - 0.06 * w, bottom + 0.6 * h), (left + 0.5 * w, bottom + 0.95 * h),
+                                  (left + 1.06 * w, bottom + 0.6 * h)], closed=True, facecolor=ROOF_COLOR,
+                                 edgecolor='none', zorder=2.1))
+    (dl, dw, dh) = (left + 0.25 * w, 0.5 * w, 0.45 * h)
+    ax.add_patch(patches.Rectangle((dl, bottom), dw, dh, facecolor=DOOR_COLOR, edgecolor=DOOR_LINE_COLOR,
+                                   linewidth=0.8, zorder=2.2))
+    for k in range(1, 5):
+        ax.plot([dl, dl + dw], [bottom + k * dh / 5] * 2, color=DOOR_LINE_COLOR, linewidth=0.6, zorder=2.3)
+
+
+def _crates(ax, left, bottom, width, height, slots, rack):
+
+    # a grid of crates, all hidden, on the shelves of a rack or stacked in a yard: the
+    # bottom row fills first, from the left
+    (cols, rows) = slots
+    (cw, ch) = (width / cols, height / rows)
+    if rack:
+        for r in range(rows + 1):
+            ax.plot([left, left + width], [bottom + r * ch] * 2, color=RACK_COLOR, linewidth=1.5, zorder=2)
+        for x in (left, left + width):
+            ax.plot([x, x], [bottom, bottom + height], color=RACK_COLOR, linewidth=1.5, zorder=2)
+    crates = []
+    for r in range(rows):
+        for c in range(cols):
+            (x, y, s) = (left + c * cw + 0.08 * cw, bottom + r * ch + 0.06 * ch, min(0.84 * cw, 0.86 * ch))
+            crate = ax.add_patch(patches.Rectangle((x, y), 0.84 * cw, s, facecolor=CRATE_COLOR,
+                                                   edgecolor=CRATE_EDGE_COLOR, linewidth=0.6, zorder=2.5))
+            lid = ax.plot([x, x + 0.84 * cw], [y + 0.5 * s] * 2, color=CRATE_EDGE_COLOR, linewidth=0.5,
+                          zorder=2.6)[0]
+            owed = ax.add_patch(patches.Rectangle((x, y), 0.84 * cw, s, facecolor=OWED_FILL_COLOR,
+                                                  edgecolor=OWED_COLOR, linewidth=0.9, linestyle=(0, (2, 1.5)),
+                                                  zorder=2.5))
+            for artist in (crate, lid, owed):
+                artist.set_visible(False)
+            crates.append(((crate, lid), (owed,)))
+    return crates
+
+
+def _count(share, slots):
+
+    # as many slots as the share of them, and one for any amount at all
+    return max(round(share * slots), 1) if share > 0 else 0
+
+
+def _fill(crates, share, owed_share=0.0):
+
+    # crates for the stock, or the outlines of crates owed in their place
+    stocked, owed = _count(share, len(crates)), _count(owed_share, len(crates))
+    for (k, (crate, missing)) in enumerate(crates):
+        for artist in crate:
+            artist.set_visible(k < stocked)
+        for artist in missing:
+            artist.set_visible(k < owed)
+
+
+def _cart(ax, left, bottom, size):
+
+    # a shopping cart: a basket on a frame with a handle and two wheels
+    s = size
+    ax.add_patch(patches.Polygon([(left + 0.1 * s, bottom + 0.75 * s), (left + 0.95 * s, bottom + 0.75 * s),
+                                  (left + 0.82 * s, bottom + 0.3 * s), (left + 0.22 * s, bottom + 0.3 * s)],
+                                 closed=True, facecolor='none', edgecolor=LAST_COLOR, linewidth=1.2, zorder=2))
+    ax.plot([left - 0.05 * s, left + 0.1 * s, left + 0.25 * s, left + 0.85 * s],
+            [bottom + 0.88 * s, bottom + 0.88 * s, bottom + 0.2 * s, bottom + 0.2 * s],
+            color=LAST_COLOR, linewidth=1.2, solid_joinstyle='round', zorder=2)
+    for dx in (0.3, 0.78):
+        ax.add_patch(plt.Circle((left + dx * s, bottom + 0.08 * s), 0.07 * s, facecolor=LAST_COLOR,
+                                edgecolor='none', zorder=2))
 
 
 class SupplyChainVisualizer(BaseViz):
-    '''Draws the factory on the left, supplying one row per warehouse. A row shows the stock
-    against the capacity with the items owed in red, and the demand of the last two steps.
+    '''Draws the factory with the crates in its yard on the left, and a road from it to each
+    warehouse, which keeps its crates on a rack. A warehouse that owes items shows them as
+    the red outlines of missing crates on its rack instead, and two bars next to a shopping
+    cart show its demand in the last two steps.
 
     The action is not part of the state, so what was produced and shipped only shows in the
     stock. The drawing only depends on the current state.
@@ -63,196 +162,111 @@ class SupplyChainVisualizer(BaseViz):
         self._nonfluents = model.ground_vars_with_values(model.non_fluents)
         self._warehouses = list(model.type_to_objects['warehouse'])
 
-        # everything is laid out in inches
+        # everything is laid out in inches, with rows that shrink to fit many warehouses
         count = max(len(self._warehouses), 1)
-        room = MAX_SIZE[1] - BOTTOM_MARGIN - TOP_MARGIN - HEADER_HEIGHT
-        self._row_height = min(MAX_ROW_HEIGHT, room / count)
-        rows_height = max(count * self._row_height, FACTORY_HEIGHT)
-        self._demand_width = DEMAND_LABEL_WIDTH + DEMAND_BAR_WIDTH + DEMAND_VALUE_WIDTH
-        grid_width = (FACTORY_WIDTH + BUS_WIDTH + NAME_WIDTH + GAUGE_WIDTH + COLUMN_GAP
-                      + self._demand_width)
-        grid_height = HEADER_HEIGHT + rows_height
-
-        width = max(grid_width + 0.4, MIN_WIDTH)
-        height = grid_height + BOTTOM_MARGIN + TOP_MARGIN
+        room = MAX_SIZE[1] - TOP_MARGIN - LEGEND_HEIGHT - 0.1
+        self._row = min(MAX_ROW, room / count)
+        scale = min(1.0, self._row / MAX_ROW)
+        rows_height = max(count * self._row, 2.2)
+        row_width = ((WAREHOUSE_WIDTH + RACK_WIDTH + DEMAND_WIDTH + 2 * GAP) * max(scale, 0.75)
+                     + 0.32 * 0.8 * self._row + 0.08)
+        width = FACTORY_WIDTH + ROAD_WIDTH + row_width + 0.4
+        height = LEGEND_HEIGHT + rows_height + TOP_MARGIN
         self._figure_size = (width, height)
         self.fig = plt.figure(figsize=self._figure_size)
-        self.ax = self.fig.add_axes([0, BOTTOM_MARGIN / height, 1, grid_height / height])
-        self.ax.set_xlim(-(width - grid_width) / 2, (width + grid_width) / 2)
-        self.ax.set_ylim(0, grid_height)
+        self.ax = self.fig.add_axes([0, LEGEND_HEIGHT / height, 1, rows_height / height])
+        self.ax.set_xlim(0, width)
+        self.ax.set_ylim(0, rows_height)
+        self.ax.set_aspect('equal')
         self.ax.axis('off')
+        self.fig.patch.set_facecolor('white')
 
-        self._rows_center = rows_height / 2
-        self._first_row = rows_height / 2 + count * self._row_height / 2
-        self._name_x = FACTORY_WIDTH + BUS_WIDTH
-        self._gauge_x = self._name_x + NAME_WIDTH
-        self._demand_x = self._gauge_x + GAUGE_WIDTH + COLUMN_GAP
-
-        self._draw_header(grid_height)
-        self._draw_factory()
-        self._draw_routes()
-        self._draw_warehouses()
-
-        handles = [
-            patches.Patch(facecolor=STOCK_COLOR, edgecolor='none', label='Stock'),
-            patches.Patch(facecolor=OWED_COLOR, edgecolor='none', label='Items owed'),
-            patches.Patch(facecolor=LAST_COLOR, edgecolor='none', label='Demand last step'),
-            patches.Patch(facecolor=BEFORE_COLOR, edgecolor='none', label='Demand the step before')
-        ]
-        self.fig.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, 0.25 / height),
-                        ncol=len(handles), frameon=False, fontsize=8.5, columnspacing=1.0,
-                        handlelength=1.4)
-        caption = (f'Items sell for {self._value("PRICE"):g} and cost {self._value("PRODUCTION-COST"):g} to make, '
-                   f'each owed item costs {self._value("PENALTY-COST"):g} per step. '
-                   'Nothing ships if the factory cannot supply all orders.')
-        self.fig.text(0.5, 0.1 / height, caption, ha='center', va='bottom', fontsize=9,
-                      color=DETAIL_COLOR)
+        self._centers = [rows_height / 2 + (count / 2 - row - 0.5) * self._row
+                         for row in range(len(self._warehouses))]
+        self._draw_factory(rows_height / 2)
+        self._draw_roads(rows_height / 2, scale)
+        self._draw_warehouses(scale)
+        self._draw_legend()
 
     def _value(self, var, *args):
         return self._nonfluents[RDDLPlanningModel.ground_var(var, list(args))]
 
-    def _shorten(self, name, limit):
+    # ---------- the scene
 
-        # names that cannot fit keep both ends, since numbered names differ at the end
-        if len(name) <= limit:
-            return name
-        head = max(limit, 2) // 2
-        tail = max(limit - head - 1, 0)
-        return f'{name[:head]}…{name[len(name) - tail:]}'
+    def _draw_factory(self, middle):
+        _factory(self.ax, 0.25, middle - 0.1, 1.55, 1.0)
+        self._yard = _crates(self.ax, 0.3, middle - 0.95, 1.4, 0.75, YARD_SLOTS, rack=False)
 
-    def _draw_header(self, top):
-        y = top - HEADER_HEIGHT / 2
-        for (x, column_width, text) in ((self._gauge_x, GAUGE_WIDTH, 'Stock'),
-                                        (self._demand_x, self._demand_width, 'Demand')):
-            self.ax.text(x + column_width / 2, y, text, ha='center', va='center', fontsize=8,
-                         fontweight='bold', color=DETAIL_COLOR)
+    def _draw_roads(self, middle, scale):
 
-    def _draw_factory(self):
-        bottom = self._rows_center - FACTORY_HEIGHT / 2
-        top = bottom + FACTORY_HEIGHT
-        self.ax.add_patch(patches.FancyBboxPatch(
-            (0.02, bottom + 0.02), FACTORY_WIDTH - 0.04, FACTORY_HEIGHT - 0.04,
-            boxstyle='round,pad=0,rounding_size=0.06', facecolor=CARD_COLOR, edgecolor=LINE_COLOR,
-            linewidth=1.2, zorder=1))
-        center = FACTORY_WIDTH / 2
-        self.ax.text(center, top - 0.24, 'Factory', ha='center', va='center', fontsize=10.5,
-                     fontweight='bold', zorder=2)
-        self._factory_stock = self.ax.text(center, top - 0.52, '', ha='center', va='center',
-                                           fontsize=8.5, zorder=2)
-
-        self._factory_width = FACTORY_WIDTH - 0.3
-        self.ax.add_patch(patches.Rectangle((0.15, top - 0.8), self._factory_width, GAUGE_HEIGHT,
-                                            facecolor=EMPTY_COLOR, edgecolor='none', zorder=2))
-        self._factory_bar = self.ax.add_patch(patches.Rectangle(
-            (0.15, top - 0.8), 0, GAUGE_HEIGHT, facecolor=STOCK_COLOR, edgecolor='none', zorder=3))
-
-        for (y, text) in ((top - 1.06, f'Makes up to {self._value("PRODUCE-MAX"):g}'),
-                          (top - 1.28, f'Storage {self._value("STORAGE-COST-FACTORY"):g} per item')):
-            self.ax.text(center, y, text, ha='center', va='center', fontsize=7.5,
-                         color=DETAIL_COLOR, zorder=2)
-
-    def _row_center(self, row):
-        return self._first_row - (row + 0.5) * self._row_height
-
-    def _draw_routes(self):
+        # one road leaves the factory and branches to the door of each warehouse
         if not self._warehouses:
             return
-        bus = FACTORY_WIDTH + BUS_WIDTH * 0.4
-        end = self._name_x - 0.04
-        centers = [self._row_center(row) for row in range(len(self._warehouses))]
-        line = {'color': LINE_COLOR, 'linewidth': 1.2, 'zorder': 0}
-        self.ax.plot([FACTORY_WIDTH, bus], [self._rows_center] * 2, **line)
-        self.ax.plot([bus, bus], [min(centers + [self._rows_center]), max(centers + [self._rows_center])], **line)
-        arrows = self._row_height >= ARROW_ROW
-        for y in centers:
-            if arrows:
-                self.ax.add_patch(patches.FancyArrowPatch(
-                    (bus, y), (end, y), arrowstyle='-|>', mutation_scale=9, shrinkA=0, shrinkB=0,
-                    color=LINE_COLOR, linewidth=1.2, zorder=0))
+        road = {'color': ROAD_COLOR, 'linewidth': 7 * max(scale, 0.5), 'solid_capstyle': 'round',
+                'solid_joinstyle': 'round', 'zorder': 1}
+        line = {'color': ROAD_LINE_COLOR, 'linewidth': 0.8, 'dashes': (3, 3), 'zorder': 1.1}
+        (start, bus, end) = (FACTORY_WIDTH - 0.2, FACTORY_WIDTH + ROAD_WIDTH / 2, FACTORY_WIDTH + ROAD_WIDTH)
+        door = 0.15 * self._row
+        ys = [y - 0.4 * self._row + door for y in self._centers]
+        low, high = min(ys + [middle - 0.1]), max(ys + [middle - 0.1])
+        for (xs, yy) in (([start, bus], [middle - 0.1] * 2), ([bus, bus], [low, high])):
+            self.ax.plot(xs, yy, **road)
+            self.ax.plot(xs, yy, **line)
+        for y in ys:
+            self.ax.plot([bus, end + 0.1], [y, y], **road)
+            self.ax.plot([bus, end + 0.1], [y, y], **line)
+
+    def _draw_warehouses(self, scale):
+        s = max(scale, 0.75)
+        h = 0.8 * self._row
+        self._racks, self._demand = {}, {}
+        rack_x = FACTORY_WIDTH + ROAD_WIDTH + (WAREHOUSE_WIDTH + GAP) * s
+        cart = 0.32 * h
+        demand_x = rack_x + (RACK_WIDTH + GAP) * s + cart + 0.08
+        for (warehouse, y) in zip(self._warehouses, self._centers):
+            bottom = y - 0.4 * self._row
+            _warehouse(self.ax, FACTORY_WIDTH + ROAD_WIDTH, bottom, WAREHOUSE_WIDTH * s, h)
+            self._racks[warehouse] = _crates(self.ax, rack_x, bottom + 0.05 * h, RACK_WIDTH * s, 0.75 * h,
+                                             RACK_SLOTS, rack=True)
+            _cart(self.ax, demand_x - cart - 0.08, bottom + 0.22 * h, cart)
+            bars = []
+            for (k, color) in enumerate((LAST_COLOR, BEFORE_COLOR)):
+                bar_y = bottom + (0.42 - 0.25 * k) * h
+                self.ax.add_patch(patches.Rectangle((demand_x, bar_y), DEMAND_WIDTH * s, 0.18 * h,
+                                                    facecolor=BAR_TRACK_COLOR, edgecolor='none', zorder=2))
+                bars.append(self.ax.add_patch(patches.Rectangle((demand_x, bar_y), 0, 0.18 * h,
+                                                                facecolor=color, edgecolor='none', zorder=2.1)))
+            self._demand[warehouse] = (bars, DEMAND_WIDTH * s)
+
+            # the name sits on the roof, where it fits
+            size = min(8.5, 72 * 0.18 * h)
+            if size >= 5:
+                self.ax.text(FACTORY_WIDTH + ROAD_WIDTH + WAREHOUSE_WIDTH * s / 2, bottom + 0.69 * h,
+                             warehouse, ha='center', va='center', fontsize=size, color='white',
+                             fontweight='bold', zorder=3)
+
+    def _draw_legend(self):
+        (width, height) = self._figure_size
+        ax = self.fig.add_axes([0, 0.04 / height, 1, 0.42 / height])
+        ax.set_xlim(0, width)
+        ax.set_ylim(0, 0.42)
+        ax.set_aspect('equal')
+        ax.axis('off')
+        entries = [('crate', 'Stock'), ('owed', 'Items owed'), ('last', 'Demand last step'),
+                   ('before', 'Demand the step before')]
+        widths = [0.45 + 0.066 * len(label) + 0.35 for (_, label) in entries]
+        x = (width - sum(widths)) / 2
+        for ((kind, label), entry_width) in zip(entries, widths):
+            if kind in ('crate', 'owed'):
+                crates = _crates(ax, x + 0.05, 0.08, 0.3, 0.26, (2, 1), rack=False)
+                _fill(crates, 1.0 if kind == 'crate' else 0.0, 1.0 if kind == 'owed' else 0.0)
             else:
-                self.ax.plot([bus, end], [y, y], **line)
+                ax.add_patch(patches.Rectangle((x, 0.13), 0.38, 0.14, edgecolor='none',
+                                               facecolor=LAST_COLOR if kind == 'last' else BEFORE_COLOR))
+            ax.text(x + 0.45, 0.2, label, ha='left', va='center', fontsize=8.5, color=TEXT_COLOR)
+            x += entry_width
 
-    def _draw_warehouses(self):
-        height = self._row_height
-        full = height >= FULL_ROW
-        has_text = height >= ARROW_ROW
-        self._gauges, self._stock_texts = {}, {}
-        self._last, self._before = {}, {}
-        limit = int((NAME_WIDTH - 0.08) * 72 / (CHAR_WIDTH * 8.5))
-        for (row, warehouse) in enumerate(self._warehouses):
-            y = self._row_center(row)
-            if height >= MIN_TEXT_ROW:
-                self.ax.text(self._name_x + 0.04, y, self._shorten(warehouse, limit), ha='left',
-                             va='center', fontsize=8.5, fontweight='bold')
-
-            # the gauge sits between its two lines of text, or holds its text when rows are low
-            bar_height = GAUGE_HEIGHT if full else min(MEDIUM_GAUGE_HEIGHT, height * 0.7)
-            bar_y = y - bar_height / 2
-            zero = self._gauge_x + GAUGE_WIDTH * OWED_SHARE
-            self.ax.add_patch(patches.Rectangle((self._gauge_x, bar_y), GAUGE_WIDTH * OWED_SHARE, bar_height,
-                                                facecolor=OWED_ZONE_COLOR, edgecolor='none', zorder=1))
-            self.ax.add_patch(patches.Rectangle((zero, bar_y), GAUGE_WIDTH * (1 - OWED_SHARE), bar_height,
-                                                facecolor=EMPTY_COLOR, edgecolor='none', zorder=1))
-            self._gauges[warehouse] = self.ax.add_patch(patches.Rectangle(
-                (zero, bar_y), 0, bar_height, edgecolor='none', zorder=2))
-            self.ax.plot([zero, zero], [bar_y - 0.02, bar_y + bar_height + 0.02], color=DETAIL_COLOR,
-                         linewidth=1.0, zorder=3)
-
-            if full:
-                self._stock_texts[warehouse] = self.ax.text(
-                    self._gauge_x + GAUGE_WIDTH / 2, y + 0.2, '', ha='center', va='center', fontsize=8.5)
-                self.ax.text(self._gauge_x + GAUGE_WIDTH / 2, y - 0.2,
-                             f'Truck carries {self._value("TRUCK-CAPACITY", warehouse):g} for '
-                             f'{self._value("TRUCK-COST", warehouse):g}, '
-                             f'storage {self._value("STORAGE-COST-WAREHOUSE", warehouse):g}',
-                             ha='center', va='center', fontsize=7.5, color=DETAIL_COLOR)
-            elif has_text:
-                self._stock_texts[warehouse] = self.ax.text(
-                    self._gauge_x + GAUGE_WIDTH / 2, y, '', ha='center', va='center', fontsize=7.5, zorder=4)
-
-            self._draw_demand(warehouse, y)
-
-    def _draw_demand(self, warehouse, y):
-        height = self._row_height
-        has_text = height >= MEDIUM_ROW
-        bar_height = min(DEMAND_BAR_HEIGHT, height * 0.4)
-        offset = max(bar_height / 2 + 0.02, 0.11) if has_text else bar_height / 2 + height * 0.03
-        bar_x = self._demand_x + DEMAND_LABEL_WIDTH
-        for (shift, label, color, store) in ((offset, 'Last', LAST_COLOR, self._last),
-                                             (-offset, 'Before', BEFORE_COLOR, self._before)):
-            bar_y = y + shift - bar_height / 2
-            self.ax.add_patch(patches.Rectangle((bar_x, bar_y), DEMAND_BAR_WIDTH, bar_height,
-                                                facecolor=EMPTY_COLOR, edgecolor='none', zorder=1))
-            bar = self.ax.add_patch(patches.Rectangle((bar_x, bar_y), 0, bar_height, facecolor=color,
-                                                      edgecolor='none', zorder=2))
-            value = None
-            if has_text:
-                self.ax.text(self._demand_x, y + shift, label, ha='left', va='center', fontsize=7.5,
-                             color=DETAIL_COLOR)
-                value = self.ax.text(bar_x + DEMAND_BAR_WIDTH + 0.06, y + shift, '', ha='left',
-                                     va='center', fontsize=8)
-            store[warehouse] = (bar, value)
-
-    def _set_gauge(self, warehouse, stock):
-        capacity = self._value('CAPACITY-WAREHOUSE', warehouse)
-        zero = self._gauge_x + GAUGE_WIDTH * OWED_SHARE
-        bar = self._gauges[warehouse]
-        if stock >= 0:
-            share = min(stock / capacity, 1) if capacity > 0 else 0
-            bar.set(x=zero, width=GAUGE_WIDTH * (1 - OWED_SHARE) * share, facecolor=STOCK_COLOR)
-        else:
-
-            # what is owed has no limit, so it fills its zone at one full capacity
-            share = min(-stock / capacity, 1) if capacity > 0 else 1
-            width = GAUGE_WIDTH * OWED_SHARE * share
-            bar.set(x=zero - width, width=width, facecolor=OWED_COLOR)
-
-    def _set_demand(self, cell, demand):
-        most = self._value('MAX-DEMAND')
-        (bar, value) = cell
-        bar.set_width(DEMAND_BAR_WIDTH * min(demand / most, 1) if most > 0 else 0)
-        if value is not None:
-            value.set_text(str(demand))
+    # ---------- the state
 
     def convert2img(self, fig):
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
@@ -263,40 +277,31 @@ class SupplyChainVisualizer(BaseViz):
     def render(self, state):
         fluent = RDDLPlanningModel.ground_var
 
-        stock = int(state['stock-factory'])
         capacity = self._value('CAPACITY-FACTORY')
-        self._factory_stock.set_text(f'Stock {stock} / {capacity:g}')
-        self._factory_bar.set_width(self._factory_width * min(max(stock, 0) / capacity, 1) if capacity > 0 else 0)
+        _fill(self._yard, min(max(int(state['stock-factory']), 0) / capacity, 1) if capacity > 0 else 0)
 
-        owed = {}
+        short = 0
+        most = self._value('MAX-DEMAND')
         for warehouse in self._warehouses:
             stock = int(state[fluent('stock-warehouse', [warehouse])])
-            self._set_gauge(warehouse, stock)
-            if stock < 0:
-                owed[warehouse] = -stock
+            capacity = self._value('CAPACITY-WAREHOUSE', warehouse)
 
-            if warehouse in self._stock_texts:
-                capacity = self._value('CAPACITY-WAREHOUSE', warehouse)
-                if stock < 0:
-                    self._stock_texts[warehouse].set(text=f'Short {-stock}', color=LOSING_COLOR,
-                                                     fontweight='bold')
-                else:
-                    self._stock_texts[warehouse].set(text=f'{stock} / {capacity:g}', color='black',
-                                                     fontweight='normal')
+            # what is owed has no limit, so the rack is full of it at one full warehouse owed
+            owed = max(-stock, 0)
+            _fill(self._racks[warehouse], min(max(stock, 0) / capacity, 1) if capacity > 0 else 0,
+                  min(owed / capacity, 1) if capacity > 0 else float(owed > 0))
+            short += owed > 0
 
-            self._set_demand(self._last[warehouse], int(state[fluent('demand-new', [warehouse])]))
-            self._set_demand(self._before[warehouse], int(state[fluent('demand-old', [warehouse])]))
+            (bars, full) = self._demand[warehouse]
+            for (bar, var) in zip(bars, ('demand-new', 'demand-old')):
+                demand = int(state[fluent(var, [warehouse])])
+                bar.set_width(full * min(demand / most, 1) if most > 0 else 0)
 
         total = len(self._warehouses)
-        title = f'Step {int(state["epoch"])}, '
-        if owed:
-            items = sum(owed.values())
-            title += (f'{len(owed)} / {total} warehouse{"" if total == 1 else "s"} '
-                      f'short by {items} item{"" if items == 1 else "s"}')
-        else:
-            title += 'no warehouse short'
+        title = (f'{short} / {total} warehouse{"" if total == 1 else "s"} short' if short
+                 else 'No warehouse short')
         self.ax.set_title(title, fontsize=13, fontweight='bold',
-                          color=LOSING_COLOR if owed else 'black')
+                          color=LOSING_COLOR if short else 'black')
 
         self.fig.canvas.draw()
         return self.convert2img(self.fig)

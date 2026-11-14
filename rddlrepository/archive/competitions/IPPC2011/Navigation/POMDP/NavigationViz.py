@@ -3,8 +3,7 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize, to_rgb
-from matplotlib.lines import Line2D
+from matplotlib.colors import Normalize
 import numpy as np
 from PIL import Image
 
@@ -12,6 +11,8 @@ from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
 ROBOT_COLOR = '#1565c0'
+TREAD_COLOR = '#37474f'
+LIGHT_COLOR = '#ffb300'
 GRID_COLOR = '#b0bec5'
 GOAL_COLOR = '#c8e6c9'
 GOAL_EDGE_COLOR = '#2e7d32'
@@ -20,9 +21,6 @@ FIELD_COLORMAP = 'YlOrRd'
 
 # wide grids use cells at least this large where they can, so that their names fit
 MIN_CELL_SIZE = 0.45
-
-# text smaller than this is not readable, so it is left out
-MIN_FONT_SIZE = 5
 
 
 class NavigationVisualizer(BaseViz):
@@ -58,9 +56,9 @@ class NavigationVisualizer(BaseViz):
         cell_size = max(cell_size, min(MIN_CELL_SIZE, max_size[0] / num_x, max_size[1] / num_y))
         self._star_size = 0.45 * cell_size * 72
 
-        # title above, then the grid, its coordinates, the color scale and the legend
+        # title above, then the grid, its coordinates and the color scale
         grid_width, grid_height = num_x * cell_size, num_y * cell_size
-        bottom = 1.2
+        bottom = 0.9
         width = max(grid_width + 0.8, min_width)
         height = bottom + grid_height + 0.45
         self._figure_size = (width, height)
@@ -82,7 +80,6 @@ class NavigationVisualizer(BaseViz):
         # the chances and goal never change, so they are only drawn once
         norm = Normalize(vmin=0.0, vmax=1.0)
         colormap = plt.get_cmap(FIELD_COLORMAP)
-        self._labels = {}
         for (col, row, x, y) in self._cells:
             chance = self._nonfluent('P', x, y)
             goal = (col, row) in self._goals
@@ -92,30 +89,14 @@ class NavigationVisualizer(BaseViz):
                 edgecolor=GOAL_EDGE_COLOR if goal else GRID_COLOR,
                 linewidth=2 if goal else 1, zorder=2 if goal else 1))
 
-            # the star is in the center of the goal, so its chance goes below that
-            size = min(9, 72 * cell_size / (0.62 * 4))
-            if chance > 0 and size >= MIN_FONT_SIZE:
-                dark = sum(np.multiply(to_rgb(color), (0.299, 0.587, 0.114))) < 0.5
-                self._labels[(col, row)] = self.ax.text(
-                    col + 0.5, row + (0.14 if goal else 0.5), f'{chance:.2f}', ha='center',
-                    va='center', fontsize=size, zorder=3,
-                    color='white' if dark and not goal else 'black')
-
         bar_width = min(3.6, grid_width)
         bar_axis = self.fig.add_axes(
-            [(width - bar_width) / (2 * width), 0.72 / height, bar_width / width, 0.12 / height])
+            [(width - bar_width) / (2 * width), 0.42 / height, bar_width / width, 0.12 / height])
         bar = self.fig.colorbar(ScalarMappable(norm=norm, cmap=colormap), cax=bar_axis,
                                 orientation='horizontal')
         bar.set_label('chance of disappearing', fontsize=9, labelpad=1)
         bar.ax.tick_params(labelsize=8, colors='#616161')
         bar.outline.set_edgecolor(GRID_COLOR)
-
-        self.fig.legend(handles=[
-            patches.Patch(facecolor=GOAL_COLOR, edgecolor=GOAL_EDGE_COLOR, label='Goal'),
-            Line2D([], [], marker='o', color='none', markerfacecolor=ROBOT_COLOR,
-                   markeredgecolor='white', markersize=9, label='Robot')
-        ], loc='lower center', ncol=2, frameon=False, fontsize=8.5, columnspacing=1.0,
-           handlelength=1.4)
 
     def _nonfluent(self, var, *args):
         return self._nonfluents[RDDLPlanningModel.ground_var(var, list(args))]
@@ -146,12 +127,22 @@ class NavigationVisualizer(BaseViz):
         set_ticks(positions + 0.5, [names[i] for i in positions])
 
     def _draw_robot(self, col, row):
-        return [
-            self.ax.add_patch(patches.Wedge(
-                (col + 0.5, row + 0.14), 0.3, 0, 180, facecolor=ROBOT_COLOR, zorder=6)),
-            self.ax.add_patch(patches.Circle(
-                (col + 0.5, row + 0.62), 0.17, facecolor=ROBOT_COLOR, zorder=6))
-        ]
+
+        # a robot on treads, with a body, a head with two eyes and an antenna
+        def box(left, bottom, right, top, radius, color):
+            return patches.FancyBboxPatch(
+                (col + left, row + bottom), right - left, top - bottom,
+                boxstyle=f'round,pad=0,rounding_size={radius}', facecolor=color,
+                edgecolor='none', zorder=6)
+
+        parts = [box(0.22, 0.08, 0.78, 0.2, 0.06, TREAD_COLOR),
+                 box(0.27, 0.22, 0.73, 0.5, 0.05, ROBOT_COLOR),
+                 box(0.31, 0.53, 0.69, 0.8, 0.06, ROBOT_COLOR),
+                 box(0.485, 0.8, 0.515, 0.87, 0.0, TREAD_COLOR),
+                 patches.Circle((col + 0.5, row + 0.88), 0.04, facecolor=LIGHT_COLOR, zorder=6)]
+        parts.extend(patches.Circle((col + x, row + 0.67), 0.05, facecolor='white', zorder=7)
+                     for x in (0.41, 0.59))
+        return [self.ax.add_patch(part) for part in parts]
 
     def _title(self, state, robots):
         if any(robot in self._goals for robot in robots):
@@ -181,9 +172,7 @@ class NavigationVisualizer(BaseViz):
                 robots.append((col, row))
                 artists.extend(self._draw_robot(col, row))
 
-        # the robot stands in front of the chance of its cell and any star
-        for (cell, label) in self._labels.items():
-            label.set_visible(cell not in robots)
+        # the robot stands in front of any star
         for (col, row) in self._goals:
             if (col, row) not in robots:
                 artists.extend(self.ax.plot(

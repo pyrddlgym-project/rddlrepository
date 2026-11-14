@@ -2,7 +2,6 @@ import math
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from matplotlib.lines import Line2D
 from matplotlib.path import Path
 import numpy as np
 from PIL import Image
@@ -10,12 +9,22 @@ from PIL import Image
 from pyRDDLGym.core.compiler.model import RDDLPlanningModel
 from pyRDDLGym.core.visualizer.viz import BaseViz
 
-# the face and edge of a spring with each population
-POPULATION_COLORS = {
-    'red-finned-blue-eye': ('#bbdefb', '#1565c0'),
-    'gambusia': ('#ffcdd2', '#c62828'),
-    'none': ('#ffffff', '#90a4ae')
+# the water of a spring with each population, which is murky with Gambusia
+WATER_COLORS = {
+    'red-finned-blue-eye': '#b3e5fc',
+    'gambusia': '#d4dcae',
+    'none': '#e3f4fc'
 }
+BANK_COLOR = '#c5e1a5'
+BANK_EDGE_COLOR = '#8bc34a'
+RIPPLE_COLOR = '#81d4fa'
+BLUE_EYE_COLOR = '#cfe3f5'
+BLUE_EYE_EDGE_COLOR = '#5c7f9e'
+FIN_COLOR = '#e53935'
+EYE_COLOR = '#1e88e5'
+GAMBUSIA_COLOR = '#a19f63'
+GAMBUSIA_EDGE_COLOR = '#5d5b36'
+GAMBUSIA_FIN_COLOR = '#7f7d4f'
 SPREAD_COLOR = '#c62828'
 QUIET_COLOR = '#b0bec5'
 GOOD_COLOR = '#2e7d32'
@@ -53,10 +62,11 @@ TOP_MARGIN = 0.45
 
 
 class RedFinnedBlueEyeVisualizer(BaseViz):
-    '''Draws the springs coloured by their population, as trees that branch out from the
-    middle of each group of connected springs. Each line shows the chance that the water
-    connects two springs in the next step, and is red when Gambusia could spread along it.
-    Springs show the chance that Gambusia arrive or that they die out in the next step.
+    '''Draws the springs as ponds with the fish that live in them, as trees that branch out
+    from the middle of each group of connected springs: slim red-finned blue-eyes, stout
+    olive Gambusia in murky water, or only ripples in an empty spring. Each line shows the
+    chance that the water connects two springs in the next step, and is red when Gambusia
+    could spread along it.
 
     The high-water mark is not part of the state, so only its chances show. The drawing only
     depends on the current state.
@@ -85,7 +95,7 @@ class RedFinnedBlueEyeVisualizer(BaseViz):
         (places, graph_width, graph_height, scale) = self._layout(max_size, max_scale)
         self._has_lines = DETAIL_FONT_SIZE * min(scale, 1) >= MIN_FONT_SIZE
 
-        self._boxes, self._details, self._lines = {}, {}, {}
+        self._ponds, self._lines = {}, {}
         if self._has_lines:
             self._places = places
             self._draw_graph(graph_width, graph_height, scale, min_size)
@@ -93,27 +103,12 @@ class RedFinnedBlueEyeVisualizer(BaseViz):
             self._draw_list(max_size, min_size)
         height = self._figure_size[1]
 
-        (blue_face, blue_edge) = POPULATION_COLORS['red-finned-blue-eye']
-        (bad_face, bad_edge) = POPULATION_COLORS['gambusia']
-        (none_face, none_edge) = POPULATION_COLORS['none']
-        reward = self._nonfluent('REWARD_RED_FINNED_BLUE_EYE_POPULATION')
-        handles = [
-            patches.Patch(facecolor=blue_face, edgecolor=blue_edge, label=f'Blue-eyes, +{reward:g} per step'),
-            patches.Patch(facecolor=bad_face, edgecolor=bad_edge, label='Gambusia'),
-            patches.Patch(facecolor=none_face, edgecolor=none_edge, label='Empty')
-        ]
-        if self._has_lines:
-            handles += [
-                Line2D([], [], color=SPREAD_COLOR, linewidth=1.6, label='Gambusia could spread'),
-                Line2D([], [], color=QUIET_COLOR, linewidth=1.6, label='No threat')
-            ]
-        self.fig.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, 0.25 / height),
-                        ncol=len(handles), frameon=False, fontsize=8.5, columnspacing=1.0,
-                        handlelength=1.4)
+        self._draw_legend()
 
         points = self._nonfluent('ACTION_POINTS')
+        lines = 'Percentages are chances that springs connect. ' if self._has_lines else ''
         self.fig.text(0.5, 0.1 / height,
-                      f'Percentages are chances for the next step. Each step has {points:g} '
+                      f'{lines}Each step has {points:g} '
                       f'point{"" if points == 1 else "s"}: poison 1 '
                       f'({self._nonfluent("POISON_SUCCESS_PROB"):.0%}, '
                       f'penalty {self._nonfluent("PENALTY_POISON_USAGE"):g}), by hand 2 '
@@ -301,24 +296,113 @@ class RedFinnedBlueEyeVisualizer(BaseViz):
                     limit += NODE_WIDTH if not stacked else NODE_HEIGHT
         return best
 
-    def _add_spring(self, spring, x, y, width, height, scale, has_detail):
-        self._boxes[spring] = self.ax.add_patch(patches.FancyBboxPatch(
-            (x - width / 2, y - height / 2), width, height,
-            boxstyle=f'round,pad=0,rounding_size={height / 6:g}', linewidth=1.4, zorder=2))
+    @staticmethod
+    def _fish(ax, x, y, length, kind, facing, up):
+
+        # a fish seen from the side, facing right or left, where up is the sign of up on
+        # the screen: blue-eyes are slim, with red fins and a blue eye, and Gambusia are
+        # stout and olive, with a round tail
+        L, d = length, facing
+
+        def at(dx, dy):
+            return (x + d * dx * L, y + up * dy * L)
+
+        if kind == 'red-finned-blue-eye':
+            fins = [[at(-0.33, 0), at(-0.55, 0.17), at(-0.46, 0), at(-0.55, -0.17)],
+                    [at(-0.04, 0.1), at(-0.22, 0.26), at(-0.24, 0.08)],
+                    [at(-0.04, -0.1), at(-0.2, -0.22), at(-0.22, -0.08)]]
+            artists = [ax.add_patch(patches.Polygon(points, closed=True, facecolor=FIN_COLOR,
+                                                    edgecolor='none', zorder=4))
+                       for points in fins]
+            artists += [
+                ax.add_patch(patches.Ellipse((x, y), 0.76 * L, 0.26 * L, facecolor=BLUE_EYE_COLOR,
+                                             edgecolor=BLUE_EYE_EDGE_COLOR, linewidth=0.6, zorder=4.1)),
+                ax.add_patch(patches.Circle(at(0.24, 0.02), 0.055 * L, facecolor=EYE_COLOR,
+                                            edgecolor='white', linewidth=0.4, zorder=4.2))]
+        else:
+            angles = (140, 220) if d > 0 else (-40, 40)
+            artists = [
+                ax.add_patch(patches.Wedge(at(-0.3, 0), 0.24 * L, *angles,
+                                           facecolor=GAMBUSIA_FIN_COLOR, edgecolor='none', zorder=4)),
+                ax.add_patch(patches.Polygon([at(-0.08, 0.13), at(-0.2, 0.24), at(-0.24, 0.1)],
+                                             closed=True, facecolor=GAMBUSIA_FIN_COLOR,
+                                             edgecolor='none', zorder=4)),
+                ax.add_patch(patches.Ellipse((x, y), 0.68 * L, 0.36 * L, facecolor=GAMBUSIA_COLOR,
+                                             edgecolor=GAMBUSIA_EDGE_COLOR, linewidth=0.6, zorder=4.1)),
+                ax.add_patch(patches.Circle(at(0.2, 0.04), 0.045 * L, facecolor='black',
+                                            edgecolor='none', zorder=4.2))]
+        return artists
+
+    @classmethod
+    def _pond(cls, ax, x, y, width, height, up):
+
+        # a pond on its bank, with two fish of each kind and ripples, all hidden: the
+        # pictures sit below the middle so that a name fits above them
+        bank = ax.add_patch(patches.Ellipse((x, y), width, height, facecolor=BANK_COLOR,
+                                            edgecolor=BANK_EDGE_COLOR, linewidth=1, zorder=2))
+        water = ax.add_patch(patches.Ellipse((x, y), 0.88 * width, 0.78 * height,
+                                             facecolor=WATER_COLORS['none'], edgecolor='none',
+                                             zorder=2.1))
+        length = min(0.36 * width, 0.9 * height)
+        low = y - up * 0.12 * height
+        pictures = {kind: cls._fish(ax, x - 0.16 * width, low + up * 0.04 * height, length, kind, 1, up)
+                    + cls._fish(ax, x + 0.17 * width, low - up * 0.08 * height, length, kind, -1, up)
+                    for kind in ('red-finned-blue-eye', 'gambusia')}
+        pictures['none'] = [ax.add_patch(patches.Ellipse(
+            (x, low), size * width, size * 0.45 * height, facecolor='none',
+            edgecolor=RIPPLE_COLOR, linewidth=0.8, zorder=2.5)) for size in (0.18, 0.36)]
+        for artists in pictures.values():
+            for artist in artists:
+                artist.set_visible(False)
+        return bank, water, pictures
+
+    @staticmethod
+    def _show_pond(pond, kind):
+        (_, water, pictures) = pond
+        water.set_facecolor(WATER_COLORS[kind])
+        for (other, artists) in pictures.items():
+            for artist in artists:
+                artist.set_visible(other == kind)
+
+    def _add_spring(self, spring, x, y, width, height, scale):
+
+        # the first row goes on top, so that up is a smaller y here
+        self._ponds[spring] = self._pond(self.ax, x, y, width, height, -1)
         fonts = min(scale, 1)
-        room = 0.9 * width * scale * 72 / CHAR_WIDTH
+        room = 0.6 * width * scale * 72 / CHAR_WIDTH
         if room / MIN_FONT_SIZE < 2:
             return
         name_size = max(min(NAME_FONT_SIZE * fonts, room / len(spring)), MIN_FONT_SIZE)
+        if name_size * LINE_HEIGHT / 72 <= 0.45 * height * scale:
+            self.ax.text(x, y - 0.2 * height, self._shorten(spring, int(room / MIN_FONT_SIZE)),
+                         ha='center', va='center', fontsize=name_size, fontweight='bold',
+                         color='#37474f', zorder=3)
 
-        # the first row goes on top, so that going up means a smaller y here
-        self.ax.text(x, y - (0.2 * height if has_detail else 0),
-                     self._shorten(spring, int(room / MIN_FONT_SIZE)), ha='center', va='center',
-                     fontsize=name_size, fontweight='bold', zorder=3)
-        if has_detail:
-            self._details[spring] = self.ax.text(
-                x, y + 0.24 * height, '', ha='center', va='center', color=DETAIL_COLOR, zorder=3,
-                fontsize=max(DETAIL_FONT_SIZE * fonts, MIN_FONT_SIZE))
+    def _draw_legend(self):
+
+        # the legend shows the same ponds and lines as the springs, in a row of pictures
+        (width, height) = self._figure_size
+        reward = self._nonfluent('REWARD_RED_FINNED_BLUE_EYE_POPULATION')
+        entries = [('red-finned-blue-eye', f'Blue-eyes, +{reward:g} per step'),
+                   ('gambusia', 'Gambusia'), ('none', 'Empty')]
+        if self._has_lines:
+            entries += [('spread', 'Gambusia could spread'), ('quiet', 'No threat')]
+        widths = [0.6 + 0.066 * len(label) + 0.3 for (_, label) in entries]
+        shrink = min(1.0, (width - 0.2) / sum(widths))
+        ax = self.fig.add_axes([0, 0.24 / height, 1, 0.34 / height])
+        ax.set_xlim(0, width)
+        ax.set_ylim(0, 0.34)
+        ax.set_aspect('equal')
+        ax.axis('off')
+        x = (width - shrink * sum(widths)) / 2
+        for ((kind, label), entry_width) in zip(entries, widths):
+            if kind in WATER_COLORS:
+                self._show_pond(self._pond(ax, x + 0.26, 0.15, 0.52, 0.3, 1), kind)
+            else:
+                ax.plot([x + 0.04, x + 0.48], [0.17, 0.17], linewidth=1.6,
+                        color=SPREAD_COLOR if kind == 'spread' else QUIET_COLOR)
+            ax.text(x + 0.58, 0.17, label, ha='left', va='center', fontsize=8.5, color=DETAIL_COLOR)
+            x += shrink * entry_width
 
     def _open_figure(self, width, height):
 
@@ -342,7 +426,7 @@ class RedFinnedBlueEyeVisualizer(BaseViz):
 
         for spring in self._springs:
             (x, y) = self._places[spring]
-            self._add_spring(spring, x, y, NODE_WIDTH, NODE_HEIGHT, scale, True)
+            self._add_spring(spring, x, y, NODE_WIDTH, NODE_HEIGHT, scale)
 
         # arcs have only one place for a label, so they go first
         self._labels = []
@@ -415,19 +499,10 @@ class RedFinnedBlueEyeVisualizer(BaseViz):
         room = height - BOTTOM_MARGIN - TOP_MARGIN
         self.ax.set_ylim(rows * cell_y / 2 + room / 2, rows * cell_y / 2 - room / 2)
 
-        has_detail = cell_y * 72 / LINE_HEIGHT >= 2 * MIN_FONT_SIZE
         ordered = [spring for group in self._groups() for spring in group]
         for (i, spring) in enumerate(ordered):
             self._add_spring(spring, (i % columns + 0.5) * cell_x, (i // columns + 0.5) * cell_y,
-                             0.9 * cell_x, 0.9 * cell_y, 1, has_detail)
-
-    def _invasion_chance(self, spring, gambusia):
-
-        # as in the domain, any connection to Gambusia at the high-water level of the next
-        # step brings them, regardless of the chance to colonize that the instance gives
-        return sum(self._nonfluent('HIGH_WATER_PROB', level) for level in self._levels
-                   if any(self._connected(spring, other, level)
-                          for other in gambusia if other != spring))
+                             0.9 * cell_x, 0.9 * cell_y, 1)
 
     def convert2img(self, fig):
         data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
@@ -442,21 +517,7 @@ class RedFinnedBlueEyeVisualizer(BaseViz):
         natives = sum(kind == 'red-finned-blue-eye' for kind in population.values())
 
         for spring in self._springs:
-            (face, edge) = POPULATION_COLORS[population[spring]]
-            self._boxes[spring].set(facecolor=face, edgecolor=edge)
-            if spring not in self._details:
-                continue
-
-            # Gambusia and empty springs may die out first, and then nothing else happens
-            dies = self._nonfluent('NATURAL_MORTALITY_PROB', spring)
-            if population[spring] == 'gambusia':
-                text = f'Dies {dies:.0%}'
-            else:
-                chance = self._invasion_chance(spring, gambusia)
-                if population[spring] == 'none':
-                    chance *= 1 - dies
-                text = f'Risk {chance:.0%}'
-            self._details[spring].set_text(text)
+            self._show_pond(self._ponds[spring], population[spring])
 
         # lines that Gambusia could spread along stay on top of the others
         for ((a, b), (line, text)) in self._lines.items():

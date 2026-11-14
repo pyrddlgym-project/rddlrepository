@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PIL import Image
 
@@ -14,6 +15,23 @@ CURVE_COLOR = '#37474f'
 CAPACITY_COLOR = '#c62828'
 MET_COLOR = '#2e7d32'
 SHORT_COLOR = '#c62828'
+BUILDING_COLOR = '#b0bec5'
+BUILDING_EDGE_COLOR = '#455a64'
+WINDOW_DARK_COLOR = '#546e7a'
+WINDOW_LIT_COLOR = '#ffd54f'
+GENERATOR_ON_COLOR = '#ffb300'
+GENERATOR_OFF_COLOR = '#cfd8dc'
+TUBE_COLOR = '#fafafa'
+MERCURY_COLOR = '#e53935'
+
+# a power station is at most this tall, in inches, with this many rows and columns of
+# windows, which light up with the share of its capacity that it produces
+STATION_HEIGHT = 0.85
+WINDOW_ROWS, WINDOW_COLUMNS = 2, 3
+
+# the thermometer stands this far to the right of the curve, in inches, this wide, with
+# room for its numbers to its right
+THERMOMETER_GAP, THERMOMETER_WIDTH, THERMOMETER_LABELS = 0.3, 0.3, 0.35
 
 # text smaller than this is not readable, so it is left out
 MIN_FONT_SIZE = 5
@@ -21,7 +39,9 @@ MIN_FONT_SIZE = 5
 
 class PowerGenVisualizer(BaseViz):
     '''Draws the production of each plant from the previous step within its limits,
-    next to the demand at the current temperature. A plant that was off shows as off,
+    above its power station, whose windows light up with the share of its capacity that it
+    produces and whose generator is amber while it runs, next to the demand at the current
+    temperature and a thermometer. A plant that was off shows as off,
     as it produces nothing and pays to turn on again.
 
     The state holds the production of the previous step and the temperature of the
@@ -56,21 +76,38 @@ class PowerGenVisualizer(BaseViz):
 
         # the left margin of each panel holds its axis, and the bottom the labels
         left, gap, right, bottom, top = 0.65, 0.75, 0.2, 1.15, 0.85
+        thermometer = THERMOMETER_GAP + THERMOMETER_WIDTH + THERMOMETER_LABELS
         plants_width = max(column_width * len(self._plants), min_plants_width)
-        plants_width = min(plants_width, max_width - curve_width - left - gap - right)
-        fig_width = left + plants_width + gap + curve_width + right
-        fig_height = bottom + plot_height + top
+        plants_width = min(plants_width,
+                           max_width - curve_width - left - gap - right - thermometer)
+        fig_width = left + plants_width + gap + curve_width + thermometer + right
         self._column_inches = plants_width / len(self._plants)
+
+        # each plant has a power station under its production, at most as tall as it is
+        # wide, so that one unit is as long across as up
+        station = min(STATION_HEIGHT, self._column_inches)
+        fig_height = bottom + station + plot_height + top
+        plot_bottom = (bottom + station) / fig_height
 
         self.fig = plt.figure(figsize=(fig_width, fig_height))
         self._plant_ax = self.fig.add_axes(
-            [left / fig_width, bottom / fig_height,
-             plants_width / fig_width, plot_height / fig_height])
+            [left / fig_width, plot_bottom, plants_width / fig_width, plot_height / fig_height])
+        self._station_ax = self.fig.add_axes(
+            [left / fig_width, bottom / fig_height, plants_width / fig_width,
+             station / fig_height])
+        self._station_ax.set_xlim(0, len(self._plants))
+        self._station_ax.set_ylim(0, station / self._column_inches)
+        self._station_ax.axis('off')
+        self._stations = {}
         self._curve_ax = self.fig.add_axes(
-            [(left + plants_width + gap) / fig_width, bottom / fig_height,
+            [(left + plants_width + gap) / fig_width, plot_bottom,
              curve_width / fig_width, plot_height / fig_height])
+        self._thermometer_ax = self.fig.add_axes(
+            [(left + plants_width + gap + curve_width + THERMOMETER_GAP) / fig_width,
+             plot_bottom, THERMOMETER_WIDTH / fig_width, plot_height / fig_height])
         self._setup_plants()
         self._setup_curve()
+        self._setup_thermometer()
 
     def _get_values(self, nonfluents, var):
         return {p: nonfluents[RDDLPlanningModel.ground_var(var, [p])] for p in self._plants}
@@ -102,15 +139,16 @@ class PowerGenVisualizer(BaseViz):
             if self._min[p] > 0:
                 ax.plot([i + 0.12, i + 0.88], [self._min[p]] * 2, color=LIMIT_COLOR,
                         linestyle='--', linewidth=1, zorder=4)
+            self._draw_station(i, p)
             size = self._font_size([p], 10)
             if size is not None:
-                ax.annotate(p, (i + 0.5, 0), xytext=(0, -6), textcoords='offset points',
+                self._station_ax.annotate(p, (i + 0.5, 0), xytext=(0, -6), textcoords='offset points',
                             ha='center', va='top', fontsize=size, annotation_clip=False)
             lines = [f'cost {self._cost[p]:g}', f'change {self._penalty[p]:g}',
                      f'turn on {self._turn_on[p]:g}']
             size = self._font_size(lines, 8)
             if size is not None:
-                ax.annotate('\n'.join(lines), (i + 0.5, 0), xytext=(0, -22),
+                self._station_ax.annotate('\n'.join(lines), (i + 0.5, 0), xytext=(0, -22),
                             textcoords='offset points', ha='center', va='top', fontsize=size,
                             color='#616161', annotation_clip=False)
 
@@ -135,9 +173,90 @@ class PowerGenVisualizer(BaseViz):
             Line2D([], [], marker='o', color='none', markerfacecolor=MET_COLOR,
                    markeredgecolor='none', label='Would be met'),
             Line2D([], [], marker='o', color='none', markerfacecolor=SHORT_COLOR,
-                   markeredgecolor='none', label='Would fall short')
-        ], loc='lower center', ncol=5, frameon=False, fontsize=8.5, columnspacing=1.0,
+                   markeredgecolor='none', label='Would fall short'),
+            patches.Patch(facecolor=WINDOW_LIT_COLOR, edgecolor=BUILDING_EDGE_COLOR,
+                          label='Output'),
+            Line2D([], [], marker='o', color='none', markerfacecolor=GENERATOR_ON_COLOR,
+                   markeredgecolor=BUILDING_EDGE_COLOR, label='Running')
+        ], loc='lower center', ncol=7, frameon=False, fontsize=8.5, columnspacing=1.0,
            handlelength=1.4)
+
+    def _draw_station(self, i, plant):
+
+        # a building with a sawtooth roof and a chimney, with its windows, and its
+        # generator beside it, wired up to the production above
+        ax = self._station_ax
+        (x, width, height, roof) = (i + 0.1, 0.52, 0.4, 0.1)
+        ax.add_patch(patches.Rectangle(
+            (x + 0.36, height), 0.08, 0.3, facecolor=BUILDING_COLOR,
+            edgecolor=BUILDING_EDGE_COLOR, linewidth=0.8, zorder=1))
+        outline = [(x, 0), (x, height)]
+        for k in range(3):
+            outline += [(x + k * width / 3, height + roof), (x + (k + 1) * width / 3, height)]
+        outline.append((x + width, 0))
+        ax.add_patch(patches.Polygon(
+            outline, facecolor=BUILDING_COLOR, edgecolor=BUILDING_EDGE_COLOR, linewidth=0.8,
+            zorder=2))
+        windows = []
+        size = 0.08
+        for row in range(WINDOW_ROWS):
+            for column in range(WINDOW_COLUMNS):
+                windows.append(ax.add_patch(patches.Rectangle(
+                    (x + width * (column + 0.5) / WINDOW_COLUMNS - size / 2, 0.08 + 0.15 * row),
+                    size, size, facecolor=WINDOW_DARK_COLOR, edgecolor='none', zorder=3)))
+        (gx, gy, radius) = (i + 0.8, 0.16, 0.12)
+        ax.plot([gx, gx], [gy + radius, ax.get_ylim()[1]], color=BUILDING_EDGE_COLOR,
+                linewidth=1, zorder=1)
+        generator = ax.add_patch(patches.Circle(
+            (gx, gy), radius, facecolor=GENERATOR_OFF_COLOR, edgecolor=BUILDING_EDGE_COLOR,
+            linewidth=1, zorder=2))
+        t = np.linspace(-1, 1, 30)
+        ax.plot(gx + 0.6 * radius * t, gy + 0.3 * radius * np.sin(np.pi * t),
+                color=BUILDING_EDGE_COLOR, linewidth=1, zorder=3)
+        self._stations[plant] = (windows, generator)
+
+    def _update_stations(self, production, on):
+
+        # any production lights at least one window, and full capacity all of them
+        for p in self._plants:
+            (windows, generator) = self._stations[p]
+            share = production[p] / self._max[p] if self._max[p] > 0 else 0.0
+            lit = int(np.ceil(min(max(share, 0.0), 1.0) * len(windows)))
+            for (k, window) in enumerate(windows):
+                window.set_facecolor(WINDOW_LIT_COLOR if k < lit else WINDOW_DARK_COLOR)
+            generator.set_facecolor(GENERATOR_ON_COLOR if on[p] else GENERATOR_OFF_COLOR)
+
+    def _setup_thermometer(self):
+        ax = self._thermometer_ax
+        ax.set_xlim(-1, 1)
+        ax.set_xticks([])
+        ax.yaxis.tick_right()
+        ax.tick_params(labelsize=8, colors='#616161')
+        ax.set_title('\u00b0C', fontsize=10)
+        for side in ('top', 'bottom', 'left', 'right'):
+            ax.spines[side].set_visible(False)
+        self._tube = [ax.plot([0, 0], [0, 1], color=color, linewidth=width,
+                              solid_capstyle='round', zorder=zorder)[0]
+                      for (color, width, zorder) in ((BUILDING_EDGE_COLOR, 12, 1),
+                                                     (TUBE_COLOR, 9, 2))]
+        self._bulb = ax.plot([0], [0], marker='o', markersize=18, color=MERCURY_COLOR,
+                             markeredgecolor=BUILDING_EDGE_COLOR, markeredgewidth=1.5,
+                             zorder=3)[0]
+        self._mercury = ax.plot([0, 0], [0, 0], color=MERCURY_COLOR, linewidth=5,
+                                solid_capstyle='butt', zorder=4)[0]
+
+    def _draw_thermometer(self, low, high, temperature):
+
+        # the tube spans the same temperatures as the curve, above its bulb
+        span = high - low
+        bulb = low - 0.1 * span
+        ax = self._thermometer_ax
+        ax.set_ylim(bulb - 0.05 * span, high + 0.02 * span)
+        ax.set_yticks([t for t in MaxNLocator(5).tick_values(low, high) if low <= t <= high])
+        for line in self._tube:
+            line.set_ydata([bulb, high])
+        self._bulb.set_ydata([bulb])
+        self._mercury.set_ydata([bulb, min(max(temperature, low), high)])
 
     def _demand(self, temperature):
 
@@ -180,6 +299,7 @@ class PowerGenVisualizer(BaseViz):
         ys = self._demand(xs)
         self._curve_line.set_data(xs, ys)
         self._production_line.set_ydata([total, total])
+        self._draw_thermometer(xs[0], xs[-1], temperature)
 
         ax.set_xlim(low, high)
         top = max(self._capacity, float(np.max(ys)), total) or 1.0
@@ -206,6 +326,7 @@ class PowerGenVisualizer(BaseViz):
         demand = float(self._demand(temperature))
         total = sum(production.values())
 
+        self._update_stations(production, on)
         artists = self._draw_plants(production, on)
         artists.extend(self._draw_curve(temperature, demand, total))
 

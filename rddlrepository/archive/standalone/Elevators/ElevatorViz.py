@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
+from matplotlib.path import Path
 import numpy as np
 from PIL import Image
 
@@ -9,10 +10,18 @@ from pyRDDLGym.core.visualizer.viz import BaseViz
 
 FLOOR_COLORS = ('#fafafa', '#eceff1')
 EXIT_COLOR = '#c8e6c9'
-SHAFT_COLOR = '#cfd8dc'
-CLOSED_COLOR = '#1565c0'
-OPEN_COLOR = '#bbdefb'
+SLAB_COLOR = '#90a4ae'
+SHAFT_COLOR = '#dde3e6'
+RAIL_COLOR = '#b0bec5'
+CABLE_COLOR = '#37474f'
+FRAME_COLOR = '#455a64'
+DOOR_COLOR = '#b0bec5'
+DOOR_EDGE_COLOR = '#78909c'
+CAB_COLOR = '#fff3c4'
+PANEL_COLOR = '#212121'
+LED_COLOR = '#ffca28'
 DELIVER_COLOR = '#2e7d32'
+RIDER_COLOR = '#1565c0'
 WAITING_COLOR = '#ff8f00'
 EMPTY_COLOR = '#90a4ae'
 TEXT_COLOR = 'black'
@@ -22,15 +31,34 @@ NAME_WIDTH = 1.1
 WAITING_WIDTH = 2.6
 HEADER_HEIGHT = 0.4
 
+# the car within its cell, and the indicator panel and doors within the car, as fractions;
+# the car is never wider than CAR_ASPECT times its height
+CAR_Y, CAR_WIDTH, CAR_HEIGHT, CAR_ASPECT = 0.06, 0.6, 0.88, 0.75
+FRAME = 0.08
+PANEL = 0.3
+
 # text smaller than this is not readable, so it is left out
 MIN_FONT_SIZE = 5
 
 
+def _person_marker():
+    '''A head above rounded shoulders, as one path, so that a single call to plot draws
+    a whole row of people.'''
+    t = np.linspace(0, np.pi, 13)
+    body = np.column_stack([np.r_[0.34 * np.cos(t), -0.34, 0.34, 0.34],
+                            np.r_[0.34 * np.sin(t) - 0.16, -0.75, -0.75, 0]])
+    return Path.make_compound_path(Path.circle((0, 0.5), 0.24), Path(body, closed=True))
+
+
+PERSON = _person_marker()
+
+
 class ElevatorVisualizer(BaseViz):
     '''Draws the building with its floors in the order given by ADJACENT-UP, each
-    elevator with its door, direction and passengers, and the people waiting on each
-    floor. An elevator is green while its passengers get off at the bottom floor. The
-    drawing only depends on the current state.
+    elevator car on its cable with an indicator of its direction and passengers above
+    its doors, and the people waiting on each floor. An open car shows its passengers
+    inside, and its frame is green while they get off at the bottom floor. The drawing
+    only depends on the current state.
     '''
 
     def __init__(self, model: RDDLPlanningModel,
@@ -62,6 +90,7 @@ class ElevatorVisualizer(BaseViz):
         fig_height = num_rows * row_height + top + bottom
         self._column_width = column_width
         self._row_height = row_height
+        self._car_width = min(CAR_WIDTH, CAR_ASPECT * CAR_HEIGHT * row_height / column_width)
 
         self.fig = plt.figure(figsize=(fig_width, fig_height))
         self.ax = self.fig.add_axes(
@@ -73,13 +102,15 @@ class ElevatorVisualizer(BaseViz):
 
         self._draw_building(num_columns)
 
+        person = dict(marker=PERSON, color='none', markeredgecolor='none', markersize=11)
         self.fig.legend(handles=[
-            patches.Patch(facecolor=CLOSED_COLOR, label='Door closed'),
-            patches.Patch(facecolor=OPEN_COLOR, edgecolor=CLOSED_COLOR, label='Door open'),
-            patches.Patch(facecolor=DELIVER_COLOR, label='Delivering'),
-            Line2D([], [], marker='o', color='none', markerfacecolor=WAITING_COLOR,
-                   markeredgecolor='none', label='Waiting')
-        ], loc='lower center', ncol=4, frameon=False, fontsize=8.5, columnspacing=1.0,
+            patches.Patch(facecolor=DOOR_COLOR, edgecolor=FRAME_COLOR, label='Door closed'),
+            patches.Patch(facecolor=CAB_COLOR, edgecolor=FRAME_COLOR, label='Door open'),
+            patches.Patch(facecolor='none', edgecolor=DELIVER_COLOR, linewidth=2,
+                          label='Delivering'),
+            Line2D([], [], markerfacecolor=RIDER_COLOR, label='Riding', **person),
+            Line2D([], [], markerfacecolor=WAITING_COLOR, label='Waiting', **person)
+        ], loc='lower center', ncol=5, frameon=False, fontsize=8.5, columnspacing=1.0,
            handlelength=1.4)
 
     def _get_floor_order(self, floors):
@@ -102,98 +133,135 @@ class ElevatorVisualizer(BaseViz):
             order = order + [above[order[-1]]]
         return order if len(order) == len(floors) else floors
 
-    def _font_size(self, text, width, font_size):
+    def _font_size(self, text, width, font_size, height=0.5):
 
-        # text shrinks to fit the given number of columns and the height of a row, and
-        # is left out if unreadable
-        size = min(font_size, 72 * 0.5 * self._row_height,
+        # text shrinks to fit the given number of columns and rows, and is left out if
+        # unreadable
+        size = min(font_size, 72 * height * self._row_height,
                    72 * width * self._column_width / (0.62 * len(text)))
         return size if size >= MIN_FONT_SIZE else None
 
-    def _add_text(self, x, y, text, width, font_size, **kwargs):
-        size = self._font_size(text, width, font_size)
+    def _add_text(self, x, y, text, width, font_size, height=0.5, **kwargs):
+        size = self._font_size(text, width, font_size, height)
         if size is None:
             return None
         return self.ax.text(x, y, text, ha='center', va='center', fontsize=size, **kwargs)
 
+    def _draw_people(self, x, y, width, height, count, color):
+
+        # one figure for each person, as many as fit in the given box
+        size_inches = min(0.24, height * self._row_height)
+        spacing = 0.65 * size_inches / self._column_width
+        shown = min(count, int(width / spacing))
+        if shown <= 0:
+            return []
+        return self.ax.plot(
+            x + spacing * (np.arange(shown) + 0.5), [y + height / 2] * shown,
+            linestyle='none', marker=PERSON, markersize=72 * size_inches,
+            color=color, markeredgecolor='none', zorder=6)
+
     def _draw_building(self, num_columns):
 
-        # the building never changes, so it is only drawn once
+        # the building never changes, so it is only drawn once: floors and their slabs,
+        # then the shafts in front of them
         num_floors = len(self._floors)
         for (i, f) in enumerate(self._floors):
             color = EXIT_COLOR if f in self._bottom else FLOOR_COLORS[i % 2]
             self.ax.add_patch(patches.Rectangle(
                 (0, i), num_columns, 1, facecolor=color, edgecolor='none', zorder=0))
-            self.ax.plot([0, num_columns], [i, i], color=SHAFT_COLOR, linewidth=1, zorder=1)
+            self.ax.plot([0, num_columns], [i, i], color=SLAB_COLOR, linewidth=2, zorder=1)
             self._add_text(NAME_WIDTH / 2, i + 0.5, f, 0.9 * NAME_WIDTH, 10, color=TEXT_COLOR,
                            fontweight='bold' if f in self._bottom else 'normal', zorder=5)
 
         for (i, e) in enumerate(self._elevators):
             x = NAME_WIDTH + i
             self.ax.add_patch(patches.Rectangle(
-                (x + 0.08, 0), 0.84, num_floors, facecolor=SHAFT_COLOR, alpha=0.45,
-                edgecolor='none', zorder=1))
+                (x + 0.08, 0), 0.84, num_floors, facecolor=SHAFT_COLOR, edgecolor='none',
+                zorder=1))
+            for rail in (x + 0.1, x + 0.9):
+                self.ax.plot([rail] * 2, [0, num_floors], color=RAIL_COLOR, linewidth=1.5,
+                             zorder=1)
             self._add_text(x + 0.5, num_floors + HEADER_HEIGHT / 2, e, 0.95, 10, color=TEXT_COLOR)
         self._add_text(self._waiting_x + WAITING_WIDTH / 2, num_floors + HEADER_HEIGHT / 2,
                        'waiting', WAITING_WIDTH, 10, color=TEXT_COLOR)
 
     def _draw_elevator(self, index, elevator, floor, state):
-        x = NAME_WIDTH + index + 0.14
-        y = self._rows[floor] + 0.08
-        width, height = 0.72, 0.84
+        car_width = self._car_width
+        x = NAME_WIDTH + index + (1 - car_width) / 2
+        y = self._rows[floor] + CAR_Y
         riders = int(state[RDDLPlanningModel.ground_var('num-person-in-elevator', [elevator])])
         closed = state[RDDLPlanningModel.ground_var('elevator-closed', [elevator])]
         going_up = state[RDDLPlanningModel.ground_var('elevator-dir-up', [elevator])]
 
         # same rule as the reward: passengers are delivered at the bottom floor
         delivering = riders > 0 and floor in self._bottom
-        color = DELIVER_COLOR if delivering else CLOSED_COLOR
-        text_color = 'white' if closed or delivering else color
 
+        # the cable from the top of the shaft, and the car around its panel and doors
+        center = x + car_width / 2
+        artists = self.ax.plot([center] * 2, [y + CAR_HEIGHT, len(self._floors)],
+                               color=CABLE_COLOR, linewidth=1, zorder=2)
         rounding = 0.06 * min(self._column_width, self._row_height)
-        artists = [self.ax.add_patch(patches.FancyBboxPatch(
-            (x, y), width, height, boxstyle=f'round,pad=0,rounding_size={rounding}',
+        artists.append(self.ax.add_patch(patches.FancyBboxPatch(
+            (x, y), car_width, CAR_HEIGHT, boxstyle=f'round,pad=0,rounding_size={rounding}',
             mutation_aspect=self._column_width / self._row_height,
-            facecolor=color if closed or delivering else OPEN_COLOR,
-            edgecolor=color, linewidth=1.5, zorder=3))]
+            facecolor=DELIVER_COLOR if delivering else FRAME_COLOR, edgecolor='none',
+            zorder=3)))
+        inset_x = FRAME * car_width
+        inset_y = inset_x * self._column_width / self._row_height
+        inner_x, inner_width = x + inset_x, car_width - 2 * inset_x
+        door_y = y + inset_y
+        door_height = (1 - PANEL) * CAR_HEIGHT - 2 * inset_y
+        panel_y = door_y + door_height + inset_y
+        panel_height = y + CAR_HEIGHT - inset_y - panel_y
 
-        # a closed door has a line down the middle of it
-        if closed:
-            artists.extend(self.ax.plot(
-                [x + width / 2] * 2, [y, y + height], color='white', linewidth=1, alpha=0.35,
-                zorder=4))
-
-        # the direction is above the number of passengers
-        marker_size = min(9, 12 * self._row_height)
+        # the panel above the doors shows the direction and the number of passengers
+        artists.append(self.ax.add_patch(patches.Rectangle(
+            (inner_x, panel_y), inner_width, panel_height, facecolor=PANEL_COLOR,
+            edgecolor='none', zorder=4)))
+        panel_middle = panel_y + panel_height / 2
         artists.extend(self.ax.plot(
-            [x + width / 2], [y + 0.72 * height], marker='^' if going_up else 'v',
-            markersize=marker_size, color=text_color, markeredgecolor='none', zorder=5))
-        label = self._add_text(x + width / 2, y + 0.3 * height, str(riders), width, 10,
-                               color=text_color, fontweight='bold', zorder=5)
+            [inner_x + 0.2 * inner_width], [panel_middle], marker='^' if going_up else 'v',
+            markersize=0.7 * 72 * panel_height * self._row_height, color=LED_COLOR,
+            markeredgecolor='none', zorder=5))
+        label = self._add_text(inner_x + 0.62 * inner_width, panel_middle, str(riders),
+                               0.6 * inner_width, 9, 0.8 * panel_height, color=LED_COLOR,
+                               fontweight='bold', zorder=5)
         if label is not None:
             artists.append(label)
+
+        # closed doors meet in the middle; open ones slide to the sides of the lit cab,
+        # where the passengers stand
+        if closed:
+            for left in (inner_x, center):
+                artists.append(self.ax.add_patch(patches.Rectangle(
+                    (left, door_y), inner_width / 2, door_height, facecolor=DOOR_COLOR,
+                    edgecolor=DOOR_EDGE_COLOR, linewidth=0.8, zorder=4)))
+        else:
+            artists.append(self.ax.add_patch(patches.Rectangle(
+                (inner_x, door_y), inner_width, door_height, facecolor=CAB_COLOR,
+                edgecolor='none', zorder=4)))
+            leaf = 0.12 * inner_width
+            for left in (inner_x, inner_x + inner_width - leaf):
+                artists.append(self.ax.add_patch(patches.Rectangle(
+                    (left, door_y), leaf, door_height, facecolor=DOOR_COLOR,
+                    edgecolor=DOOR_EDGE_COLOR, linewidth=0.8, zorder=5)))
+            artists.extend(self._draw_people(
+                inner_x + leaf, door_y + 0.1 * door_height, inner_width - 2 * leaf,
+                0.8 * door_height, riders, RIDER_COLOR))
         return artists
 
     def _draw_waiting(self, floor, state):
         count = int(state[RDDLPlanningModel.ground_var('num-person-waiting', [floor])])
-        y = self._rows[floor] + 0.5
+        y = self._rows[floor]
         artists = []
-        label = self._add_text(self._waiting_x + 0.35, y, str(count), 0.6, 10, zorder=5,
+        label = self._add_text(self._waiting_x + 0.35, y + 0.5, str(count), 0.6, 10, zorder=5,
                                color=WAITING_COLOR if count > 0 else EMPTY_COLOR, fontweight='bold')
         if label is not None:
             artists.append(label)
 
-        # one dot for each person, as many as fit: the number gives the exact count
-        spacing_inches = min(0.14, 0.4 * self._row_height)
-        start = self._waiting_x + 0.8
-        available = WAITING_WIDTH - 0.9
-        spacing = spacing_inches / self._column_width
-        dots = min(count, int(available / spacing))
-        if dots > 0:
-            artists.extend(self.ax.plot(
-                start + spacing * np.arange(dots), [y] * dots, linestyle='none', marker='o',
-                markersize=72 * 0.75 * spacing_inches, color=WAITING_COLOR,
-                markeredgecolor='none', zorder=4))
+        # the people stand on the floor: the number gives the exact count
+        artists.extend(self._draw_people(
+            self._waiting_x + 0.7, y + 0.15, WAITING_WIDTH - 0.8, 0.6, count, WAITING_COLOR))
         return artists
 
     def convert2img(self, fig):
