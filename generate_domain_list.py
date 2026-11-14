@@ -1,4 +1,5 @@
-'''Builds the list of domains in README.md, grouped by context, with a small picture of each domain.
+'''Builds the list of domains in README.md, grouped by context: a small picture, the name, the instances
+and a few words about each domain.
 
     python generate_domain_list.py                  # rewrite the list in README.md
     python generate_domain_list.py --thumbnails     # also render the pictures that are missing
@@ -25,13 +26,8 @@ BOX = (200, 150)            # every picture is this size (pixels): the visualize
                             # shape inside it, and the rest is filled with its background
 COLORS = 96                 # colors kept in a picture
 STEPS = 10                  # random steps before the picture is taken
-COLUMNS = 4                 # domains in a row of the list
-SHOWN = 150                 # width at which pictures are shown (pixels); smaller than BOX, so sharp.
-                            # COLUMNS of them must fit GitHub's README column with room to spare, or
-                            # GitHub narrows the columns unevenly and some pictures shrink
-LINE = 18                   # longest line of a name (characters), no wider than a picture in GitHub's
-                            # code font, so that every column of every context is a picture wide
-BLANK = 'docs/thumbnails/_blank.png'    # an empty box for a domain without a visualizer
+SHOWN = 64                  # width at which pictures are shown (pixels); smaller than BOX, so sharp
+SPACER = 16                 # non-breaking spaces that keep the picture column about SHOWN wide
 TIMEOUT = 300               # seconds to render one domain
 
 # contexts in the order shown, with a line about each; other contexts follow in alphabetical order
@@ -50,6 +46,93 @@ CONTEXTS = {
                 '([site](https://ipc2018-probabilistic.bitbucket.io/)).',
     'ippc2023': 'The International Probabilistic Planning Competition of 2023 '
                 '([site](https://ipc2023.github.io)).',
+}
+
+
+# words in a problem's name that mark a version of its domain, not the domain itself
+VERSIONS = {'MDP', 'POMDP', 'Continuous', 'Discrete', 'Mixed', 'ComplexPhases', 'SimplePhases'}
+
+# a few words about each domain, by problem name or by the name of the domain without its context and
+# version (see label); a new domain without one gets its full description and a reminder
+SHORT = {
+    # standalone
+    'BernoulliBandit': 'Bayesian Bernoulli bandit',
+    'Elevators': 'Elevators carry passengers between floors',
+    'Epidemic': 'Contain an epidemic with interventions',
+    'Fishery': 'Harvest competing fish stocks',
+    'HVAC': 'Heat the zones of a building',
+    'Intruders': 'Detect intruders in an area',
+    'Navigation_Continuous': 'Navigate around regions to avoid',
+    'PowerGen': 'Generate power to meet demand',
+    'Reservoir': 'Manage water in linked reservoirs',
+    'TrafficBLX': 'Time traffic signals to cut travel time',
+    # physics
+    'Bicycle': 'Balance and ride a bicycle',
+    'CartPoleChain': 'Swing up a chain of poles on a cart',
+    'CartPoleSwingUp': 'Swing up a pole on a cart',
+    'Highway': 'Drive through highway traffic',
+    'Lander': 'Land a craft on a pad',
+    'Pinball': 'Steer a ball around obstacles',
+    'Quadcopter': 'Fly a swarm of quadcopters',
+    'Reacher': 'Reach a target with a robot arm',
+    'Reactor': 'Control a chemical reactor',
+    'UAV': 'Fly drones to goal positions',
+    # or
+    'BinPacking': 'Pack random items into few bins',
+    'CarRental': 'Move rental cars between locations',
+    'Knapsack': 'Fill knapsacks with valuable items',
+    'Option': 'Exercise an American option',
+    'StructuralMaintenance': 'Inspect and repair a cracking structure',
+    'SupplyChain': 'Ship stock from a factory to warehouses',
+    'TSP': 'Travelling salesman tour',
+    # arcade
+    'Blackjack': 'Draw cards to 21 without going over',
+    'BrickBreaker': 'Break bricks with a bouncing ball',
+    'Eight': 'Sliding tile puzzle',
+    'MazeChase': 'Gather berries in a maze full of wolves',
+    'Minesweeper': 'Reveal safe cells, avoid hidden mines',
+    'Pong': 'Single player pong',
+    'Snake': 'Grow a snake by eating fruit',
+    'Sokoban': 'Push boxes onto storage spots',
+    'SpaceShooter': 'Shoot down waves of aliens',
+    'Sudoku': 'Sudoku number puzzle',
+    'Tetris': 'Classic block stacking game',
+    'TowerOfHanoi': 'Move a tower of disks between rods',
+    'Zombies': 'Avoid infection by zombies',
+    # gym
+    'Acrobot': 'Swing up a two-link arm',
+    'CartPole': 'Balance a pole on a cart',
+    'MountainCar': 'Drive a weak car up a hill',
+    'Pendulum': 'Swing up and hold a pendulum',
+    # rddlsim
+    'ComplexSysAdmin': 'Keep an enhanced computer network running',
+    'Logistics': 'Deliver packages by truck',
+    'Pizza': 'Deliver pizzas',
+    'PropDBN': 'Simple propositional network',
+    'Sidewalk': 'People walking down a sidewalk',
+    'Workforce': 'Run a call center',
+    # competitions
+    'AcademicAdvising': 'Choose courses for a student to graduate',
+    'ChromaticDice': 'Yahtzee-like dice game',
+    'CooperativeRecon': 'Rovers survey and photograph objects',
+    'CrossingTraffic': 'Cross a grid of moving obstacles',
+    'EarthObservation': 'A satellite photographs the Earth',
+    'GameOfLife': "Control Conway's Game of Life",
+    'Manufacturer': 'Run a manufacturing company',
+    'MarsRover': 'Rovers harvest minerals',
+    'Navigation': 'Reach a goal across risky cells',
+    'PushYourLuck': 'Push-your-luck dice game',
+    'RaceCar': 'Race a car around a track',
+    'RecSim': 'Recommend content to users',
+    'RedFinnedBlueEye': 'Remove an invasive fish species',
+    'SkillTeaching': 'Teach skills with hints and quizzes',
+    'SysAdmin': 'Keep a computer network running',
+    'Tamarisk': 'Contain an invasive plant species',
+    'Traffic': 'Control traffic lights on a road network',
+    'Traffic_CTM': 'Control traffic lights on a road network',
+    'TriangleTireworld': 'Drive to a goal, risking flat tires',
+    'Wildfire': 'Fight spreading wildfires',
+    'WildlifePreserve': 'Send rangers to stop poachers',
 }
 
 
@@ -161,60 +244,32 @@ def entries(manager, context):
     return out
 
 
-def blank():
-    '''A transparent picture of the size of a box, so that a row stays aligned without a picture.'''
-    path = os.path.join(ROOT, BLANK)
-    if not os.path.exists(path):
-        from PIL import Image
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        Image.new('LA', BOX, (0, 0)).save(path, optimize=True)
-    return BLANK
+def label(name, context):
+    '''The short description of a problem: by its name, or by the name of its domain without the context
+    and the version in it (MDP, POMDP, Continuous, ...); the full description if there is none.'''
+    if name in SHORT:
+        return SHORT[name]
+    base = re.sub('_' + re.escape(context) + '$', '', name)
+    parts = [p for p in base.split('_') if p not in VERSIONS and not re.fullmatch(r'V\d+', p)]
+    return SHORT.get('_'.join(parts))
 
 
-def wrap(name):
-    '''A name in lines of at most LINE characters, broken after underscores (or in words).'''
-    parts = [p + '_' for p in name.split('_')]
-    parts[-1] = parts[-1][:-1]
-    # a part that is still too long is broken before its capital letters
-    parts = [q for p in parts for q in (re.findall(r'[A-Z]?[^A-Z]*', p)[:-1] if len(p) > LINE else [p])]
-    lines, line = [], ''
-    for part in parts:
-        if line and len(line + part) > LINE:
-            lines.append(line)
-            line = part
-        else:
-            line += part
-    lines.append(line)
-
-    # every line is padded to LINE characters with non-breaking spaces, centered: in the code font they
-    # make every cell equally wide and unsqueezable, so that on a narrow screen GitHub scrolls the table
-    # instead of narrowing the columns with short names and shrinking their pictures
-    def pad(line):
-        left = (LINE - len(line)) // 2
-        return '&nbsp;' * left + line + '&nbsp;' * (LINE - len(line) - left)
-
-    return '<br>'.join(f'<code>{pad(line)}</code>' for line in lines)
+def identifier(name):
+    '''A name in code, which may wrap after its underscores on a narrow screen.'''
+    return '<code>' + name.replace('_', '_<wbr>') + '</code>'
 
 
-def filler():
-    '''An empty cell as wide as the others, for the end of a short row.'''
-    return f'<td><img src="{blank()}" width="{SHOWN}" alt=""></td>'
-
-
-def cell(e):
-    names = [wrap(n) for _, n in e['names']]
-    if len(names) == 1:
-        title = names[0]
-    else:
-        title = f'{names[0]}<br>to<br>{names[-1]}'
+def row(e, context):
+    names = [n for _, n in e['names']]
+    title = identifier(names[0]) if len(names) == 1 else f'{identifier(names[0])} to {identifier(names[-1])}'
     path = thumbnail_path(e['picture'])
-    desc = escape(' '.join((e['desc'] or '').split()))
-    if not os.path.exists(os.path.join(ROOT, path)):
-        path, desc = blank(), ''     # a domain without a visualizer has no picture
     # only the width is given, so that the browser always keeps the shape of the picture
-    picture = f'<img src="{path}" width="{SHOWN}" alt="{desc}" title="{desc}">'
-    return (f'<td align="center" valign="top">{picture}<br>{title}<br>'
-            f'<sub>instances {e["instances"]}</sub></td>')
+    picture = f'<img src="{path}" width="{SHOWN}" alt="">' if os.path.exists(os.path.join(ROOT, path)) else ''
+    text = label(names[0], context)
+    if text is None:
+        print(f'no short description for {names[0]}: add one to SHORT')
+        text = ' '.join((e['desc'] or '').split())
+    return f'| {picture} | {title} | {e["instances"]} | {escape(text).replace("|", "&#124;")} |'
 
 
 def domain_list(manager):
@@ -224,17 +279,16 @@ def domain_list(manager):
     lines = [START, '',
              f'**{total} problems in {len(order)} contexts:** '
              + ' &middot; '.join(f'[{c}](#{c}) ({len(manager.list_problems_by_context(c))})' for c in order), '']
+    # the header of the picture column is a row of non-breaking spaces about as wide as a picture: GitHub
+    # cannot narrow the column below it, so on a small screen the pictures keep their size
+    spacer = '&nbsp;' * SPACER
     for context in order:
         lines += [f'### {context}', '']
         if context in CONTEXTS:
             lines += [CONTEXTS[context], '']
-        es = entries(manager, context)
-        lines.append('<table>')
-        for i in range(0, len(es), COLUMNS):
-            row = [cell(e) for e in es[i:i + COLUMNS]]
-            row += [filler()] * (COLUMNS - len(row))     # every table has COLUMNS columns
-            lines.append('<tr>' + ''.join(row) + '</tr>')
-        lines += ['</table>', '', '<sub>[back to contexts](#domain-gallery)</sub>', '']
+        lines += [f'| {spacer} | Domain | Instances | Description |', '|:-:|:--|:--|:--|']
+        lines += [row(e, context) for e in entries(manager, context)]
+        lines += ['', '<sub>[back to contexts](#domain-gallery)</sub>', '']
     lines.append(END)
     return '\n'.join(lines)
 
