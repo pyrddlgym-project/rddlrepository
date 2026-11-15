@@ -156,7 +156,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**130 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (3) &middot; [or](#or) (8) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**131 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (3) &middot; [or](#or) (8) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -244,6 +244,7 @@ Arcade, puzzle and card games.
 | <img src="docs/thumbnails/MazeChase_arcade.png" width="64" alt=""> | <code>MazeChase_<wbr>arcade</code> | 0&ndash;3 | Gather berries in a maze full of wolves |
 | <img src="docs/thumbnails/Minesweeper_arcade.png" width="64" alt=""> | <code>Minesweeper_<wbr>arcade</code> | 0&ndash;2 | Reveal safe cells, avoid hidden mines |
 | <img src="docs/thumbnails/Pong_arcade.png" width="64" alt=""> | <code>Pong_<wbr>arcade</code> | 0, 1 | Single player pong |
+| <img src="docs/thumbnails/RubiksCube_arcade.png" width="64" alt=""> | <code>RubiksCube_<wbr>arcade</code> | 0&ndash;4 | Solve a scrambled Rubik's cube |
 | <img src="docs/thumbnails/Snake_arcade.png" width="64" alt=""> | <code>Snake_<wbr>arcade</code> | 0 | Grow a snake by eating fruit |
 | <img src="docs/thumbnails/Sokoban_arcade.png" width="64" alt=""> | <code>Sokoban_<wbr>arcade</code> | 0, 1 | Push boxes onto storage spots |
 | <img src="docs/thumbnails/SpaceShooter_arcade.png" width="64" alt=""> | <code>SpaceShooter_<wbr>arcade</code> | 0 | Shoot down waves of aliens |

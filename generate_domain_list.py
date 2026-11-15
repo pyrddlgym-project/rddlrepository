@@ -97,6 +97,7 @@ SHORT = {
     'MazeChase': 'Gather berries in a maze full of wolves',
     'Minesweeper': 'Reveal safe cells, avoid hidden mines',
     'Pong': 'Single player pong',
+    'RubiksCube': "Solve a scrambled Rubik's cube",
     'Snake': 'Grow a snake by eating fruit',
     'Sokoban': 'Push boxes onto storage spots',
     'SpaceShooter': 'Shoot down waves of aliens',

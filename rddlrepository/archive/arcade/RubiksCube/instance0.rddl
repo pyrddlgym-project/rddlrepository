@@ -1,0 +1,55 @@
+// The pocket cube (2 x 2 x 2), scrambled by 5 random moves.
+
+non-fluents rubiks_cube_nf0 {
+	domain = rubiks_cube;
+
+	objects {
+		sticker : { up_0_0, up_1_0, up_0_1, up_1_1, front_1_0, front_0_0, front_1_1, front_0_1, right_1_1, right_1_0, right_0_1, right_0_0, back_1_1, back_0_1, back_1_0, back_0_0, left_1_0, left_1_1, left_0_0, left_0_1, down_1_0, down_0_0, down_1_1, down_0_1 };
+	};
+
+	non-fluents {
+		SIZE = 2;
+		COLOR(up_0_0) = @white; COLOR(up_1_0) = @white; COLOR(up_0_1) = @white; COLOR(up_1_1) = @white;
+		COLOR(front_1_0) = @green; COLOR(front_0_0) = @green; COLOR(front_1_1) = @green; COLOR(front_0_1) = @green;
+		COLOR(right_1_1) = @red; COLOR(right_1_0) = @red; COLOR(right_0_1) = @red; COLOR(right_0_0) = @red;
+		COLOR(back_1_1) = @blue; COLOR(back_0_1) = @blue; COLOR(back_1_0) = @blue; COLOR(back_0_0) = @blue;
+		COLOR(left_1_0) = @orange; COLOR(left_1_1) = @orange; COLOR(left_0_0) = @orange; COLOR(left_0_1) = @orange;
+		COLOR(down_1_0) = @yellow; COLOR(down_0_0) = @yellow; COLOR(down_1_1) = @yellow; COLOR(down_0_1) = @yellow;
+	};
+}
+
+instance rubiks_cube_inst0 {
+	domain = rubiks_cube;
+	non-fluents = rubiks_cube_nf0;
+
+	init-state {
+		cx(up_0_0) = 1; cy(up_0_0) = 1; cz(up_0_0) = -1; nx(up_0_0) = 1;
+		cx(up_1_0) = 1; cy(up_1_0) = 1; cz(up_1_0) = 1; nx(up_1_0) = 1;
+		cx(up_0_1) = 1; cy(up_0_1) = -1; cz(up_0_1) = -1; nx(up_0_1) = 1;
+		cx(up_1_1) = 1; cy(up_1_1) = -1; cz(up_1_1) = 1; nx(up_1_1) = 1;
+		cx(front_1_0) = -1; cy(front_1_0) = -1; cz(front_1_0) = 1; ny(front_1_0) = -1;
+		cx(front_0_0) = 1; cy(front_0_0) = 1; cz(front_0_0) = 1; nz(front_0_0) = 1;
+		cx(front_1_1) = -1; cy(front_1_1) = -1; cz(front_1_1) = -1; ny(front_1_1) = -1;
+		cx(front_0_1) = 1; cy(front_0_1) = -1; cz(front_0_1) = 1; nz(front_0_1) = 1;
+		cx(right_1_1) = -1; cy(right_1_1) = 1; cz(right_1_1) = -1; nz(right_1_1) = -1;
+		cx(right_1_0) = -1; cy(right_1_0) = -1; cz(right_1_0) = -1; nz(right_1_0) = -1;
+		cx(right_0_1) = 1; cy(right_0_1) = -1; cz(right_0_1) = -1; ny(right_0_1) = -1;
+		cx(right_0_0) = 1; cy(right_0_0) = -1; cz(right_0_0) = 1; ny(right_0_0) = -1;
+		cx(back_1_1) = -1; cy(back_1_1) = 1; cz(back_1_1) = 1; ny(back_1_1) = 1;
+		cx(back_0_1) = 1; cy(back_0_1) = 1; cz(back_0_1) = -1; nz(back_0_1) = -1;
+		cx(back_1_0) = -1; cy(back_1_0) = 1; cz(back_1_0) = -1; ny(back_1_0) = 1;
+		cx(back_0_0) = 1; cy(back_0_0) = -1; cz(back_0_0) = -1; nz(back_0_0) = -1;
+		cx(left_1_0) = -1; cy(left_1_0) = 1; cz(left_1_0) = 1; nz(left_1_0) = 1;
+		cx(left_1_1) = -1; cy(left_1_1) = -1; cz(left_1_1) = 1; nz(left_1_1) = 1;
+		cx(left_0_0) = 1; cy(left_0_0) = 1; cz(left_0_0) = -1; ny(left_0_0) = 1;
+		cx(left_0_1) = 1; cy(left_0_1) = 1; cz(left_0_1) = 1; ny(left_0_1) = 1;
+		cx(down_1_0) = -1; cy(down_1_0) = 1; cz(down_1_0) = 1; nx(down_1_0) = -1;
+		cx(down_0_0) = -1; cy(down_0_0) = -1; cz(down_0_0) = 1; nx(down_0_0) = -1;
+		cx(down_1_1) = -1; cy(down_1_1) = 1; cz(down_1_1) = -1; nx(down_1_1) = -1;
+		cx(down_0_1) = -1; cy(down_0_1) = -1; cz(down_0_1) = -1; nx(down_0_1) = -1;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 200;
+	discount = 1.0;
+}

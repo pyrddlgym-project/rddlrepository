@@ -1,0 +1,157 @@
+////////////////////////////////////////////////////////////////////
+// The Rubik's cube of any size, with the moves and rules of the
+// RubiksCube environment of Jumanji.
+//
+// The cube is made of SIZE x SIZE x SIZE small cubes, and each sticker
+// is an object with a fixed colour. A sticker is stored by the centre
+// of its small cube and the direction it faces, in coordinates with x
+// to the right, y up and z to the front, counted in half the width of
+// a small cube from the centre of the cube. The centres of the small
+// cubes are at -(SIZE - 1), -(SIZE - 3), ..., SIZE - 1 on each axis,
+// and the faces of the cube are up (+y), front (+z), right (+x),
+// back (-z), left (-x) and down (-y).
+//
+// Each step turns one layer of the cube by a quarter turn clockwise
+// or anticlockwise, as seen looking at a face, or by a half turn. The
+// layer is the one at a depth of 0 to SIZE / 2 - 1 small cubes from
+// that face: depth 0 turns the face itself. As in Jumanji, the middle
+// layer of a cube of odd size is never turned, so the centres of its
+// faces stay where they are. Turning a layer rotates the centre and
+// the direction of each of its stickers about the outward direction u
+// of the face, by the formula of a rotation by an angle a:
+//   v -> v cos(a) + (u x v) sin(a) + u (u . v) (1 - cos(a)),
+// with a = -90 degrees for clockwise, 90 for anticlockwise and 180 for
+// a half turn, all in whole numbers.
+//
+// The cube is solved when the stickers facing each way all have the
+// same colour. The reward is 1 when a move solves the cube, which ends
+// the episode, and 0 otherwise.
+//
+// Jumanji starts from a cube scrambled by 100 random moves and stops
+// after 200 steps. The instances fix the scramble.
+//
+// References:
+//
+//		Clément Bonnet et al. Jumanji: a Diverse Suite of Scalable
+//		Reinforcement Learning Environments in JAX. ICLR, 2024.
+//
+//		Forest Agostinelli, Stephen McAleer, Alexander Shmakov and Pierre
+//		Baldi. Solving the Rubik's cube with deep reinforcement learning
+//		and search. Nature Machine Intelligence 1, 356-363, 2019.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain rubiks_cube {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		sticker : object;
+		colour : { @white, @green, @red, @blue, @orange, @yellow };
+		side : { @up, @front, @right, @back, @left, @down };
+		amount : { @clockwise, @anticlockwise, @half };
+	};
+
+	pvariables {
+
+		// the cube
+		SIZE 						: { non-fluent, int, default = 3 };			// small cubes along an edge
+		COLOR(sticker) 				: { non-fluent, colour, default = @white };
+
+		// the turn: outward direction of the face, and sine and cosine of the angle
+		ux 							: { interm-fluent, int };
+		uy 							: { interm-fluent, int };
+		uz 							: { interm-fluent, int };
+		sin-a 						: { interm-fluent, int };
+		cos-a 						: { interm-fluent, int };
+		turns(sticker) 				: { interm-fluent, bool };					// is in the turned layer
+
+		// u . v for the centre and the direction of each sticker
+		dot-c(sticker) 				: { interm-fluent, int };
+		dot-n(sticker) 				: { interm-fluent, int };
+
+		// after the move
+		new-cx(sticker) 			: { interm-fluent, int };
+		new-cy(sticker) 			: { interm-fluent, int };
+		new-cz(sticker) 			: { interm-fluent, int };
+		new-nx(sticker) 			: { interm-fluent, int };
+		new-ny(sticker) 			: { interm-fluent, int };
+		new-nz(sticker) 			: { interm-fluent, int };
+		solved 						: { interm-fluent, bool };
+
+		// states: centre of the small cube of each sticker, and the direction it faces
+		cx(sticker) 				: { state-fluent, int, default = 0 };
+		cy(sticker) 				: { state-fluent, int, default = 0 };
+		cz(sticker) 				: { state-fluent, int, default = 0 };
+		nx(sticker) 				: { state-fluent, int, default = 0 };
+		ny(sticker) 				: { state-fluent, int, default = 0 };
+		nz(sticker) 				: { state-fluent, int, default = 0 };
+
+		// actions
+		face 						: { action-fluent, side, default = @up };
+		depth 						: { action-fluent, int, default = 0 };
+		turn 						: { action-fluent, amount, default = @clockwise };
+	};
+
+	cpfs {
+
+		// the turn
+		ux = if (face == @right) then 1 else if (face == @left) then -1 else 0;
+		uy = if (face == @up) then 1 else if (face == @down) then -1 else 0;
+		uz = if (face == @front) then 1 else if (face == @back) then -1 else 0;
+		sin-a = if (turn == @clockwise) then -1 else if (turn == @anticlockwise) then 1 else 0;
+		cos-a = if (turn == @half) then -1 else 0;
+		dot-c(?s) = ux * cx(?s) + uy * cy(?s) + uz * cz(?s);
+		dot-n(?s) = ux * nx(?s) + uy * ny(?s) + uz * nz(?s);
+		turns(?s) = (dot-c(?s) == SIZE - 1 - 2 * depth);
+
+		// the rotation of the stickers in the layer
+		new-cx(?s) = if (turns(?s)) then cos-a * cx(?s) + sin-a * (uy * cz(?s) - uz * cy(?s))
+									   + ux * dot-c(?s) * (1 - cos-a)
+					 else cx(?s);
+		new-cy(?s) = if (turns(?s)) then cos-a * cy(?s) + sin-a * (uz * cx(?s) - ux * cz(?s))
+									   + uy * dot-c(?s) * (1 - cos-a)
+					 else cy(?s);
+		new-cz(?s) = if (turns(?s)) then cos-a * cz(?s) + sin-a * (ux * cy(?s) - uy * cx(?s))
+									   + uz * dot-c(?s) * (1 - cos-a)
+					 else cz(?s);
+		new-nx(?s) = if (turns(?s)) then cos-a * nx(?s) + sin-a * (uy * nz(?s) - uz * ny(?s))
+									   + ux * dot-n(?s) * (1 - cos-a)
+					 else nx(?s);
+		new-ny(?s) = if (turns(?s)) then cos-a * ny(?s) + sin-a * (uz * nx(?s) - ux * nz(?s))
+									   + uy * dot-n(?s) * (1 - cos-a)
+					 else ny(?s);
+		new-nz(?s) = if (turns(?s)) then cos-a * nz(?s) + sin-a * (ux * ny(?s) - uy * nx(?s))
+									   + uz * dot-n(?s) * (1 - cos-a)
+					 else nz(?s);
+
+		// solved: stickers facing the same way have the same colour
+		solved = (forall_{?s : sticker, ?s2 : sticker} [
+					((new-nx(?s) == new-nx(?s2)) ^ (new-ny(?s) == new-ny(?s2)) ^ (new-nz(?s) == new-nz(?s2)))
+					=> (COLOR(?s) == COLOR(?s2))]);
+
+		// the next state
+		cx'(?s) = new-cx(?s);
+		cy'(?s) = new-cy(?s);
+		cz'(?s) = new-cz(?s);
+		nx'(?s) = new-nx(?s);
+		ny'(?s) = new-ny(?s);
+		nz'(?s) = new-nz(?s);
+	};
+
+	reward = if (solved) then 1 else 0;
+
+	termination {
+		forall_{?s : sticker, ?s2 : sticker} [
+			((nx(?s) == nx(?s2)) ^ (ny(?s) == ny(?s2)) ^ (nz(?s) == nz(?s2))) => (COLOR(?s) == COLOR(?s2))];
+	};
+
+	action-preconditions {
+		depth >= 0;
+		depth <= div[SIZE, 2] - 1;
+	};
+}

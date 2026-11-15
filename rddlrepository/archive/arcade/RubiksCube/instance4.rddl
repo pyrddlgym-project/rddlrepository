@@ -1,0 +1,127 @@
+// The Rubik's revenge (4 x 4 x 4), scrambled by 100 random moves, as in Jumanji.
+
+non-fluents rubiks_cube_nf4 {
+	domain = rubiks_cube;
+
+	objects {
+		sticker : { up_0_0, up_1_0, up_2_0, up_3_0, up_0_1, up_1_1, up_2_1, up_3_1, up_0_2, up_1_2, up_2_2, up_3_2, up_0_3, up_1_3, up_2_3, up_3_3, front_3_0, front_2_0, front_1_0, front_0_0, front_3_1, front_2_1, front_1_1, front_0_1, front_3_2, front_2_2, front_1_2, front_0_2, front_3_3, front_2_3, front_1_3, front_0_3, right_3_3, right_3_2, right_3_1, right_3_0, right_2_3, right_2_2, right_2_1, right_2_0, right_1_3, right_1_2, right_1_1, right_1_0, right_0_3, right_0_2, right_0_1, right_0_0, back_3_3, back_2_3, back_1_3, back_0_3, back_3_2, back_2_2, back_1_2, back_0_2, back_3_1, back_2_1, back_1_1, back_0_1, back_3_0, back_2_0, back_1_0, back_0_0, left_3_0, left_3_1, left_3_2, left_3_3, left_2_0, left_2_1, left_2_2, left_2_3, left_1_0, left_1_1, left_1_2, left_1_3, left_0_0, left_0_1, left_0_2, left_0_3, down_3_0, down_2_0, down_1_0, down_0_0, down_3_1, down_2_1, down_1_1, down_0_1, down_3_2, down_2_2, down_1_2, down_0_2, down_3_3, down_2_3, down_1_3, down_0_3 };
+	};
+
+	non-fluents {
+		SIZE = 4;
+		COLOR(up_0_0) = @white; COLOR(up_1_0) = @white; COLOR(up_2_0) = @white; COLOR(up_3_0) = @white; COLOR(up_0_1) = @white; COLOR(up_1_1) = @white; COLOR(up_2_1) = @white; COLOR(up_3_1) = @white; COLOR(up_0_2) = @white; COLOR(up_1_2) = @white; COLOR(up_2_2) = @white; COLOR(up_3_2) = @white; COLOR(up_0_3) = @white; COLOR(up_1_3) = @white; COLOR(up_2_3) = @white; COLOR(up_3_3) = @white;
+		COLOR(front_3_0) = @green; COLOR(front_2_0) = @green; COLOR(front_1_0) = @green; COLOR(front_0_0) = @green; COLOR(front_3_1) = @green; COLOR(front_2_1) = @green; COLOR(front_1_1) = @green; COLOR(front_0_1) = @green; COLOR(front_3_2) = @green; COLOR(front_2_2) = @green; COLOR(front_1_2) = @green; COLOR(front_0_2) = @green; COLOR(front_3_3) = @green; COLOR(front_2_3) = @green; COLOR(front_1_3) = @green; COLOR(front_0_3) = @green;
+		COLOR(right_3_3) = @red; COLOR(right_3_2) = @red; COLOR(right_3_1) = @red; COLOR(right_3_0) = @red; COLOR(right_2_3) = @red; COLOR(right_2_2) = @red; COLOR(right_2_1) = @red; COLOR(right_2_0) = @red; COLOR(right_1_3) = @red; COLOR(right_1_2) = @red; COLOR(right_1_1) = @red; COLOR(right_1_0) = @red; COLOR(right_0_3) = @red; COLOR(right_0_2) = @red; COLOR(right_0_1) = @red; COLOR(right_0_0) = @red;
+		COLOR(back_3_3) = @blue; COLOR(back_2_3) = @blue; COLOR(back_1_3) = @blue; COLOR(back_0_3) = @blue; COLOR(back_3_2) = @blue; COLOR(back_2_2) = @blue; COLOR(back_1_2) = @blue; COLOR(back_0_2) = @blue; COLOR(back_3_1) = @blue; COLOR(back_2_1) = @blue; COLOR(back_1_1) = @blue; COLOR(back_0_1) = @blue; COLOR(back_3_0) = @blue; COLOR(back_2_0) = @blue; COLOR(back_1_0) = @blue; COLOR(back_0_0) = @blue;
+		COLOR(left_3_0) = @orange; COLOR(left_3_1) = @orange; COLOR(left_3_2) = @orange; COLOR(left_3_3) = @orange; COLOR(left_2_0) = @orange; COLOR(left_2_1) = @orange; COLOR(left_2_2) = @orange; COLOR(left_2_3) = @orange; COLOR(left_1_0) = @orange; COLOR(left_1_1) = @orange; COLOR(left_1_2) = @orange; COLOR(left_1_3) = @orange; COLOR(left_0_0) = @orange; COLOR(left_0_1) = @orange; COLOR(left_0_2) = @orange; COLOR(left_0_3) = @orange;
+		COLOR(down_3_0) = @yellow; COLOR(down_2_0) = @yellow; COLOR(down_1_0) = @yellow; COLOR(down_0_0) = @yellow; COLOR(down_3_1) = @yellow; COLOR(down_2_1) = @yellow; COLOR(down_1_1) = @yellow; COLOR(down_0_1) = @yellow; COLOR(down_3_2) = @yellow; COLOR(down_2_2) = @yellow; COLOR(down_1_2) = @yellow; COLOR(down_0_2) = @yellow; COLOR(down_3_3) = @yellow; COLOR(down_2_3) = @yellow; COLOR(down_1_3) = @yellow; COLOR(down_0_3) = @yellow;
+	};
+}
+
+instance rubiks_cube_inst4 {
+	domain = rubiks_cube;
+	non-fluents = rubiks_cube_nf4;
+
+	init-state {
+		cx(up_0_0) = 3; cy(up_0_0) = 3; cz(up_0_0) = 3; nx(up_0_0) = 1;
+		cx(up_1_0) = 1; cy(up_1_0) = -3; cz(up_1_0) = 3; ny(up_1_0) = -1;
+		cx(up_2_0) = -3; cy(up_2_0) = 1; cz(up_2_0) = -3; nz(up_2_0) = -1;
+		cx(up_3_0) = -3; cy(up_3_0) = 3; cz(up_3_0) = 3; nx(up_3_0) = -1;
+		cx(up_0_1) = 1; cy(up_0_1) = 3; cz(up_0_1) = 3; ny(up_0_1) = 1;
+		cx(up_1_1) = -1; cy(up_1_1) = -3; cz(up_1_1) = -1; ny(up_1_1) = -1;
+		cx(up_2_1) = 1; cy(up_2_1) = -3; cz(up_2_1) = 1; ny(up_2_1) = -1;
+		cx(up_3_1) = 1; cy(up_3_1) = 3; cz(up_3_1) = -3; ny(up_3_1) = 1;
+		cx(up_0_2) = -1; cy(up_0_2) = 3; cz(up_0_2) = 3; ny(up_0_2) = 1;
+		cx(up_1_2) = -1; cy(up_1_2) = -1; cz(up_1_2) = -3; nz(up_1_2) = -1;
+		cx(up_2_2) = -1; cy(up_2_2) = 3; cz(up_2_2) = 1; ny(up_2_2) = 1;
+		cx(up_3_2) = 3; cy(up_3_2) = -3; cz(up_3_2) = 1; ny(up_3_2) = -1;
+		cx(up_0_3) = 3; cy(up_0_3) = -3; cz(up_0_3) = 3; ny(up_0_3) = -1;
+		cx(up_1_3) = -3; cy(up_1_3) = -1; cz(up_1_3) = -3; nx(up_1_3) = -1;
+		cx(up_2_3) = -1; cy(up_2_3) = -3; cz(up_2_3) = -3; ny(up_2_3) = -1;
+		cx(up_3_3) = -3; cy(up_3_3) = -3; cz(up_3_3) = -3; nx(up_3_3) = -1;
+		cx(front_3_0) = 3; cy(front_3_0) = 3; cz(front_3_0) = -3; ny(front_3_0) = 1;
+		cx(front_2_0) = -3; cy(front_2_0) = 3; cz(front_2_0) = -1; nx(front_2_0) = -1;
+		cx(front_1_0) = 3; cy(front_1_0) = 1; cz(front_1_0) = -3; nz(front_1_0) = -1;
+		cx(front_0_0) = -3; cy(front_0_0) = 3; cz(front_0_0) = 3; ny(front_0_0) = 1;
+		cx(front_3_1) = 3; cy(front_3_1) = -1; cz(front_3_1) = -3; nx(front_3_1) = 1;
+		cx(front_2_1) = 1; cy(front_2_1) = 3; cz(front_2_1) = 1; ny(front_2_1) = 1;
+		cx(front_1_1) = -1; cy(front_1_1) = -3; cz(front_1_1) = 1; ny(front_1_1) = -1;
+		cx(front_0_1) = 1; cy(front_0_1) = 3; cz(front_0_1) = -3; nz(front_0_1) = -1;
+		cx(front_3_2) = -3; cy(front_3_2) = 3; cz(front_3_2) = 1; ny(front_3_2) = 1;
+		cx(front_2_2) = 1; cy(front_2_2) = 1; cz(front_2_2) = -3; nz(front_2_2) = -1;
+		cx(front_1_2) = 3; cy(front_1_2) = -1; cz(front_1_2) = -1; nx(front_1_2) = 1;
+		cx(front_0_2) = 3; cy(front_0_2) = -3; cz(front_0_2) = 1; nx(front_0_2) = 1;
+		cx(front_3_3) = -3; cy(front_3_3) = 3; cz(front_3_3) = -3; nz(front_3_3) = -1;
+		cx(front_2_3) = -3; cy(front_2_3) = -3; cz(front_2_3) = -1; nx(front_2_3) = -1;
+		cx(front_1_3) = 3; cy(front_1_3) = 3; cz(front_1_3) = 1; nx(front_1_3) = 1;
+		cx(front_0_3) = -3; cy(front_0_3) = -3; cz(front_0_3) = -3; nz(front_0_3) = -1;
+		cx(right_3_3) = -3; cy(right_3_3) = -3; cz(right_3_3) = 3; ny(right_3_3) = -1;
+		cx(right_3_2) = 1; cy(right_3_2) = -3; cz(right_3_2) = -3; ny(right_3_2) = -1;
+		cx(right_3_1) = -1; cy(right_3_1) = 3; cz(right_3_1) = -3; nz(right_3_1) = -1;
+		cx(right_3_0) = -3; cy(right_3_0) = 3; cz(right_3_0) = -3; ny(right_3_0) = 1;
+		cx(right_2_3) = -3; cy(right_2_3) = 1; cz(right_2_3) = 3; nz(right_2_3) = 1;
+		cx(right_2_2) = -1; cy(right_2_2) = -1; cz(right_2_2) = 3; nz(right_2_2) = 1;
+		cx(right_2_1) = 1; cy(right_2_1) = -1; cz(right_2_1) = 3; nz(right_2_1) = 1;
+		cx(right_2_0) = -3; cy(right_2_0) = -3; cz(right_2_0) = -1; ny(right_2_0) = -1;
+		cx(right_1_3) = 3; cy(right_1_3) = 1; cz(right_1_3) = 3; nz(right_1_3) = 1;
+		cx(right_1_2) = 3; cy(right_1_2) = 1; cz(right_1_2) = 1; nx(right_1_2) = 1;
+		cx(right_1_1) = 1; cy(right_1_1) = -3; cz(right_1_1) = -1; ny(right_1_1) = -1;
+		cx(right_1_0) = 3; cy(right_1_0) = 3; cz(right_1_0) = 1; ny(right_1_0) = 1;
+		cx(right_0_3) = 3; cy(right_0_3) = -3; cz(right_0_3) = 3; nx(right_0_3) = 1;
+		cx(right_0_2) = -3; cy(right_0_2) = -1; cz(right_0_2) = -3; nz(right_0_2) = -1;
+		cx(right_0_1) = -1; cy(right_0_1) = -3; cz(right_0_1) = -3; nz(right_0_1) = -1;
+		cx(right_0_0) = -3; cy(right_0_0) = -3; cz(right_0_0) = -3; ny(right_0_0) = -1;
+		cx(back_3_3) = 3; cy(back_3_3) = -3; cz(back_3_3) = -3; nx(back_3_3) = 1;
+		cx(back_2_3) = 3; cy(back_2_3) = 3; cz(back_2_3) = -1; nx(back_2_3) = 1;
+		cx(back_1_3) = -3; cy(back_1_3) = -1; cz(back_1_3) = 3; nz(back_1_3) = 1;
+		cx(back_0_3) = 3; cy(back_0_3) = 3; cz(back_0_3) = 3; ny(back_0_3) = 1;
+		cx(back_3_2) = 3; cy(back_3_2) = -1; cz(back_3_2) = 3; nx(back_3_2) = 1;
+		cx(back_2_2) = -3; cy(back_2_2) = 1; cz(back_2_2) = -1; nx(back_2_2) = -1;
+		cx(back_1_2) = -1; cy(back_1_2) = 1; cz(back_1_2) = 3; nz(back_1_2) = 1;
+		cx(back_0_2) = 1; cy(back_0_2) = 3; cz(back_0_2) = 3; nz(back_0_2) = 1;
+		cx(back_3_1) = -3; cy(back_3_1) = -3; cz(back_3_1) = 1; ny(back_3_1) = -1;
+		cx(back_2_1) = -1; cy(back_2_1) = 3; cz(back_2_1) = -1; ny(back_2_1) = 1;
+		cx(back_1_1) = 1; cy(back_1_1) = -1; cz(back_1_1) = -3; nz(back_1_1) = -1;
+		cx(back_0_1) = -1; cy(back_0_1) = 3; cz(back_0_1) = 3; nz(back_0_1) = 1;
+		cx(back_3_0) = -3; cy(back_3_0) = -3; cz(back_3_0) = 3; nx(back_3_0) = -1;
+		cx(back_2_0) = -3; cy(back_2_0) = 1; cz(back_2_0) = 3; nx(back_2_0) = -1;
+		cx(back_1_0) = 3; cy(back_1_0) = 1; cz(back_1_0) = 3; nx(back_1_0) = 1;
+		cx(back_0_0) = 3; cy(back_0_0) = -3; cz(back_0_0) = 3; nz(back_0_0) = 1;
+		cx(left_3_0) = 3; cy(left_3_0) = -3; cz(left_3_0) = -3; nz(left_3_0) = -1;
+		cx(left_3_1) = 3; cy(left_3_1) = -3; cz(left_3_1) = -1; ny(left_3_1) = -1;
+		cx(left_3_2) = -1; cy(left_3_2) = -3; cz(left_3_2) = 3; ny(left_3_2) = -1;
+		cx(left_3_3) = 3; cy(left_3_3) = 3; cz(left_3_3) = -3; nx(left_3_3) = 1;
+		cx(left_2_0) = 3; cy(left_2_0) = 3; cz(left_2_0) = -1; ny(left_2_0) = 1;
+		cx(left_2_1) = 1; cy(left_2_1) = 3; cz(left_2_1) = -1; ny(left_2_1) = 1;
+		cx(left_2_2) = 3; cy(left_2_2) = 1; cz(left_2_2) = -1; nx(left_2_2) = 1;
+		cx(left_2_3) = -3; cy(left_2_3) = 3; cz(left_2_3) = -1; ny(left_2_3) = 1;
+		cx(left_1_0) = -3; cy(left_1_0) = -1; cz(left_1_0) = 3; nx(left_1_0) = -1;
+		cx(left_1_1) = 3; cy(left_1_1) = -1; cz(left_1_1) = 1; nx(left_1_1) = 1;
+		cx(left_1_2) = 1; cy(left_1_2) = 1; cz(left_1_2) = 3; nz(left_1_2) = 1;
+		cx(left_1_3) = 3; cy(left_1_3) = 1; cz(left_1_3) = -3; nx(left_1_3) = 1;
+		cx(left_0_0) = 3; cy(left_0_0) = 3; cz(left_0_0) = 3; nz(left_0_0) = 1;
+		cx(left_0_1) = 1; cy(left_0_1) = -3; cz(left_0_1) = 3; nz(left_0_1) = 1;
+		cx(left_0_2) = -3; cy(left_0_2) = 1; cz(left_0_2) = -3; nx(left_0_2) = -1;
+		cx(left_0_3) = -3; cy(left_0_3) = 3; cz(left_0_3) = 3; nz(left_0_3) = 1;
+		cx(down_3_0) = 3; cy(down_3_0) = -3; cz(down_3_0) = -3; ny(down_3_0) = -1;
+		cx(down_2_0) = 3; cy(down_2_0) = -3; cz(down_2_0) = -1; nx(down_2_0) = 1;
+		cx(down_1_0) = -1; cy(down_1_0) = -3; cz(down_1_0) = 3; nz(down_1_0) = 1;
+		cx(down_0_0) = 3; cy(down_0_0) = 3; cz(down_0_0) = -3; nz(down_0_0) = -1;
+		cx(down_3_1) = 3; cy(down_3_1) = -1; cz(down_3_1) = 3; nz(down_3_1) = 1;
+		cx(down_2_1) = -1; cy(down_2_1) = 1; cz(down_2_1) = -3; nz(down_2_1) = -1;
+		cx(down_1_1) = -3; cy(down_1_1) = -1; cz(down_1_1) = 1; nx(down_1_1) = -1;
+		cx(down_0_1) = 3; cy(down_0_1) = -1; cz(down_0_1) = -3; nz(down_0_1) = -1;
+		cx(down_3_2) = -3; cy(down_3_2) = -3; cz(down_3_2) = 1; nx(down_3_2) = -1;
+		cx(down_2_2) = -3; cy(down_2_2) = -1; cz(down_2_2) = -1; nx(down_2_2) = -1;
+		cx(down_1_2) = -3; cy(down_1_2) = 1; cz(down_1_2) = 1; nx(down_1_2) = -1;
+		cx(down_0_2) = -3; cy(down_0_2) = 3; cz(down_0_2) = 1; nx(down_0_2) = -1;
+		cx(down_3_3) = -3; cy(down_3_3) = -3; cz(down_3_3) = 3; nz(down_3_3) = 1;
+		cx(down_2_3) = 1; cy(down_2_3) = -3; cz(down_2_3) = -3; nz(down_2_3) = -1;
+		cx(down_1_3) = -1; cy(down_1_3) = 3; cz(down_1_3) = -3; ny(down_1_3) = 1;
+		cx(down_0_3) = -3; cy(down_0_3) = 3; cz(down_0_3) = -3; nx(down_0_3) = -1;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 200;
+	discount = 1.0;
+}
