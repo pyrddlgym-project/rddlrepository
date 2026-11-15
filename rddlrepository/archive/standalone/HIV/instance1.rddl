@@ -1,0 +1,31 @@
+// The patient of Ernst et al. (2006) in steps of 1 day: faster, but less accurate (see the domain).
+
+non-fluents hiv_nf1 {
+	domain = hiv;
+
+	objects {
+		patient : { p1 };
+	};
+
+	non-fluents {
+		DT = 1;
+	};
+}
+
+instance hiv_inst1 {
+	domain = hiv;
+	non-fluents = hiv_nf1;
+
+	init-state {
+		t1(p1) = 163573;
+		t2(p1) = 5;
+		i1(p1) = 11945;
+		i2(p1) = 46;
+		v(p1) = 63919;
+		e(p1) = 24;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 1000;
+	discount = 0.9959676105;	// 0.98 per revision, as in Ernst et al.
+}

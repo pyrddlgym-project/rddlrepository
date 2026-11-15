@@ -1,0 +1,231 @@
+////////////////////////////////////////////////////////////////////
+// Structured treatment interruption for HIV infected patients, with
+// the model of HIV infection of Adams et al. (2004) and the treatment
+// problem of Ernst et al. (2006).
+//
+// Each patient has six populations, per ml of blood:
+//   T1  healthy CD4+ T-lymphocytes,   T1* infected ones,
+//   T2  healthy macrophages,          T2* infected ones,
+//   V   free virus particles (copies/ml),
+//   E   HIV-specific cytotoxic T-lymphocytes (immune effectors),
+// which follow, with I = T1* + T2*:
+//
+//   T1'  = LAMBDA1 - D1 T1 - (1 - e1) K1 V T1
+//   T2'  = LAMBDA2 - D2 T2 - (1 - F e1) K2 V T2
+//   T1*' = (1 - e1) K1 V T1 - DELTA T1* - M1 E T1*
+//   T2*' = (1 - F e1) K2 V T2 - DELTA T2* - M2 E T2*
+//   V'   = (1 - e2) NT DELTA I - C V
+//          - [(1 - e1) RHO1 K1 T1 + (1 - F e1) RHO2 K2 T2] V
+//   E'   = LAMBDAE + BE I / (I + KB) E - DE I / (I + KD) E - DELTAE E
+//
+// in days. The drugs are a reverse transcriptase inhibitor (RTI),
+// with e1 = EPS1 while it is taken and 0 otherwise, and a protease
+// inhibitor (PI), with e2 = EPS2 while it is taken and 0 otherwise.
+//
+// The treatment is revised every DECISION-DAYS days: on the first
+// step and then every DECISION-DAYS days, the actions give-rti and give-pi
+// choose which drugs each patient takes until the next revision, and
+// the actions are ignored on the steps in between. Each revision
+// costs, for each patient,
+//
+//   Q V + R1 e1^2 + R2 e2^2 - S E
+//
+// with the state at the revision and the drugs chosen in it, and the
+// reward is minus the cost, given on the revision steps only.
+//
+// Each step lasts DT days. The model is stiff (during an acute
+// infection some populations change at rates near 60 per day), so it
+// is integrated by a positive, stable second-order semi-implicit
+// scheme: each population x is written as x' = P - L x with P, L >= 0,
+// and
+//
+//   x~ = (x + DT P(x)) / (1 + DT L(x))
+//   x+ = (x + DT (P(x) + P(x~)) / 2) / (1 + DT (L(x) + L(x~)) / 2)
+//
+// which keeps every population positive and has the steady states of
+// the model as its fixed points, for any DT. Its accuracy depends on DT:
+// compared with an accurate ODE solver over 1000 days, DT = 0.1 keeps
+// every population within about one order of magnitude of the
+// solution, even under random treatment, and ends in the same steady
+// state, while DT = 1 can end a patient in a different steady state
+// than the model does. DT = 0.01 is within a third of an order.
+//
+// Without treatment the model has an unstable uninfected steady state,
+// (T1, T2, T1*, T2*, V, E) = (1e6, 3198, 0, 0, 0, 10), which one virus
+// per ml leads to the non-healthy steady state (163573, 5, 11945, 46,
+// 63919, 24). A treatment that is interrupted at the right times can
+// instead lead the patient to the healthy steady state (967839, 621,
+// 76, 6, 415, 353108), where the immune system controls the virus
+// without drugs.
+//
+// The parameters, drug efficacies, costs and the decision interval are
+// those of Ernst et al. (2006), who take the model from Adams et al.
+// (2004); Ernst et al. start the patients in the non-healthy steady
+// state, monitor them for 1000 days, and discount each revision by
+// 0.98, which is 0.98^(DT / DECISION-DAYS) for each step here.
+//
+// References:
+//
+//		B. M. Adams, H. T. Banks, H.-D. Kwon, and H. T. Tran. Dynamic
+//		multidrug therapies for HIV: Optimal and STI control
+//		approaches. Mathematical Biosciences and Engineering 1(2),
+//		2004.
+//
+//		D. Ernst, G.-B. Stan, J. Goncalves, and L. Wehenkel. Clinical
+//		data based optimal STI strategies for HIV: a reinforcement
+//		learning approach. IEEE Conference on Decision and Control,
+//		2006.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain hiv {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		patient : object;
+	};
+
+	pvariables {
+
+		// the model (per day, and per ml of blood)
+		LAMBDA1(patient) 	: { non-fluent, real, default = 10000.0 };	// production of T1
+		D1(patient) 		: { non-fluent, real, default = 0.01 };		// death rate of T1
+		K1(patient) 		: { non-fluent, real, default = 0.0000008 };	// infection rate of T1
+		LAMBDA2(patient) 	: { non-fluent, real, default = 31.98 };	// production of T2
+		D2(patient) 		: { non-fluent, real, default = 0.01 };		// death rate of T2
+		K2(patient) 		: { non-fluent, real, default = 0.0001 };	// infection rate of T2
+		F(patient) 			: { non-fluent, real, default = 0.34 };		// RTI efficacy in T2 relative to T1
+		DELTA(patient) 		: { non-fluent, real, default = 0.7 };		// death rate of infected cells
+		M1(patient) 		: { non-fluent, real, default = 0.00001 };	// immune clearance of T1*
+		M2(patient) 		: { non-fluent, real, default = 0.00001 };	// immune clearance of T2*
+		NT(patient) 		: { non-fluent, real, default = 100.0 };	// virions made by an infected cell
+		C(patient) 			: { non-fluent, real, default = 13.0 };		// death rate of free virus
+		RHO1(patient) 		: { non-fluent, real, default = 1.0 };		// virions infecting a T1 cell
+		RHO2(patient) 		: { non-fluent, real, default = 1.0 };		// virions infecting a T2 cell
+		LAMBDAE(patient) 	: { non-fluent, real, default = 1.0 };		// production of E
+		BE(patient) 		: { non-fluent, real, default = 0.3 };		// largest birth rate of E
+		KB(patient) 		: { non-fluent, real, default = 100.0 };	// saturation of the birth of E
+		DE(patient) 		: { non-fluent, real, default = 0.25 };		// largest death rate of E
+		KD(patient) 		: { non-fluent, real, default = 500.0 };	// saturation of the death of E
+		DELTAE(patient) 	: { non-fluent, real, default = 0.1 };		// natural death rate of E
+
+		// the drugs and the costs
+		EPS1 				: { non-fluent, real, default = 0.7 };		// efficacy of the RTI
+		EPS2 				: { non-fluent, real, default = 0.3 };		// efficacy of the PI
+		Q 					: { non-fluent, real, default = 0.1 };		// cost of free virus
+		R1 					: { non-fluent, real, default = 20000.0 };	// cost of the RTI
+		R2 					: { non-fluent, real, default = 2000.0 };	// cost of the PI
+		S 					: { non-fluent, real, default = 1000.0 };	// value of immune effectors
+
+		// time (days)
+		DT 					: { non-fluent, real, default = 0.1 };		// length of a step
+		DECISION-DAYS 		: { non-fluent, real, default = 5.0 };		// time between revisions
+
+		// the treatment in effect
+		revise 				: { interm-fluent, bool };
+		e1(patient) 		: { interm-fluent, real };
+		e2(patient) 		: { interm-fluent, real };
+
+		// the model as x' = P - L x, at the state and at the predicted state
+		pt1(patient) : { interm-fluent, real };		lt1(patient) : { interm-fluent, real };
+		pt2(patient) : { interm-fluent, real };		lt2(patient) : { interm-fluent, real };
+		pi1(patient) : { interm-fluent, real };		li1(patient) : { interm-fluent, real };
+		pi2(patient) : { interm-fluent, real };		li2(patient) : { interm-fluent, real };
+		pv(patient) : { interm-fluent, real };		lv(patient) : { interm-fluent, real };
+		pe(patient) : { interm-fluent, real };		le(patient) : { interm-fluent, real };
+		t1p(patient) : { interm-fluent, real };		t2p(patient) : { interm-fluent, real };
+		i1p(patient) : { interm-fluent, real };		i2p(patient) : { interm-fluent, real };
+		vp(patient) : { interm-fluent, real };		ep(patient) : { interm-fluent, real };
+		pt1p(patient) : { interm-fluent, real };	lt1p(patient) : { interm-fluent, real };
+		pt2p(patient) : { interm-fluent, real };	lt2p(patient) : { interm-fluent, real };
+		pi1p(patient) : { interm-fluent, real };	li1p(patient) : { interm-fluent, real };
+		pi2p(patient) : { interm-fluent, real };	li2p(patient) : { interm-fluent, real };
+		pvp(patient) : { interm-fluent, real };		lvp(patient) : { interm-fluent, real };
+		pep(patient) : { interm-fluent, real };		lep(patient) : { interm-fluent, real };
+
+		// states
+		t1(patient) 		: { state-fluent, real, default = 1000000.0 };	// T1 (cells/ml)
+		t2(patient) 		: { state-fluent, real, default = 3198.0 };		// T2 (cells/ml)
+		i1(patient) 		: { state-fluent, real, default = 0.0 };		// T1* (cells/ml)
+		i2(patient) 		: { state-fluent, real, default = 0.0 };		// T2* (cells/ml)
+		v(patient) 			: { state-fluent, real, default = 0.0 };		// V (copies/ml)
+		e(patient) 			: { state-fluent, real, default = 10.0 };		// E (cells/ml)
+		rti-on(patient) 	: { state-fluent, bool, default = false };		// RTI chosen at the last revision
+		pi-on(patient) 	: { state-fluent, bool, default = false };		// PI chosen at the last revision
+		since 				: { state-fluent, real, default = 1000000000.0 };		// days since the last revision
+
+		// actions, which take effect at a revision
+		give-rti(patient) 		: { action-fluent, bool, default = false };
+		give-pi(patient) 		: { action-fluent, bool, default = false };
+	};
+
+	cpfs {
+
+		// the treatment in effect
+		revise = since >= DECISION-DAYS - DT / 2;
+		e1(?p) = if (revise) then (if (give-rti(?p)) then EPS1 else 0.0) else (if (rti-on(?p)) then EPS1 else 0.0);
+		e2(?p) = if (revise) then (if (give-pi(?p)) then EPS2 else 0.0) else (if (pi-on(?p)) then EPS2 else 0.0);
+
+		// the model at the state
+		pt1(?p) = LAMBDA1(?p);
+		lt1(?p) = D1(?p) + (1 - e1(?p)) * K1(?p) * v(?p);
+		pt2(?p) = LAMBDA2(?p);
+		lt2(?p) = D2(?p) + (1 - F(?p) * e1(?p)) * K2(?p) * v(?p);
+		pi1(?p) = (1 - e1(?p)) * K1(?p) * v(?p) * t1(?p);
+		li1(?p) = DELTA(?p) + M1(?p) * e(?p);
+		pi2(?p) = (1 - F(?p) * e1(?p)) * K2(?p) * v(?p) * t2(?p);
+		li2(?p) = DELTA(?p) + M2(?p) * e(?p);
+		pv(?p) = (1 - e2(?p)) * NT(?p) * DELTA(?p) * (i1(?p) + i2(?p));
+		lv(?p) = C(?p) + (1 - e1(?p)) * RHO1(?p) * K1(?p) * t1(?p) + (1 - F(?p) * e1(?p)) * RHO2(?p) * K2(?p) * t2(?p);
+		pe(?p) = LAMBDAE(?p) + BE(?p) * (i1(?p) + i2(?p)) / (i1(?p) + i2(?p) + KB(?p)) * e(?p);
+		le(?p) = DE(?p) * (i1(?p) + i2(?p)) / (i1(?p) + i2(?p) + KD(?p)) + DELTAE(?p);
+
+		// the predicted state
+		t1p(?p) = (t1(?p) + DT * pt1(?p)) / (1 + DT * lt1(?p));
+		t2p(?p) = (t2(?p) + DT * pt2(?p)) / (1 + DT * lt2(?p));
+		i1p(?p) = (i1(?p) + DT * pi1(?p)) / (1 + DT * li1(?p));
+		i2p(?p) = (i2(?p) + DT * pi2(?p)) / (1 + DT * li2(?p));
+		vp(?p) = (v(?p) + DT * pv(?p)) / (1 + DT * lv(?p));
+		ep(?p) = (e(?p) + DT * pe(?p)) / (1 + DT * le(?p));
+
+		// the model at the predicted state
+		pt1p(?p) = LAMBDA1(?p);
+		lt1p(?p) = D1(?p) + (1 - e1(?p)) * K1(?p) * vp(?p);
+		pt2p(?p) = LAMBDA2(?p);
+		lt2p(?p) = D2(?p) + (1 - F(?p) * e1(?p)) * K2(?p) * vp(?p);
+		pi1p(?p) = (1 - e1(?p)) * K1(?p) * vp(?p) * t1p(?p);
+		li1p(?p) = DELTA(?p) + M1(?p) * ep(?p);
+		pi2p(?p) = (1 - F(?p) * e1(?p)) * K2(?p) * vp(?p) * t2p(?p);
+		li2p(?p) = DELTA(?p) + M2(?p) * ep(?p);
+		pvp(?p) = (1 - e2(?p)) * NT(?p) * DELTA(?p) * (i1p(?p) + i2p(?p));
+		lvp(?p) = C(?p) + (1 - e1(?p)) * RHO1(?p) * K1(?p) * t1p(?p) + (1 - F(?p) * e1(?p)) * RHO2(?p) * K2(?p) * t2p(?p);
+		pep(?p) = LAMBDAE(?p) + BE(?p) * (i1p(?p) + i2p(?p)) / (i1p(?p) + i2p(?p) + KB(?p)) * ep(?p);
+		lep(?p) = DE(?p) * (i1p(?p) + i2p(?p)) / (i1p(?p) + i2p(?p) + KD(?p)) + DELTAE(?p);
+
+		// the next state
+		t1'(?p) = (t1(?p) + DT * (pt1(?p) + pt1p(?p)) / 2) / (1 + DT * (lt1(?p) + lt1p(?p)) / 2);
+		t2'(?p) = (t2(?p) + DT * (pt2(?p) + pt2p(?p)) / 2) / (1 + DT * (lt2(?p) + lt2p(?p)) / 2);
+		i1'(?p) = (i1(?p) + DT * (pi1(?p) + pi1p(?p)) / 2) / (1 + DT * (li1(?p) + li1p(?p)) / 2);
+		i2'(?p) = (i2(?p) + DT * (pi2(?p) + pi2p(?p)) / 2) / (1 + DT * (li2(?p) + li2p(?p)) / 2);
+		v'(?p) = (v(?p) + DT * (pv(?p) + pvp(?p)) / 2) / (1 + DT * (lv(?p) + lvp(?p)) / 2);
+		e'(?p) = (e(?p) + DT * (pe(?p) + pep(?p)) / 2) / (1 + DT * (le(?p) + lep(?p)) / 2);
+		rti-on'(?p) = if (revise) then give-rti(?p) else rti-on(?p);
+		pi-on'(?p) = if (revise) then give-pi(?p) else pi-on(?p);
+		since' = if (revise) then DT else since + DT;
+	};
+
+	// the cost of each revision, at the state and the drugs chosen in it
+	reward = if (revise) then -(sum_{?p : patient} [Q * v(?p) + R1 * pow[e1(?p), 2] + R2 * pow[e2(?p), 2] - S * e(?p)])
+			 else 0.0;
+
+	state-invariants {
+		DT > 0;
+		DECISION-DAYS >= DT;
+		forall_{?p : patient} [(t1(?p) >= 0) ^ (t2(?p) >= 0) ^ (i1(?p) >= 0) ^ (i2(?p) >= 0) ^ (v(?p) >= 0) ^ (e(?p) >= 0)];
+	};
+}

@@ -156,7 +156,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**128 problems in 10 contexts:** [standalone](#standalone) (14) &middot; [physics](#physics) (14) &middot; [or](#or) (7) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**129 problems in 10 contexts:** [standalone](#standalone) (15) &middot; [physics](#physics) (14) &middot; [or](#or) (7) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -168,6 +168,7 @@ Domains written for this repository.
 | <img src="docs/thumbnails/Elevators.png" width="64" alt=""> | <code>Elevators</code> | 0, 1 | Elevators carry passengers between floors |
 | <img src="docs/thumbnails/Epidemic.png" width="64" alt=""> | <code>Epidemic</code> | 0 | Contain an epidemic with interventions |
 | <img src="docs/thumbnails/Fishery.png" width="64" alt=""> | <code>Fishery</code> | 0 | Harvest competing fish stocks |
+| <img src="docs/thumbnails/HIV.png" width="64" alt=""> | <code>HIV</code> | 0&ndash;4 | Interrupt HIV treatment to boost immunity |
 | <img src="docs/thumbnails/HVAC.png" width="64" alt=""> | <code>HVAC</code> | 0, 1 | Heat the zones of a building |
 | <img src="docs/thumbnails/Intruders_Continuous.png" width="64" alt=""> | <code>Intruders_<wbr>Continuous</code> | 0 | Detect intruders in an area |
 | <img src="docs/thumbnails/Intruders_Discrete.png" width="64" alt=""> | <code>Intruders_<wbr>Discrete</code> | 0 | Detect intruders in an area |

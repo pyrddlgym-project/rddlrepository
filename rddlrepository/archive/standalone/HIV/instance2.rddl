@@ -1,0 +1,23 @@
+// A patient just infected: the uninfected steady state with one virus per ml, monitored for
+// 1000 days in steps of 0.1 day.
+
+non-fluents hiv_nf2 {
+	domain = hiv;
+
+	objects {
+		patient : { p1 };
+	};
+}
+
+instance hiv_inst2 {
+	domain = hiv;
+	non-fluents = hiv_nf2;
+
+	init-state {
+		v(p1) = 1;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 10000;
+	discount = 0.9995960275;	// 0.98 per revision, as in Ernst et al.
+}

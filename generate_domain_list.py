@@ -60,6 +60,7 @@ SHORT = {
     'Elevators': 'Elevators carry passengers between floors',
     'Epidemic': 'Contain an epidemic with interventions',
     'Fishery': 'Harvest competing fish stocks',
+    'HIV': 'Interrupt HIV treatment to boost immunity',
     'HVAC': 'Heat the zones of a building',
     'Intruders': 'Detect intruders in an area',
     'Navigation_Continuous': 'Navigate around regions to avoid',

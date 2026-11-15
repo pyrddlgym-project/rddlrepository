@@ -1,0 +1,72 @@
+// Ten patients: six in the non-healthy steady state, two just infected, and two in the healthy
+// steady state; 1000 days in steps of 0.1 day.
+
+non-fluents hiv_nf4 {
+	domain = hiv;
+
+	objects {
+		patient : { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 };
+	};
+}
+
+instance hiv_inst4 {
+	domain = hiv;
+	non-fluents = hiv_nf4;
+
+	init-state {
+		t1(p1) = 163573;
+		t2(p1) = 5;
+		i1(p1) = 11945;
+		i2(p1) = 46;
+		v(p1) = 63919;
+		e(p1) = 24;
+		t1(p2) = 163573;
+		t2(p2) = 5;
+		i1(p2) = 11945;
+		i2(p2) = 46;
+		v(p2) = 63919;
+		e(p2) = 24;
+		t1(p3) = 163573;
+		t2(p3) = 5;
+		i1(p3) = 11945;
+		i2(p3) = 46;
+		v(p3) = 63919;
+		e(p3) = 24;
+		t1(p4) = 163573;
+		t2(p4) = 5;
+		i1(p4) = 11945;
+		i2(p4) = 46;
+		v(p4) = 63919;
+		e(p4) = 24;
+		t1(p5) = 163573;
+		t2(p5) = 5;
+		i1(p5) = 11945;
+		i2(p5) = 46;
+		v(p5) = 63919;
+		e(p5) = 24;
+		t1(p6) = 163573;
+		t2(p6) = 5;
+		i1(p6) = 11945;
+		i2(p6) = 46;
+		v(p6) = 63919;
+		e(p6) = 24;
+		v(p7) = 1;
+		v(p8) = 1;
+		t1(p9) = 967839;
+		t2(p9) = 621;
+		i1(p9) = 76;
+		i2(p9) = 6;
+		v(p9) = 415;
+		e(p9) = 353108;
+		t1(p10) = 967839;
+		t2(p10) = 621;
+		i1(p10) = 76;
+		i2(p10) = 6;
+		v(p10) = 415;
+		e(p10) = 353108;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 10000;
+	discount = 0.9995960275;	// 0.98 per revision, as in Ernst et al.
+}

@@ -1,0 +1,28 @@
+// The patient of Ernst et al. (2006): one patient in the non-healthy steady state, monitored for
+// 1000 days in steps of 0.1 day.
+
+non-fluents hiv_nf0 {
+	domain = hiv;
+
+	objects {
+		patient : { p1 };
+	};
+}
+
+instance hiv_inst0 {
+	domain = hiv;
+	non-fluents = hiv_nf0;
+
+	init-state {
+		t1(p1) = 163573;
+		t2(p1) = 5;
+		i1(p1) = 11945;
+		i2(p1) = 46;
+		v(p1) = 63919;
+		e(p1) = 24;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 10000;
+	discount = 0.9995960275;	// 0.98 per revision, as in Ernst et al.
+}
