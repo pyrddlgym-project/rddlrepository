@@ -34,6 +34,7 @@ TIMEOUT = 300               # seconds to render one domain
 CONTEXTS = {
     'standalone': 'Domains written for this repository.',
     'physics': 'Physical systems and control.',
+    'biology': 'Biology, medicine and ecology.',
     'or': 'Operations research.',
     'arcade': 'Arcade, puzzle and card games.',
     'gym': 'RDDL versions of the classic control environments of Gymnasium.',
@@ -58,15 +59,16 @@ SHORT = {
     # standalone
     'BernoulliBandit': 'Bayesian Bernoulli bandit',
     'Elevators': 'Elevators carry passengers between floors',
-    'Epidemic': 'Contain an epidemic with interventions',
-    'Fishery': 'Harvest competing fish stocks',
-    'HIV': 'Interrupt HIV treatment to boost immunity',
     'HVAC': 'Heat the zones of a building',
     'Intruders': 'Detect intruders in an area',
     'Navigation_Continuous': 'Navigate around regions to avoid',
     'PowerGen': 'Generate power to meet demand',
     'Reservoir': 'Manage water in linked reservoirs',
     'TrafficBLX': 'Time traffic signals to cut travel time',
+    # biology
+    'Epidemic': 'Contain an epidemic with interventions',
+    'Fishery': 'Harvest competing fish stocks',
+    'HIV': 'Interrupt HIV treatment to boost immunity',
     # physics
     'Bicycle': 'Balance and ride a bicycle',
     'CartPoleChain': 'Swing up a chain of poles on a cart',

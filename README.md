@@ -156,7 +156,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**129 problems in 10 contexts:** [standalone](#standalone) (15) &middot; [physics](#physics) (14) &middot; [or](#or) (7) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**129 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (3) &middot; [or](#or) (7) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -166,9 +166,6 @@ Domains written for this repository.
 |:-:|:--|:--|:--|
 | <img src="docs/thumbnails/BernoulliBandit.png" width="64" alt=""> | <code>BernoulliBandit</code> | 0 | Bayesian Bernoulli bandit |
 | <img src="docs/thumbnails/Elevators.png" width="64" alt=""> | <code>Elevators</code> | 0, 1 | Elevators carry passengers between floors |
-| <img src="docs/thumbnails/Epidemic.png" width="64" alt=""> | <code>Epidemic</code> | 0 | Contain an epidemic with interventions |
-| <img src="docs/thumbnails/Fishery.png" width="64" alt=""> | <code>Fishery</code> | 0 | Harvest competing fish stocks |
-| <img src="docs/thumbnails/HIV.png" width="64" alt=""> | <code>HIV</code> | 0&ndash;4 | Interrupt HIV treatment to boost immunity |
 | <img src="docs/thumbnails/HVAC.png" width="64" alt=""> | <code>HVAC</code> | 0, 1 | Heat the zones of a building |
 | <img src="docs/thumbnails/Intruders_Continuous.png" width="64" alt=""> | <code>Intruders_<wbr>Continuous</code> | 0 | Detect intruders in an area |
 | <img src="docs/thumbnails/Intruders_Discrete.png" width="64" alt=""> | <code>Intruders_<wbr>Discrete</code> | 0 | Detect intruders in an area |
@@ -202,6 +199,18 @@ Physical systems and control.
 | <img src="docs/thumbnails/UAV_Continuous_physics.png" width="64" alt=""> | <code>UAV_<wbr>Continuous_<wbr>physics</code> | 0, 1 | Fly drones to goal positions |
 | <img src="docs/thumbnails/UAV_Discrete_physics.png" width="64" alt=""> | <code>UAV_<wbr>Discrete_<wbr>physics</code> | 0 | Fly drones to goal positions |
 | <img src="docs/thumbnails/UAV_Mixed_physics.png" width="64" alt=""> | <code>UAV_<wbr>Mixed_<wbr>physics</code> | 0 | Fly drones to goal positions |
+
+<sub>[back to contexts](#domain-gallery)</sub>
+
+### biology
+
+Biology, medicine and ecology.
+
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Domain | Instances | Description |
+|:-:|:--|:--|:--|
+| <img src="docs/thumbnails/Epidemic_biology.png" width="64" alt=""> | <code>Epidemic_<wbr>biology</code> | 0 | Contain an epidemic with interventions |
+| <img src="docs/thumbnails/Fishery_biology.png" width="64" alt=""> | <code>Fishery_<wbr>biology</code> | 0 | Harvest competing fish stocks |
+| <img src="docs/thumbnails/HIV_biology.png" width="64" alt=""> | <code>HIV_<wbr>biology</code> | 0&ndash;4 | Interrupt HIV treatment to boost immunity |
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
