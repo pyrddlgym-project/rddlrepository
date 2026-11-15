@@ -156,7 +156,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**129 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (3) &middot; [or](#or) (7) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**130 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (3) &middot; [or](#or) (8) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -227,6 +227,7 @@ Operations research.
 | <img src="docs/thumbnails/StructuralMaintenance_or.png" width="64" alt=""> | <code>StructuralMaintenance_<wbr>or</code> | 0&ndash;4 | Inspect and repair a cracking structure |
 | <img src="docs/thumbnails/SupplyChain_or.png" width="64" alt=""> | <code>SupplyChain_<wbr>or</code> | 0 | Ship stock from a factory to warehouses |
 | <img src="docs/thumbnails/TSP_or.png" width="64" alt=""> | <code>TSP_<wbr>or</code> | 0&ndash;4 | Travelling salesman tour |
+| <img src="docs/thumbnails/Warehouse_or.png" width="64" alt=""> | <code>Warehouse_<wbr>or</code> | 0&ndash;4 | Robots carry requested shelves to workstations |
 
 <sub>[back to contexts](#domain-gallery)</sub>
 

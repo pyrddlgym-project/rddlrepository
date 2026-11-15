@@ -88,6 +88,7 @@ SHORT = {
     'StructuralMaintenance': 'Inspect and repair a cracking structure',
     'SupplyChain': 'Ship stock from a factory to warehouses',
     'TSP': 'Travelling salesman tour',
+    'Warehouse': 'Robots carry requested shelves to workstations',
     # arcade
     'Blackjack': 'Draw cards to 21 without going over',
     'BrickBreaker': 'Break bricks with a bouncing ball',

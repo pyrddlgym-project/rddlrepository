@@ -1,0 +1,90 @@
+// The large warehouse of RWARE with 8 robots and 8 requests (rware-large-8ag-v2):
+// 29 rows and 16 columns, 224 shelves and 2 workstations, with a random start.
+
+non-fluents warehouse_nf4 {
+	domain = warehouse;
+
+	objects {
+		xpos : { x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15 };
+		ypos : { y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, y16, y17, y18, y19, y20, y21, y22, y23, y24, y25, y26, y27, y28 };
+		robot : { r1, r2, r3, r4, r5, r6, r7, r8 };
+		shelf : { s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s32, s33, s34, s35, s36, s37, s38, s39, s40, s41, s42, s43, s44, s45, s46, s47, s48, s49, s50, s51, s52, s53, s54, s55, s56, s57, s58, s59, s60, s61, s62, s63, s64, s65, s66, s67, s68, s69, s70, s71, s72, s73, s74, s75, s76, s77, s78, s79, s80, s81, s82, s83, s84, s85, s86, s87, s88, s89, s90, s91, s92, s93, s94, s95, s96, s97, s98, s99, s100, s101, s102, s103, s104, s105, s106, s107, s108, s109, s110, s111, s112, s113, s114, s115, s116, s117, s118, s119, s120, s121, s122, s123, s124, s125, s126, s127, s128, s129, s130, s131, s132, s133, s134, s135, s136, s137, s138, s139, s140, s141, s142, s143, s144, s145, s146, s147, s148, s149, s150, s151, s152, s153, s154, s155, s156, s157, s158, s159, s160, s161, s162, s163, s164, s165, s166, s167, s168, s169, s170, s171, s172, s173, s174, s175, s176, s177, s178, s179, s180, s181, s182, s183, s184, s185, s186, s187, s188, s189, s190, s191, s192, s193, s194, s195, s196, s197, s198, s199, s200, s201, s202, s203, s204, s205, s206, s207, s208, s209, s210, s211, s212, s213, s214, s215, s216, s217, s218, s219, s220, s221, s222, s223, s224 };
+	};
+
+	non-fluents {
+		WIDTH = 16;
+		HEIGHT = 29;
+		X(x0) = 0; X(x1) = 1; X(x2) = 2; X(x3) = 3; X(x4) = 4; X(x5) = 5; X(x6) = 6; X(x7) = 7; X(x8) = 8; X(x9) = 9; X(x10) = 10; X(x11) = 11; X(x12) = 12; X(x13) = 13; X(x14) = 14; X(x15) = 15;
+		Y(y0) = 0; Y(y1) = 1; Y(y2) = 2; Y(y3) = 3; Y(y4) = 4; Y(y5) = 5; Y(y6) = 6; Y(y7) = 7; Y(y8) = 8; Y(y9) = 9; Y(y10) = 10; Y(y11) = 11; Y(y12) = 12; Y(y13) = 13; Y(y14) = 14; Y(y15) = 15; Y(y16) = 16; Y(y17) = 17; Y(y18) = 18; Y(y19) = 19; Y(y20) = 20; Y(y21) = 21; Y(y22) = 22; Y(y23) = 23; Y(y24) = 24; Y(y25) = 25; Y(y26) = 26; Y(y27) = 27; Y(y28) = 28;
+		STORAGE(x1, y1); STORAGE(x2, y1); STORAGE(x4, y1); STORAGE(x5, y1); STORAGE(x7, y1); STORAGE(x8, y1); STORAGE(x10, y1); STORAGE(x11, y1); STORAGE(x13, y1); STORAGE(x14, y1);
+		STORAGE(x1, y2); STORAGE(x2, y2); STORAGE(x4, y2); STORAGE(x5, y2); STORAGE(x7, y2); STORAGE(x8, y2); STORAGE(x10, y2); STORAGE(x11, y2); STORAGE(x13, y2); STORAGE(x14, y2);
+		STORAGE(x1, y3); STORAGE(x2, y3); STORAGE(x4, y3); STORAGE(x5, y3); STORAGE(x7, y3); STORAGE(x8, y3); STORAGE(x10, y3); STORAGE(x11, y3); STORAGE(x13, y3); STORAGE(x14, y3);
+		STORAGE(x1, y4); STORAGE(x2, y4); STORAGE(x4, y4); STORAGE(x5, y4); STORAGE(x7, y4); STORAGE(x8, y4); STORAGE(x10, y4); STORAGE(x11, y4); STORAGE(x13, y4); STORAGE(x14, y4);
+		STORAGE(x1, y5); STORAGE(x2, y5); STORAGE(x4, y5); STORAGE(x5, y5); STORAGE(x7, y5); STORAGE(x8, y5); STORAGE(x10, y5); STORAGE(x11, y5); STORAGE(x13, y5); STORAGE(x14, y5);
+		STORAGE(x1, y6); STORAGE(x2, y6); STORAGE(x4, y6); STORAGE(x5, y6); STORAGE(x7, y6); STORAGE(x8, y6); STORAGE(x10, y6); STORAGE(x11, y6); STORAGE(x13, y6); STORAGE(x14, y6);
+		STORAGE(x1, y7); STORAGE(x2, y7); STORAGE(x4, y7); STORAGE(x5, y7); STORAGE(x7, y7); STORAGE(x8, y7); STORAGE(x10, y7); STORAGE(x11, y7); STORAGE(x13, y7); STORAGE(x14, y7);
+		STORAGE(x1, y8); STORAGE(x2, y8); STORAGE(x4, y8); STORAGE(x5, y8); STORAGE(x7, y8); STORAGE(x8, y8); STORAGE(x10, y8); STORAGE(x11, y8); STORAGE(x13, y8); STORAGE(x14, y8);
+		STORAGE(x1, y10); STORAGE(x2, y10); STORAGE(x4, y10); STORAGE(x5, y10); STORAGE(x7, y10); STORAGE(x8, y10); STORAGE(x10, y10); STORAGE(x11, y10); STORAGE(x13, y10); STORAGE(x14, y10);
+		STORAGE(x1, y11); STORAGE(x2, y11); STORAGE(x4, y11); STORAGE(x5, y11); STORAGE(x7, y11); STORAGE(x8, y11); STORAGE(x10, y11); STORAGE(x11, y11); STORAGE(x13, y11); STORAGE(x14, y11);
+		STORAGE(x1, y12); STORAGE(x2, y12); STORAGE(x4, y12); STORAGE(x5, y12); STORAGE(x7, y12); STORAGE(x8, y12); STORAGE(x10, y12); STORAGE(x11, y12); STORAGE(x13, y12); STORAGE(x14, y12);
+		STORAGE(x1, y13); STORAGE(x2, y13); STORAGE(x4, y13); STORAGE(x5, y13); STORAGE(x7, y13); STORAGE(x8, y13); STORAGE(x10, y13); STORAGE(x11, y13); STORAGE(x13, y13); STORAGE(x14, y13);
+		STORAGE(x1, y14); STORAGE(x2, y14); STORAGE(x4, y14); STORAGE(x5, y14); STORAGE(x7, y14); STORAGE(x8, y14); STORAGE(x10, y14); STORAGE(x11, y14); STORAGE(x13, y14); STORAGE(x14, y14);
+		STORAGE(x1, y15); STORAGE(x2, y15); STORAGE(x4, y15); STORAGE(x5, y15); STORAGE(x7, y15); STORAGE(x8, y15); STORAGE(x10, y15); STORAGE(x11, y15); STORAGE(x13, y15); STORAGE(x14, y15);
+		STORAGE(x1, y16); STORAGE(x2, y16); STORAGE(x4, y16); STORAGE(x5, y16); STORAGE(x7, y16); STORAGE(x8, y16); STORAGE(x10, y16); STORAGE(x11, y16); STORAGE(x13, y16); STORAGE(x14, y16);
+		STORAGE(x1, y17); STORAGE(x2, y17); STORAGE(x4, y17); STORAGE(x5, y17); STORAGE(x7, y17); STORAGE(x8, y17); STORAGE(x10, y17); STORAGE(x11, y17); STORAGE(x13, y17); STORAGE(x14, y17);
+		STORAGE(x1, y19); STORAGE(x2, y19); STORAGE(x4, y19); STORAGE(x5, y19); STORAGE(x10, y19); STORAGE(x11, y19); STORAGE(x13, y19); STORAGE(x14, y19);
+		STORAGE(x1, y20); STORAGE(x2, y20); STORAGE(x4, y20); STORAGE(x5, y20); STORAGE(x10, y20); STORAGE(x11, y20); STORAGE(x13, y20); STORAGE(x14, y20);
+		STORAGE(x1, y21); STORAGE(x2, y21); STORAGE(x4, y21); STORAGE(x5, y21); STORAGE(x10, y21); STORAGE(x11, y21); STORAGE(x13, y21); STORAGE(x14, y21);
+		STORAGE(x1, y22); STORAGE(x2, y22); STORAGE(x4, y22); STORAGE(x5, y22); STORAGE(x10, y22); STORAGE(x11, y22); STORAGE(x13, y22); STORAGE(x14, y22);
+		STORAGE(x1, y23); STORAGE(x2, y23); STORAGE(x4, y23); STORAGE(x5, y23); STORAGE(x10, y23); STORAGE(x11, y23); STORAGE(x13, y23); STORAGE(x14, y23);
+		STORAGE(x1, y24); STORAGE(x2, y24); STORAGE(x4, y24); STORAGE(x5, y24); STORAGE(x10, y24); STORAGE(x11, y24); STORAGE(x13, y24); STORAGE(x14, y24);
+		STORAGE(x1, y25); STORAGE(x2, y25); STORAGE(x4, y25); STORAGE(x5, y25); STORAGE(x10, y25); STORAGE(x11, y25); STORAGE(x13, y25); STORAGE(x14, y25);
+		STORAGE(x1, y26); STORAGE(x2, y26); STORAGE(x4, y26); STORAGE(x5, y26); STORAGE(x10, y26); STORAGE(x11, y26); STORAGE(x13, y26); STORAGE(x14, y26);
+		STATION(x7, y28); STATION(x8, y28);
+	};
+}
+
+instance warehouse_inst4 {
+	domain = warehouse;
+	non-fluents = warehouse_nf4;
+
+	init-state {
+		robot-x(r1) = 11; robot-y(r1) = 20; facing(r1) = @up;
+		robot-x(r2) = 1; robot-y(r2) = 28; facing(r2) = @left;
+		robot-x(r3) = 5; robot-y(r3) = 2; facing(r3) = @right;
+		robot-x(r4) = 4; robot-y(r4) = 25; facing(r4) = @up;
+		robot-x(r5) = 3; robot-y(r5) = 28; facing(r5) = @left;
+		robot-x(r6) = 15; robot-y(r6) = 26; facing(r6) = @down;
+		robot-x(r7) = 1; robot-y(r7) = 27; facing(r7) = @right;
+		robot-x(r8) = 11; robot-y(r8) = 14; facing(r8) = @up;
+		shelf-x(s1) = 1; shelf-y(s1) = 1; shelf-x(s2) = 2; shelf-y(s2) = 1; shelf-x(s3) = 4; shelf-y(s3) = 1; shelf-x(s4) = 5; shelf-y(s4) = 1; shelf-x(s5) = 7; shelf-y(s5) = 1; shelf-x(s6) = 8; shelf-y(s6) = 1; shelf-x(s7) = 10; shelf-y(s7) = 1; shelf-x(s8) = 11; shelf-y(s8) = 1; shelf-x(s9) = 13; shelf-y(s9) = 1; shelf-x(s10) = 14; shelf-y(s10) = 1;
+		shelf-x(s11) = 1; shelf-y(s11) = 2; shelf-x(s12) = 2; shelf-y(s12) = 2; shelf-x(s13) = 4; shelf-y(s13) = 2; shelf-x(s14) = 5; shelf-y(s14) = 2; shelf-x(s15) = 7; shelf-y(s15) = 2; shelf-x(s16) = 8; shelf-y(s16) = 2; shelf-x(s17) = 10; shelf-y(s17) = 2; shelf-x(s18) = 11; shelf-y(s18) = 2; shelf-x(s19) = 13; shelf-y(s19) = 2; shelf-x(s20) = 14; shelf-y(s20) = 2;
+		shelf-x(s21) = 1; shelf-y(s21) = 3; shelf-x(s22) = 2; shelf-y(s22) = 3; shelf-x(s23) = 4; shelf-y(s23) = 3; shelf-x(s24) = 5; shelf-y(s24) = 3; shelf-x(s25) = 7; shelf-y(s25) = 3; shelf-x(s26) = 8; shelf-y(s26) = 3; shelf-x(s27) = 10; shelf-y(s27) = 3; shelf-x(s28) = 11; shelf-y(s28) = 3; shelf-x(s29) = 13; shelf-y(s29) = 3; shelf-x(s30) = 14; shelf-y(s30) = 3;
+		shelf-x(s31) = 1; shelf-y(s31) = 4; shelf-x(s32) = 2; shelf-y(s32) = 4; shelf-x(s33) = 4; shelf-y(s33) = 4; shelf-x(s34) = 5; shelf-y(s34) = 4; shelf-x(s35) = 7; shelf-y(s35) = 4; shelf-x(s36) = 8; shelf-y(s36) = 4; shelf-x(s37) = 10; shelf-y(s37) = 4; shelf-x(s38) = 11; shelf-y(s38) = 4; shelf-x(s39) = 13; shelf-y(s39) = 4; shelf-x(s40) = 14; shelf-y(s40) = 4;
+		shelf-x(s41) = 1; shelf-y(s41) = 5; shelf-x(s42) = 2; shelf-y(s42) = 5; shelf-x(s43) = 4; shelf-y(s43) = 5; shelf-x(s44) = 5; shelf-y(s44) = 5; shelf-x(s45) = 7; shelf-y(s45) = 5; shelf-x(s46) = 8; shelf-y(s46) = 5; shelf-x(s47) = 10; shelf-y(s47) = 5; shelf-x(s48) = 11; shelf-y(s48) = 5; shelf-x(s49) = 13; shelf-y(s49) = 5; shelf-x(s50) = 14; shelf-y(s50) = 5;
+		shelf-x(s51) = 1; shelf-y(s51) = 6; shelf-x(s52) = 2; shelf-y(s52) = 6; shelf-x(s53) = 4; shelf-y(s53) = 6; shelf-x(s54) = 5; shelf-y(s54) = 6; shelf-x(s55) = 7; shelf-y(s55) = 6; shelf-x(s56) = 8; shelf-y(s56) = 6; shelf-x(s57) = 10; shelf-y(s57) = 6; shelf-x(s58) = 11; shelf-y(s58) = 6; shelf-x(s59) = 13; shelf-y(s59) = 6; shelf-x(s60) = 14; shelf-y(s60) = 6;
+		shelf-x(s61) = 1; shelf-y(s61) = 7; shelf-x(s62) = 2; shelf-y(s62) = 7; shelf-x(s63) = 4; shelf-y(s63) = 7; shelf-x(s64) = 5; shelf-y(s64) = 7; shelf-x(s65) = 7; shelf-y(s65) = 7; shelf-x(s66) = 8; shelf-y(s66) = 7; shelf-x(s67) = 10; shelf-y(s67) = 7; shelf-x(s68) = 11; shelf-y(s68) = 7; shelf-x(s69) = 13; shelf-y(s69) = 7; shelf-x(s70) = 14; shelf-y(s70) = 7;
+		shelf-x(s71) = 1; shelf-y(s71) = 8; shelf-x(s72) = 2; shelf-y(s72) = 8; shelf-x(s73) = 4; shelf-y(s73) = 8; shelf-x(s74) = 5; shelf-y(s74) = 8; shelf-x(s75) = 7; shelf-y(s75) = 8; shelf-x(s76) = 8; shelf-y(s76) = 8; shelf-x(s77) = 10; shelf-y(s77) = 8; shelf-x(s78) = 11; shelf-y(s78) = 8; shelf-x(s79) = 13; shelf-y(s79) = 8; shelf-x(s80) = 14; shelf-y(s80) = 8;
+		shelf-x(s81) = 1; shelf-y(s81) = 10; shelf-x(s82) = 2; shelf-y(s82) = 10; shelf-x(s83) = 4; shelf-y(s83) = 10; shelf-x(s84) = 5; shelf-y(s84) = 10; shelf-x(s85) = 7; shelf-y(s85) = 10; shelf-x(s86) = 8; shelf-y(s86) = 10; shelf-x(s87) = 10; shelf-y(s87) = 10; shelf-x(s88) = 11; shelf-y(s88) = 10; shelf-x(s89) = 13; shelf-y(s89) = 10; shelf-x(s90) = 14; shelf-y(s90) = 10;
+		shelf-x(s91) = 1; shelf-y(s91) = 11; shelf-x(s92) = 2; shelf-y(s92) = 11; shelf-x(s93) = 4; shelf-y(s93) = 11; shelf-x(s94) = 5; shelf-y(s94) = 11; shelf-x(s95) = 7; shelf-y(s95) = 11; shelf-x(s96) = 8; shelf-y(s96) = 11; shelf-x(s97) = 10; shelf-y(s97) = 11; shelf-x(s98) = 11; shelf-y(s98) = 11; shelf-x(s99) = 13; shelf-y(s99) = 11; shelf-x(s100) = 14; shelf-y(s100) = 11;
+		shelf-x(s101) = 1; shelf-y(s101) = 12; shelf-x(s102) = 2; shelf-y(s102) = 12; shelf-x(s103) = 4; shelf-y(s103) = 12; shelf-x(s104) = 5; shelf-y(s104) = 12; shelf-x(s105) = 7; shelf-y(s105) = 12; shelf-x(s106) = 8; shelf-y(s106) = 12; shelf-x(s107) = 10; shelf-y(s107) = 12; shelf-x(s108) = 11; shelf-y(s108) = 12; shelf-x(s109) = 13; shelf-y(s109) = 12; shelf-x(s110) = 14; shelf-y(s110) = 12;
+		shelf-x(s111) = 1; shelf-y(s111) = 13; shelf-x(s112) = 2; shelf-y(s112) = 13; shelf-x(s113) = 4; shelf-y(s113) = 13; shelf-x(s114) = 5; shelf-y(s114) = 13; shelf-x(s115) = 7; shelf-y(s115) = 13; shelf-x(s116) = 8; shelf-y(s116) = 13; shelf-x(s117) = 10; shelf-y(s117) = 13; shelf-x(s118) = 11; shelf-y(s118) = 13; shelf-x(s119) = 13; shelf-y(s119) = 13; shelf-x(s120) = 14; shelf-y(s120) = 13;
+		shelf-x(s121) = 1; shelf-y(s121) = 14; shelf-x(s122) = 2; shelf-y(s122) = 14; shelf-x(s123) = 4; shelf-y(s123) = 14; shelf-x(s124) = 5; shelf-y(s124) = 14; shelf-x(s125) = 7; shelf-y(s125) = 14; shelf-x(s126) = 8; shelf-y(s126) = 14; shelf-x(s127) = 10; shelf-y(s127) = 14; shelf-x(s128) = 11; shelf-y(s128) = 14; shelf-x(s129) = 13; shelf-y(s129) = 14; shelf-x(s130) = 14; shelf-y(s130) = 14;
+		shelf-x(s131) = 1; shelf-y(s131) = 15; shelf-x(s132) = 2; shelf-y(s132) = 15; shelf-x(s133) = 4; shelf-y(s133) = 15; shelf-x(s134) = 5; shelf-y(s134) = 15; shelf-x(s135) = 7; shelf-y(s135) = 15; shelf-x(s136) = 8; shelf-y(s136) = 15; shelf-x(s137) = 10; shelf-y(s137) = 15; shelf-x(s138) = 11; shelf-y(s138) = 15; shelf-x(s139) = 13; shelf-y(s139) = 15; shelf-x(s140) = 14; shelf-y(s140) = 15;
+		shelf-x(s141) = 1; shelf-y(s141) = 16; shelf-x(s142) = 2; shelf-y(s142) = 16; shelf-x(s143) = 4; shelf-y(s143) = 16; shelf-x(s144) = 5; shelf-y(s144) = 16; shelf-x(s145) = 7; shelf-y(s145) = 16; shelf-x(s146) = 8; shelf-y(s146) = 16; shelf-x(s147) = 10; shelf-y(s147) = 16; shelf-x(s148) = 11; shelf-y(s148) = 16; shelf-x(s149) = 13; shelf-y(s149) = 16; shelf-x(s150) = 14; shelf-y(s150) = 16;
+		shelf-x(s151) = 1; shelf-y(s151) = 17; shelf-x(s152) = 2; shelf-y(s152) = 17; shelf-x(s153) = 4; shelf-y(s153) = 17; shelf-x(s154) = 5; shelf-y(s154) = 17; shelf-x(s155) = 7; shelf-y(s155) = 17; shelf-x(s156) = 8; shelf-y(s156) = 17; shelf-x(s157) = 10; shelf-y(s157) = 17; shelf-x(s158) = 11; shelf-y(s158) = 17; shelf-x(s159) = 13; shelf-y(s159) = 17; shelf-x(s160) = 14; shelf-y(s160) = 17;
+		shelf-x(s161) = 1; shelf-y(s161) = 19; shelf-x(s162) = 2; shelf-y(s162) = 19; shelf-x(s163) = 4; shelf-y(s163) = 19; shelf-x(s164) = 5; shelf-y(s164) = 19; shelf-x(s165) = 10; shelf-y(s165) = 19; shelf-x(s166) = 11; shelf-y(s166) = 19; shelf-x(s167) = 13; shelf-y(s167) = 19; shelf-x(s168) = 14; shelf-y(s168) = 19;
+		shelf-x(s169) = 1; shelf-y(s169) = 20; shelf-x(s170) = 2; shelf-y(s170) = 20; shelf-x(s171) = 4; shelf-y(s171) = 20; shelf-x(s172) = 5; shelf-y(s172) = 20; shelf-x(s173) = 10; shelf-y(s173) = 20; shelf-x(s174) = 11; shelf-y(s174) = 20; shelf-x(s175) = 13; shelf-y(s175) = 20; shelf-x(s176) = 14; shelf-y(s176) = 20;
+		shelf-x(s177) = 1; shelf-y(s177) = 21; shelf-x(s178) = 2; shelf-y(s178) = 21; shelf-x(s179) = 4; shelf-y(s179) = 21; shelf-x(s180) = 5; shelf-y(s180) = 21; shelf-x(s181) = 10; shelf-y(s181) = 21; shelf-x(s182) = 11; shelf-y(s182) = 21; shelf-x(s183) = 13; shelf-y(s183) = 21; shelf-x(s184) = 14; shelf-y(s184) = 21;
+		shelf-x(s185) = 1; shelf-y(s185) = 22; shelf-x(s186) = 2; shelf-y(s186) = 22; shelf-x(s187) = 4; shelf-y(s187) = 22; shelf-x(s188) = 5; shelf-y(s188) = 22; shelf-x(s189) = 10; shelf-y(s189) = 22; shelf-x(s190) = 11; shelf-y(s190) = 22; shelf-x(s191) = 13; shelf-y(s191) = 22; shelf-x(s192) = 14; shelf-y(s192) = 22;
+		shelf-x(s193) = 1; shelf-y(s193) = 23; shelf-x(s194) = 2; shelf-y(s194) = 23; shelf-x(s195) = 4; shelf-y(s195) = 23; shelf-x(s196) = 5; shelf-y(s196) = 23; shelf-x(s197) = 10; shelf-y(s197) = 23; shelf-x(s198) = 11; shelf-y(s198) = 23; shelf-x(s199) = 13; shelf-y(s199) = 23; shelf-x(s200) = 14; shelf-y(s200) = 23;
+		shelf-x(s201) = 1; shelf-y(s201) = 24; shelf-x(s202) = 2; shelf-y(s202) = 24; shelf-x(s203) = 4; shelf-y(s203) = 24; shelf-x(s204) = 5; shelf-y(s204) = 24; shelf-x(s205) = 10; shelf-y(s205) = 24; shelf-x(s206) = 11; shelf-y(s206) = 24; shelf-x(s207) = 13; shelf-y(s207) = 24; shelf-x(s208) = 14; shelf-y(s208) = 24;
+		shelf-x(s209) = 1; shelf-y(s209) = 25; shelf-x(s210) = 2; shelf-y(s210) = 25; shelf-x(s211) = 4; shelf-y(s211) = 25; shelf-x(s212) = 5; shelf-y(s212) = 25; shelf-x(s213) = 10; shelf-y(s213) = 25; shelf-x(s214) = 11; shelf-y(s214) = 25; shelf-x(s215) = 13; shelf-y(s215) = 25; shelf-x(s216) = 14; shelf-y(s216) = 25;
+		shelf-x(s217) = 1; shelf-y(s217) = 26; shelf-x(s218) = 2; shelf-y(s218) = 26; shelf-x(s219) = 4; shelf-y(s219) = 26; shelf-x(s220) = 5; shelf-y(s220) = 26; shelf-x(s221) = 10; shelf-y(s221) = 26; shelf-x(s222) = 11; shelf-y(s222) = 26; shelf-x(s223) = 13; shelf-y(s223) = 26; shelf-x(s224) = 14; shelf-y(s224) = 26;
+		requested(s31); requested(s95); requested(s104); requested(s175); requested(s196); requested(s209); requested(s215); requested(s220);
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 500;
+	discount = 1.0;
+}

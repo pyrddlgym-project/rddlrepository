@@ -1,0 +1,70 @@
+// The small warehouse of RWARE with 4 robots and 4 requests (rware-small-4ag-v2):
+// 20 rows and 10 columns, 80 shelves and 2 workstations, with a random start.
+
+non-fluents warehouse_nf2 {
+	domain = warehouse;
+
+	objects {
+		xpos : { x0, x1, x2, x3, x4, x5, x6, x7, x8, x9 };
+		ypos : { y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, y16, y17, y18, y19 };
+		robot : { r1, r2, r3, r4 };
+		shelf : { s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s32, s33, s34, s35, s36, s37, s38, s39, s40, s41, s42, s43, s44, s45, s46, s47, s48, s49, s50, s51, s52, s53, s54, s55, s56, s57, s58, s59, s60, s61, s62, s63, s64, s65, s66, s67, s68, s69, s70, s71, s72, s73, s74, s75, s76, s77, s78, s79, s80 };
+	};
+
+	non-fluents {
+		WIDTH = 10;
+		HEIGHT = 20;
+		X(x0) = 0; X(x1) = 1; X(x2) = 2; X(x3) = 3; X(x4) = 4; X(x5) = 5; X(x6) = 6; X(x7) = 7; X(x8) = 8; X(x9) = 9;
+		Y(y0) = 0; Y(y1) = 1; Y(y2) = 2; Y(y3) = 3; Y(y4) = 4; Y(y5) = 5; Y(y6) = 6; Y(y7) = 7; Y(y8) = 8; Y(y9) = 9; Y(y10) = 10; Y(y11) = 11; Y(y12) = 12; Y(y13) = 13; Y(y14) = 14; Y(y15) = 15; Y(y16) = 16; Y(y17) = 17; Y(y18) = 18; Y(y19) = 19;
+		STORAGE(x1, y1); STORAGE(x2, y1); STORAGE(x4, y1); STORAGE(x5, y1); STORAGE(x7, y1); STORAGE(x8, y1);
+		STORAGE(x1, y2); STORAGE(x2, y2); STORAGE(x4, y2); STORAGE(x5, y2); STORAGE(x7, y2); STORAGE(x8, y2);
+		STORAGE(x1, y3); STORAGE(x2, y3); STORAGE(x4, y3); STORAGE(x5, y3); STORAGE(x7, y3); STORAGE(x8, y3);
+		STORAGE(x1, y4); STORAGE(x2, y4); STORAGE(x4, y4); STORAGE(x5, y4); STORAGE(x7, y4); STORAGE(x8, y4);
+		STORAGE(x1, y5); STORAGE(x2, y5); STORAGE(x4, y5); STORAGE(x5, y5); STORAGE(x7, y5); STORAGE(x8, y5);
+		STORAGE(x1, y6); STORAGE(x2, y6); STORAGE(x4, y6); STORAGE(x5, y6); STORAGE(x7, y6); STORAGE(x8, y6);
+		STORAGE(x1, y7); STORAGE(x2, y7); STORAGE(x4, y7); STORAGE(x5, y7); STORAGE(x7, y7); STORAGE(x8, y7);
+		STORAGE(x1, y8); STORAGE(x2, y8); STORAGE(x4, y8); STORAGE(x5, y8); STORAGE(x7, y8); STORAGE(x8, y8);
+		STORAGE(x1, y10); STORAGE(x2, y10); STORAGE(x7, y10); STORAGE(x8, y10);
+		STORAGE(x1, y11); STORAGE(x2, y11); STORAGE(x7, y11); STORAGE(x8, y11);
+		STORAGE(x1, y12); STORAGE(x2, y12); STORAGE(x7, y12); STORAGE(x8, y12);
+		STORAGE(x1, y13); STORAGE(x2, y13); STORAGE(x7, y13); STORAGE(x8, y13);
+		STORAGE(x1, y14); STORAGE(x2, y14); STORAGE(x7, y14); STORAGE(x8, y14);
+		STORAGE(x1, y15); STORAGE(x2, y15); STORAGE(x7, y15); STORAGE(x8, y15);
+		STORAGE(x1, y16); STORAGE(x2, y16); STORAGE(x7, y16); STORAGE(x8, y16);
+		STORAGE(x1, y17); STORAGE(x2, y17); STORAGE(x7, y17); STORAGE(x8, y17);
+		STATION(x4, y19); STATION(x5, y19);
+	};
+}
+
+instance warehouse_inst2 {
+	domain = warehouse;
+	non-fluents = warehouse_nf2;
+
+	init-state {
+		robot-x(r1) = 9; robot-y(r1) = 5; facing(r1) = @up;
+		robot-x(r2) = 5; robot-y(r2) = 16; facing(r2) = @down;
+		robot-x(r3) = 1; robot-y(r3) = 2; facing(r3) = @left;
+		robot-x(r4) = 1; robot-y(r4) = 5; facing(r4) = @right;
+		shelf-x(s1) = 1; shelf-y(s1) = 1; shelf-x(s2) = 2; shelf-y(s2) = 1; shelf-x(s3) = 4; shelf-y(s3) = 1; shelf-x(s4) = 5; shelf-y(s4) = 1; shelf-x(s5) = 7; shelf-y(s5) = 1; shelf-x(s6) = 8; shelf-y(s6) = 1;
+		shelf-x(s7) = 1; shelf-y(s7) = 2; shelf-x(s8) = 2; shelf-y(s8) = 2; shelf-x(s9) = 4; shelf-y(s9) = 2; shelf-x(s10) = 5; shelf-y(s10) = 2; shelf-x(s11) = 7; shelf-y(s11) = 2; shelf-x(s12) = 8; shelf-y(s12) = 2;
+		shelf-x(s13) = 1; shelf-y(s13) = 3; shelf-x(s14) = 2; shelf-y(s14) = 3; shelf-x(s15) = 4; shelf-y(s15) = 3; shelf-x(s16) = 5; shelf-y(s16) = 3; shelf-x(s17) = 7; shelf-y(s17) = 3; shelf-x(s18) = 8; shelf-y(s18) = 3;
+		shelf-x(s19) = 1; shelf-y(s19) = 4; shelf-x(s20) = 2; shelf-y(s20) = 4; shelf-x(s21) = 4; shelf-y(s21) = 4; shelf-x(s22) = 5; shelf-y(s22) = 4; shelf-x(s23) = 7; shelf-y(s23) = 4; shelf-x(s24) = 8; shelf-y(s24) = 4;
+		shelf-x(s25) = 1; shelf-y(s25) = 5; shelf-x(s26) = 2; shelf-y(s26) = 5; shelf-x(s27) = 4; shelf-y(s27) = 5; shelf-x(s28) = 5; shelf-y(s28) = 5; shelf-x(s29) = 7; shelf-y(s29) = 5; shelf-x(s30) = 8; shelf-y(s30) = 5;
+		shelf-x(s31) = 1; shelf-y(s31) = 6; shelf-x(s32) = 2; shelf-y(s32) = 6; shelf-x(s33) = 4; shelf-y(s33) = 6; shelf-x(s34) = 5; shelf-y(s34) = 6; shelf-x(s35) = 7; shelf-y(s35) = 6; shelf-x(s36) = 8; shelf-y(s36) = 6;
+		shelf-x(s37) = 1; shelf-y(s37) = 7; shelf-x(s38) = 2; shelf-y(s38) = 7; shelf-x(s39) = 4; shelf-y(s39) = 7; shelf-x(s40) = 5; shelf-y(s40) = 7; shelf-x(s41) = 7; shelf-y(s41) = 7; shelf-x(s42) = 8; shelf-y(s42) = 7;
+		shelf-x(s43) = 1; shelf-y(s43) = 8; shelf-x(s44) = 2; shelf-y(s44) = 8; shelf-x(s45) = 4; shelf-y(s45) = 8; shelf-x(s46) = 5; shelf-y(s46) = 8; shelf-x(s47) = 7; shelf-y(s47) = 8; shelf-x(s48) = 8; shelf-y(s48) = 8;
+		shelf-x(s49) = 1; shelf-y(s49) = 10; shelf-x(s50) = 2; shelf-y(s50) = 10; shelf-x(s51) = 7; shelf-y(s51) = 10; shelf-x(s52) = 8; shelf-y(s52) = 10;
+		shelf-x(s53) = 1; shelf-y(s53) = 11; shelf-x(s54) = 2; shelf-y(s54) = 11; shelf-x(s55) = 7; shelf-y(s55) = 11; shelf-x(s56) = 8; shelf-y(s56) = 11;
+		shelf-x(s57) = 1; shelf-y(s57) = 12; shelf-x(s58) = 2; shelf-y(s58) = 12; shelf-x(s59) = 7; shelf-y(s59) = 12; shelf-x(s60) = 8; shelf-y(s60) = 12;
+		shelf-x(s61) = 1; shelf-y(s61) = 13; shelf-x(s62) = 2; shelf-y(s62) = 13; shelf-x(s63) = 7; shelf-y(s63) = 13; shelf-x(s64) = 8; shelf-y(s64) = 13;
+		shelf-x(s65) = 1; shelf-y(s65) = 14; shelf-x(s66) = 2; shelf-y(s66) = 14; shelf-x(s67) = 7; shelf-y(s67) = 14; shelf-x(s68) = 8; shelf-y(s68) = 14;
+		shelf-x(s69) = 1; shelf-y(s69) = 15; shelf-x(s70) = 2; shelf-y(s70) = 15; shelf-x(s71) = 7; shelf-y(s71) = 15; shelf-x(s72) = 8; shelf-y(s72) = 15;
+		shelf-x(s73) = 1; shelf-y(s73) = 16; shelf-x(s74) = 2; shelf-y(s74) = 16; shelf-x(s75) = 7; shelf-y(s75) = 16; shelf-x(s76) = 8; shelf-y(s76) = 16;
+		shelf-x(s77) = 1; shelf-y(s77) = 17; shelf-x(s78) = 2; shelf-y(s78) = 17; shelf-x(s79) = 7; shelf-y(s79) = 17; shelf-x(s80) = 8; shelf-y(s80) = 17;
+		requested(s15); requested(s57); requested(s71); requested(s78);
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 500;
+	discount = 1.0;
+}
