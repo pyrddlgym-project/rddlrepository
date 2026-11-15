@@ -303,9 +303,7 @@ env = pyRDDLGym.make(
     domain='SimplePhases/domain.rddl',
     instance='example_3x4_simple_grid_instance.rddl')
 
-agent = pyRDDLGym.core.policy.RandomAgent(
-    action_space=env.action_space,
-    num_actions=env.max_allowed_actions)
+agent = pyRDDLGym.core.policy.RandomAgent(env)
 
 cmlt_reward = 0
 state, _ = env.reset()
