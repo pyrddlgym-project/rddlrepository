@@ -1,0 +1,30 @@
+// The board of Jumanji: 4 x 4 cells, starting with a 2 in column 1 of row 2.
+
+non-fluents game_2048_nf0 {
+	domain = game_2048;
+
+	objects {
+		xpos : { x0, x1, x2, x3 };
+		ypos : { y0, y1, y2, y3 };
+	};
+
+	non-fluents {
+		WIDTH = 4;
+		HEIGHT = 4;
+		X(x0) = 0; X(x1) = 1; X(x2) = 2; X(x3) = 3;
+		Y(y0) = 0; Y(y1) = 1; Y(y2) = 2; Y(y3) = 3;
+	};
+}
+
+instance game_2048_inst0 {
+	domain = game_2048;
+	non-fluents = game_2048_nf0;
+
+	init-state {
+		tile(x1, y2) = 1;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 2000;
+	discount = 1.0;
+}

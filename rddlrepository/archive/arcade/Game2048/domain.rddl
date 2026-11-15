@@ -1,0 +1,156 @@
+////////////////////////////////////////////////////////////////////
+// The sliding tile game 2048 on a grid, with the rules of the
+// Game2048 environment of Jumanji.
+//
+// Each tile holds a power of two, stored as its exponent: 1 for a
+// tile of 2, 2 for a tile of 4, and so on, and 0 for an empty cell.
+// Each step all tiles slide as far as they can up, right, down or
+// left, and two equal tiles that meet merge into one of twice the
+// value. Columns are counted from the left and rows from the top.
+//
+// Within each line along the move (a row for left and right, a column
+// for up and down), the tiles are numbered from the side they move
+// towards, starting at 0 and skipping empty cells. Each step:
+//   1. tiles merge in pairs from the side they move towards: in a run
+//      of equal tiles next to each other in this numbering, the 1st
+//      absorbs the 2nd, the 3rd absorbs the 4th, and so on, so a tile
+//      merges at most once per move. In a run that starts at number r,
+//      a tile merges with the one after it when it is equal to it and
+//      its distance from r is even, and is absorbed by the one before
+//      it when it is equal to it and its distance from r is odd;
+//   2. the remaining tiles pack against the side, in order, and a tile
+//      that absorbed another gains 1 in its exponent;
+//   3. if the move changed the board, a new tile appears in a cell
+//      chosen uniformly among the empty ones (the one with the largest
+//      of a random number drawn for each cell, and of two with the same
+//      number, the one with the smaller index), with exponent 1 (a 2)
+//      with probability 0.9, and 2 (a 4) otherwise. A move that changes
+//      nothing leaves the board as it was, without a new tile.
+// The reward is the sum of the values of the tiles made by merging.
+// The game ends when no move would change the board: when the board is
+// full with no two equal tiles side by side (or when it is empty).
+//
+// Jumanji plays on a 4 x 4 board starting with one random tile, and
+// has no time limit. The instances fix the first tile and set a
+// horizon instead.
+//
+// References:
+//
+//		Clément Bonnet et al. Jumanji: a Diverse Suite of Scalable
+//		Reinforcement Learning Environments in JAX. ICLR, 2024.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain game_2048 {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		xpos : object;
+		ypos : object;
+		direction : { @up, @right, @down, @left };
+	};
+
+	pvariables {
+
+		// the grid
+		WIDTH 				: { non-fluent, int, default = 4 };			// number of columns
+		HEIGHT 				: { non-fluent, int, default = 4 };			// number of rows
+		X(xpos) 			: { non-fluent, int, default = 0 };			// index of a column
+		Y(ypos) 			: { non-fluent, int, default = 0 };			// index of a row
+		TWO-PROB 			: { non-fluent, real, default = 0.9 };		// chance that a new tile is a 2
+
+		// the lines along the move
+		line(xpos, ypos) 	: { interm-fluent, int };					// the row or column of a cell
+		along(xpos, ypos) 	: { interm-fluent, int };					// distance from the side moved to
+		rank(xpos, ypos) 	: { interm-fluent, int };					// number of the tile in its line
+		before(xpos, ypos) 	: { interm-fluent, int };					// exponent of the tile numbered one less
+		after(xpos, ypos) 	: { interm-fluent, int };					// exponent of the tile numbered one more
+
+		// 1. merging
+		run(xpos, ypos) 	: { interm-fluent, int };					// number where the run of equal tiles starts
+		merges(xpos, ypos) 	: { interm-fluent, bool };					// absorbs the tile after it
+		absorbed(xpos, ypos): { interm-fluent, bool };					// is absorbed by the tile before it
+
+		// 2. packing
+		slot(xpos, ypos) 	: { interm-fluent, int };					// distance from the side after the move
+		slid(xpos, ypos) 	: { interm-fluent, int };					// the board after the move
+		changed 			: { interm-fluent, bool };
+
+		// 3. the new tile
+		draw(xpos, ypos) 	: { interm-fluent, real };					// a random number for each cell
+		best 				: { interm-fluent, real };					// the largest one of an empty cell
+		spot 				: { interm-fluent, int };					// index of the cell with it
+		two 				: { interm-fluent, bool };
+
+		// states
+		tile(xpos, ypos) 	: { state-fluent, int, default = 0 };		// exponent, 0 for an empty cell
+
+		// action
+		move 				: { action-fluent, direction, default = @up };
+	};
+
+	cpfs {
+
+		// the lines along the move
+		line(?x, ?y) = if ((move == @left) | (move == @right)) then Y(?y) else X(?x);
+		along(?x, ?y) = if (move == @left) then X(?x)
+						else if (move == @right) then WIDTH - 1 - X(?x)
+						else if (move == @up) then Y(?y)
+						else HEIGHT - 1 - Y(?y);
+		rank(?x, ?y) = (sum_{?x2 : xpos, ?y2 : ypos} [(line(?x2, ?y2) == line(?x, ?y)) ^ (tile(?x2, ?y2) > 0)
+													  ^ (along(?x2, ?y2) < along(?x, ?y))]);
+		before(?x, ?y) = (sum_{?x2 : xpos, ?y2 : ypos} [
+							if ((line(?x2, ?y2) == line(?x, ?y)) ^ (tile(?x2, ?y2) > 0)
+								^ (rank(?x2, ?y2) == rank(?x, ?y) - 1)) then tile(?x2, ?y2) else 0]);
+		after(?x, ?y) = (sum_{?x2 : xpos, ?y2 : ypos} [
+							if ((line(?x2, ?y2) == line(?x, ?y)) ^ (tile(?x2, ?y2) > 0)
+								^ (rank(?x2, ?y2) == rank(?x, ?y) + 1)) then tile(?x2, ?y2) else 0]);
+
+		// 1. merging: the run of a tile starts at the last tile up to it that differs from the
+		// one before it
+		run(?x, ?y) = (max_{?x2 : xpos, ?y2 : ypos} [
+						if ((line(?x2, ?y2) == line(?x, ?y)) ^ (tile(?x2, ?y2) > 0)
+							^ (rank(?x2, ?y2) <= rank(?x, ?y)) ^ (before(?x2, ?y2) ~= tile(?x2, ?y2)))
+						then rank(?x2, ?y2) else 0]);
+		merges(?x, ?y) = (tile(?x, ?y) > 0) ^ (after(?x, ?y) == tile(?x, ?y))
+						 ^ (mod[rank(?x, ?y) - run(?x, ?y), 2] == 0);
+		absorbed(?x, ?y) = (tile(?x, ?y) > 0) ^ (before(?x, ?y) == tile(?x, ?y))
+						   ^ (mod[rank(?x, ?y) - run(?x, ?y), 2] == 1);
+
+		// 2. packing: each merge before a tile moves it one cell closer to the side
+		slot(?x, ?y) = rank(?x, ?y) - (sum_{?x2 : xpos, ?y2 : ypos} [
+							(line(?x2, ?y2) == line(?x, ?y)) ^ merges(?x2, ?y2) ^ (rank(?x2, ?y2) < rank(?x, ?y))]);
+		slid(?x, ?y) = (sum_{?x2 : xpos, ?y2 : ypos} [
+							if ((line(?x2, ?y2) == line(?x, ?y)) ^ (tile(?x2, ?y2) > 0) ^ ~absorbed(?x2, ?y2)
+								^ (slot(?x2, ?y2) == along(?x, ?y)))
+							then tile(?x2, ?y2) + merges(?x2, ?y2) else 0]);
+		changed = (exists_{?x : xpos, ?y : ypos} [slid(?x, ?y) ~= tile(?x, ?y)]);
+
+		// 3. the new tile, in the empty cell with the largest random number
+		draw(?x, ?y) = Uniform(0, 1);
+		best = (max_{?x : xpos, ?y : ypos} [if (slid(?x, ?y) == 0) then draw(?x, ?y) else -1]);
+		spot = (min_{?x : xpos, ?y : ypos} [if ((slid(?x, ?y) == 0) ^ (draw(?x, ?y) == best))
+											then WIDTH * Y(?y) + X(?x) else WIDTH * HEIGHT]);
+		two = Bernoulli(TWO-PROB);
+
+		// the next state, which a move that changes nothing leaves as it was
+		tile'(?x, ?y) = if (~changed) then tile(?x, ?y)
+						else if (WIDTH * Y(?y) + X(?x) == spot) then (if (two) then 1 else 2)
+						else slid(?x, ?y);
+	};
+
+	reward = (sum_{?x : xpos, ?y : ypos} [if (merges(?x, ?y)) then pow[2, tile(?x, ?y) + 1] else 0]);
+
+	termination {
+		forall_{?x : xpos, ?y : ypos} [tile(?x, ?y) == 0];
+		(forall_{?x : xpos, ?y : ypos} [tile(?x, ?y) > 0])
+			^ ~(exists_{?x : xpos, ?y : ypos, ?x2 : xpos, ?y2 : ypos} [
+				(tile(?x, ?y) == tile(?x2, ?y2))
+				^ (((Y(?y) == Y(?y2)) ^ (abs[X(?x) - X(?x2)] == 1)) | ((X(?x) == X(?x2)) ^ (abs[Y(?y) - Y(?y2)] == 1)))]);
+	};
+}

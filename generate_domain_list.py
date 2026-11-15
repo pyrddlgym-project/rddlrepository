@@ -89,6 +89,7 @@ SHORT = {
     'Blackjack': 'Draw cards to 21 without going over',
     'BrickBreaker': 'Break bricks with a bouncing ball',
     'Eight': 'Sliding tile puzzle',
+    'Game2048': 'Slide and merge number tiles',
     'MazeChase': 'Gather berries in a maze full of wolves',
     'Minesweeper': 'Reveal safe cells, avoid hidden mines',
     'Pong': 'Single player pong',

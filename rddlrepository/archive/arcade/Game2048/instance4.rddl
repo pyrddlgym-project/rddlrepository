@@ -1,0 +1,30 @@
+// A board of 8 x 8 cells, starting with a 2 in column 3 of row 4.
+
+non-fluents game_2048_nf4 {
+	domain = game_2048;
+
+	objects {
+		xpos : { x0, x1, x2, x3, x4, x5, x6, x7 };
+		ypos : { y0, y1, y2, y3, y4, y5, y6, y7 };
+	};
+
+	non-fluents {
+		WIDTH = 8;
+		HEIGHT = 8;
+		X(x0) = 0; X(x1) = 1; X(x2) = 2; X(x3) = 3; X(x4) = 4; X(x5) = 5; X(x6) = 6; X(x7) = 7;
+		Y(y0) = 0; Y(y1) = 1; Y(y2) = 2; Y(y3) = 3; Y(y4) = 4; Y(y5) = 5; Y(y6) = 6; Y(y7) = 7;
+	};
+}
+
+instance game_2048_inst4 {
+	domain = game_2048;
+	non-fluents = game_2048_nf4;
+
+	init-state {
+		tile(x3, y4) = 1;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 2000;
+	discount = 1.0;
+}

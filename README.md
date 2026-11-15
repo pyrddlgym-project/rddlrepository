@@ -156,7 +156,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**127 problems in 10 contexts:** [standalone](#standalone) (14) &middot; [physics](#physics) (14) &middot; [or](#or) (7) &middot; [arcade](#arcade) (13) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**128 problems in 10 contexts:** [standalone](#standalone) (14) &middot; [physics](#physics) (14) &middot; [or](#or) (7) &middot; [arcade](#arcade) (14) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -229,6 +229,7 @@ Arcade, puzzle and card games.
 | <img src="docs/thumbnails/Blackjack_arcade.png" width="64" alt=""> | <code>Blackjack_<wbr>arcade</code> | 0 | Draw cards to 21 without going over |
 | <img src="docs/thumbnails/BrickBreaker_arcade.png" width="64" alt=""> | <code>BrickBreaker_<wbr>arcade</code> | 0 | Break bricks with a bouncing ball |
 | <img src="docs/thumbnails/Eight_arcade.png" width="64" alt=""> | <code>Eight_<wbr>arcade</code> | 0, 1 | Sliding tile puzzle |
+| <img src="docs/thumbnails/Game2048_arcade.png" width="64" alt=""> | <code>Game2048_<wbr>arcade</code> | 0&ndash;4 | Slide and merge number tiles |
 | <img src="docs/thumbnails/MazeChase_arcade.png" width="64" alt=""> | <code>MazeChase_<wbr>arcade</code> | 0&ndash;3 | Gather berries in a maze full of wolves |
 | <img src="docs/thumbnails/Minesweeper_arcade.png" width="64" alt=""> | <code>Minesweeper_<wbr>arcade</code> | 0&ndash;2 | Reveal safe cells, avoid hidden mines |
 | <img src="docs/thumbnails/Pong_arcade.png" width="64" alt=""> | <code>Pong_<wbr>arcade</code> | 0, 1 | Single player pong |
