@@ -7,6 +7,8 @@
 
 **A library of planning and reinforcement learning problems written in RDDL, ready to run in [pyRDDLGym](https://github.com/pyRDDLGym-project/pyRDDLGym).**
 
+<img src="https://raw.githubusercontent.com/pyrddlgym-project/pyRDDLGym/main/Images/examples.gif" margin=0/>
+
 [Installation](#installation) | [Quick start](#quick-start) | [Finding problems](#finding-problems) | [Adding your own](#adding-your-own-problems) | [Domain gallery](#domain-gallery)
 
 ## Why rddlrepository?
