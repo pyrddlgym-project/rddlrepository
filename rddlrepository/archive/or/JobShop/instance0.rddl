@@ -1,0 +1,108 @@
+// ft06 (also mt06) of Fisher and Thompson (1963): 6 jobs on 6 machines.
+// Optimal makespan 55.
+
+non-fluents job_shop_nf0 {
+	domain = job_shop;
+
+	objects {
+		job : { j1, j2, j3, j4, j5, j6 };
+		stage : { s1, s2, s3, s4, s5, s6 };
+		machine : { m1, m2, m3, m4, m5, m6 };
+	};
+
+	non-fluents {
+		ORDER(s1) = 0;
+		ORDER(s2) = 1;
+		ORDER(s3) = 2;
+		ORDER(s4) = 3;
+		ORDER(s5) = 4;
+		ORDER(s6) = 5;
+		INDEX(j1) = 0;
+		ON(j1, s1, m3) = true;
+		DURATION(j1, s1) = 1;
+		ON(j1, s2, m1) = true;
+		DURATION(j1, s2) = 3;
+		ON(j1, s3, m2) = true;
+		DURATION(j1, s3) = 6;
+		ON(j1, s4, m4) = true;
+		DURATION(j1, s4) = 7;
+		ON(j1, s5, m6) = true;
+		DURATION(j1, s5) = 3;
+		ON(j1, s6, m5) = true;
+		DURATION(j1, s6) = 6;
+		INDEX(j2) = 1;
+		ON(j2, s1, m2) = true;
+		DURATION(j2, s1) = 8;
+		ON(j2, s2, m3) = true;
+		DURATION(j2, s2) = 5;
+		ON(j2, s3, m5) = true;
+		DURATION(j2, s3) = 10;
+		ON(j2, s4, m6) = true;
+		DURATION(j2, s4) = 10;
+		ON(j2, s5, m1) = true;
+		DURATION(j2, s5) = 10;
+		ON(j2, s6, m4) = true;
+		DURATION(j2, s6) = 4;
+		INDEX(j3) = 2;
+		ON(j3, s1, m3) = true;
+		DURATION(j3, s1) = 5;
+		ON(j3, s2, m4) = true;
+		DURATION(j3, s2) = 4;
+		ON(j3, s3, m6) = true;
+		DURATION(j3, s3) = 8;
+		ON(j3, s4, m1) = true;
+		DURATION(j3, s4) = 9;
+		ON(j3, s5, m2) = true;
+		DURATION(j3, s5) = 1;
+		ON(j3, s6, m5) = true;
+		DURATION(j3, s6) = 7;
+		INDEX(j4) = 3;
+		ON(j4, s1, m2) = true;
+		DURATION(j4, s1) = 5;
+		ON(j4, s2, m1) = true;
+		DURATION(j4, s2) = 5;
+		ON(j4, s3, m3) = true;
+		DURATION(j4, s3) = 5;
+		ON(j4, s4, m4) = true;
+		DURATION(j4, s4) = 3;
+		ON(j4, s5, m5) = true;
+		DURATION(j4, s5) = 8;
+		ON(j4, s6, m6) = true;
+		DURATION(j4, s6) = 9;
+		INDEX(j5) = 4;
+		ON(j5, s1, m3) = true;
+		DURATION(j5, s1) = 9;
+		ON(j5, s2, m2) = true;
+		DURATION(j5, s2) = 3;
+		ON(j5, s3, m5) = true;
+		DURATION(j5, s3) = 5;
+		ON(j5, s4, m6) = true;
+		DURATION(j5, s4) = 4;
+		ON(j5, s5, m1) = true;
+		DURATION(j5, s5) = 3;
+		ON(j5, s6, m4) = true;
+		DURATION(j5, s6) = 1;
+		INDEX(j6) = 5;
+		ON(j6, s1, m2) = true;
+		DURATION(j6, s1) = 3;
+		ON(j6, s2, m4) = true;
+		DURATION(j6, s2) = 3;
+		ON(j6, s3, m6) = true;
+		DURATION(j6, s3) = 9;
+		ON(j6, s4, m1) = true;
+		DURATION(j6, s4) = 10;
+		ON(j6, s5, m5) = true;
+		DURATION(j6, s5) = 4;
+		ON(j6, s6, m3) = true;
+		DURATION(j6, s6) = 1;
+	};
+}
+
+instance job_shop_inst0 {
+	domain = job_shop;
+	non-fluents = job_shop_nf0;
+
+	max-nondef-actions = pos-inf;
+	horizon = 36;
+	discount = 1.0;
+}

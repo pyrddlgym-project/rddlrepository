@@ -1,0 +1,139 @@
+// la01 of Lawrence (1984): 10 jobs on 5 machines.
+// Optimal makespan 666.
+
+non-fluents job_shop_nf1 {
+	domain = job_shop;
+
+	objects {
+		job : { j1, j2, j3, j4, j5, j6, j7, j8, j9, j10 };
+		stage : { s1, s2, s3, s4, s5 };
+		machine : { m1, m2, m3, m4, m5 };
+	};
+
+	non-fluents {
+		ORDER(s1) = 0;
+		ORDER(s2) = 1;
+		ORDER(s3) = 2;
+		ORDER(s4) = 3;
+		ORDER(s5) = 4;
+		INDEX(j1) = 0;
+		ON(j1, s1, m2) = true;
+		DURATION(j1, s1) = 21;
+		ON(j1, s2, m1) = true;
+		DURATION(j1, s2) = 53;
+		ON(j1, s3, m5) = true;
+		DURATION(j1, s3) = 95;
+		ON(j1, s4, m4) = true;
+		DURATION(j1, s4) = 55;
+		ON(j1, s5, m3) = true;
+		DURATION(j1, s5) = 34;
+		INDEX(j2) = 1;
+		ON(j2, s1, m1) = true;
+		DURATION(j2, s1) = 21;
+		ON(j2, s2, m4) = true;
+		DURATION(j2, s2) = 52;
+		ON(j2, s3, m5) = true;
+		DURATION(j2, s3) = 16;
+		ON(j2, s4, m3) = true;
+		DURATION(j2, s4) = 26;
+		ON(j2, s5, m2) = true;
+		DURATION(j2, s5) = 71;
+		INDEX(j3) = 2;
+		ON(j3, s1, m4) = true;
+		DURATION(j3, s1) = 39;
+		ON(j3, s2, m5) = true;
+		DURATION(j3, s2) = 98;
+		ON(j3, s3, m2) = true;
+		DURATION(j3, s3) = 42;
+		ON(j3, s4, m3) = true;
+		DURATION(j3, s4) = 31;
+		ON(j3, s5, m1) = true;
+		DURATION(j3, s5) = 12;
+		INDEX(j4) = 3;
+		ON(j4, s1, m2) = true;
+		DURATION(j4, s1) = 77;
+		ON(j4, s2, m1) = true;
+		DURATION(j4, s2) = 55;
+		ON(j4, s3, m5) = true;
+		DURATION(j4, s3) = 79;
+		ON(j4, s4, m3) = true;
+		DURATION(j4, s4) = 66;
+		ON(j4, s5, m4) = true;
+		DURATION(j4, s5) = 77;
+		INDEX(j5) = 4;
+		ON(j5, s1, m1) = true;
+		DURATION(j5, s1) = 83;
+		ON(j5, s2, m4) = true;
+		DURATION(j5, s2) = 34;
+		ON(j5, s3, m3) = true;
+		DURATION(j5, s3) = 64;
+		ON(j5, s4, m2) = true;
+		DURATION(j5, s4) = 19;
+		ON(j5, s5, m5) = true;
+		DURATION(j5, s5) = 37;
+		INDEX(j6) = 5;
+		ON(j6, s1, m2) = true;
+		DURATION(j6, s1) = 54;
+		ON(j6, s2, m3) = true;
+		DURATION(j6, s2) = 43;
+		ON(j6, s3, m5) = true;
+		DURATION(j6, s3) = 79;
+		ON(j6, s4, m1) = true;
+		DURATION(j6, s4) = 92;
+		ON(j6, s5, m4) = true;
+		DURATION(j6, s5) = 62;
+		INDEX(j7) = 6;
+		ON(j7, s1, m4) = true;
+		DURATION(j7, s1) = 69;
+		ON(j7, s2, m5) = true;
+		DURATION(j7, s2) = 77;
+		ON(j7, s3, m2) = true;
+		DURATION(j7, s3) = 87;
+		ON(j7, s4, m3) = true;
+		DURATION(j7, s4) = 87;
+		ON(j7, s5, m1) = true;
+		DURATION(j7, s5) = 93;
+		INDEX(j8) = 7;
+		ON(j8, s1, m3) = true;
+		DURATION(j8, s1) = 38;
+		ON(j8, s2, m1) = true;
+		DURATION(j8, s2) = 60;
+		ON(j8, s3, m2) = true;
+		DURATION(j8, s3) = 41;
+		ON(j8, s4, m4) = true;
+		DURATION(j8, s4) = 24;
+		ON(j8, s5, m5) = true;
+		DURATION(j8, s5) = 83;
+		INDEX(j9) = 8;
+		ON(j9, s1, m4) = true;
+		DURATION(j9, s1) = 17;
+		ON(j9, s2, m2) = true;
+		DURATION(j9, s2) = 49;
+		ON(j9, s3, m5) = true;
+		DURATION(j9, s3) = 25;
+		ON(j9, s4, m1) = true;
+		DURATION(j9, s4) = 44;
+		ON(j9, s5, m3) = true;
+		DURATION(j9, s5) = 98;
+		INDEX(j10) = 9;
+		ON(j10, s1, m5) = true;
+		DURATION(j10, s1) = 77;
+		ON(j10, s2, m4) = true;
+		DURATION(j10, s2) = 79;
+		ON(j10, s3, m3) = true;
+		DURATION(j10, s3) = 43;
+		ON(j10, s4, m2) = true;
+		DURATION(j10, s4) = 75;
+		ON(j10, s5, m1) = true;
+		DURATION(j10, s5) = 96;
+	};
+}
+
+instance job_shop_inst1 {
+	domain = job_shop;
+	non-fluents = job_shop_nf1;
+
+	max-nondef-actions = pos-inf;
+	horizon = 50;
+	discount = 1.0;
+}

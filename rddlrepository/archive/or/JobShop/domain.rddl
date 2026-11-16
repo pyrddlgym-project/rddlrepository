@@ -1,0 +1,136 @@
+////////////////////////////////////////////////////////////////////
+// The job shop scheduling problem, as a sequence of dispatching
+// decisions, with the benchmark instances of Fisher and Thompson (1963),
+// Lawrence (1984) and Taillard (1993).
+//
+// A shop has machines and jobs. Each job is a sequence of operations, one
+// per stage in the order of ORDER, the operation at a stage running on the
+// machine marked by ON for DURATION time units without interruption. A
+// machine runs one operation at a time, and the operations of a job run in
+// order. The goal is the shortest makespan: the time when the last job
+// finishes.
+//
+// The schedule is built one operation at a time, as in the dispatching
+// formulation of Zhang et al. (2020). In each step the next operation of
+// one job is dispatched: it starts once its job has finished the operation
+// before and its machine has finished the operations dispatched to it
+// earlier, so
+//
+//   start = max[ready of the job, ready of the machine]
+//   ready of the job and of the machine' = start + DURATION
+//
+// The order of dispatching fixes the order of the operations on each
+// machine, and every schedule without needless idle time (semi-active)
+// comes from some order, so an optimal one is always reachable. Each step
+// costs the time the makespan grows by, so the return is the negative of
+// the makespan, and the horizon is the number of operations.
+//
+// The job dispatched is the chosen job of lowest INDEX with an operation
+// left. If no such job is chosen, the job of lowest INDEX with an
+// operation left is dispatched, so no step is wasted and every job is
+// done by the end of the horizon. A job whose route has fewer operations
+// than there are stages has zero DURATION and no machine at the stages it
+// skips.
+//
+// The instances are classic benchmarks: ft06 and ft10 of Fisher and
+// Thompson, la01 of Lawrence, and ta01, ta21, ta41, ta51 and ta71 of
+// Taillard, as distributed by JSPLIB, with their optimal or best known
+// makespans in the instance headers.
+//
+// References:
+//
+//		H. Fisher and G. L. Thompson. Probabilistic learning combinations
+//		of local job-shop scheduling rules. In J. F. Muth and G. L.
+//		Thompson, editors, Industrial Scheduling, pages 225-251.
+//		Prentice-Hall, 1963.
+//
+//		S. Lawrence. Resource constrained project scheduling: an
+//		experimental investigation of heuristic scheduling techniques
+//		(supplement). Carnegie-Mellon University, 1984.
+//
+//		Eric Taillard. Benchmarks for basic scheduling problems. European
+//		Journal of Operational Research 64(2):278-285, 1993.
+//
+//		Cong Zhang, Wen Song, Zhiguang Cao, Jie Zhang, Puay Siew Tan and
+//		Chi Xu. Learning to dispatch for job shop scheduling via deep
+//		reinforcement learning. NeurIPS 2020.
+//
+//		JSPLIB: https://github.com/tamy0612/JSPLIB
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain job_shop {
+
+	requirements = {
+		reward-deterministic,
+		integer-valued
+	};
+
+	types {
+		job : object;
+		stage : object;
+		machine : object;
+	};
+
+	pvariables {
+
+		// jobs
+		ON(job, stage, machine)			: { non-fluent, bool, default = false };	// the operation of the job at the stage runs on the machine
+		DURATION(job, stage)			: { non-fluent, int, default = 0 };			// processing time of the operation
+		ORDER(stage)					: { non-fluent, int, default = 0 };			// position of the stage in each route, from 0
+		INDEX(job)						: { non-fluent, int, default = 0 };			// priority of the job when several are chosen
+
+		// the step
+		left(job)						: { interm-fluent, bool };					// job has an operation left
+		picked(job)						: { interm-fluent, bool };					// chosen job of lowest index with one left
+		chosen							: { interm-fluent, bool };					// some job is picked
+		go(job)							: { interm-fluent, bool };					// job dispatched
+		current(job, stage)				: { interm-fluent, bool };					// next operation of the job
+		duration(job)					: { interm-fluent, int };
+		start(job)						: { interm-fluent, int };
+		finish(job)						: { interm-fluent, int };
+		span							: { interm-fluent, int };					// makespan before the step
+		span-after						: { interm-fluent, int };					// makespan after the step
+
+		// states
+		done(job)						: { state-fluent, int, default = 0 };		// operations dispatched
+		job-ready(job)					: { state-fluent, int, default = 0 };		// finish of its last operation dispatched
+		machine-ready(machine)			: { state-fluent, int, default = 0 };		// finish of its last operation dispatched
+
+		// actions
+		dispatch(job)					: { action-fluent, bool, default = false };	// dispatch the next operation of the job
+	};
+
+	cpfs {
+
+		left(?j) = exists_{?s : stage} [ORDER(?s) == done(?j)];
+		picked(?j) = dispatch(?j) ^ left(?j)
+			^ ~exists_{?k : job} [dispatch(?k) ^ left(?k) ^ (INDEX(?k) < INDEX(?j))];
+		chosen = exists_{?j : job} [picked(?j)];
+		go(?j) = if (chosen) then picked(?j)
+				 else left(?j) ^ ~exists_{?k : job} [left(?k) ^ (INDEX(?k) < INDEX(?j))];
+
+		current(?j, ?s) = (ORDER(?s) == done(?j));
+		duration(?j) = sum_{?s : stage} [current(?j, ?s) * DURATION(?j, ?s)];
+		start(?j) = max[job-ready(?j), max_{?m : machine} [
+			(exists_{?s : stage} [current(?j, ?s) ^ ON(?j, ?s, ?m)]) * machine-ready(?m)]];
+		finish(?j) = start(?j) + duration(?j);
+		span = max_{?j : job} [job-ready(?j)];
+		span-after = max_{?j : job} [if (go(?j)) then finish(?j) else job-ready(?j)];
+
+		done'(?j) = done(?j) + go(?j);
+		job-ready'(?j) = if (go(?j)) then finish(?j) else job-ready(?j);
+		machine-ready'(?m) = max[machine-ready(?m), max_{?j : job} [
+			(go(?j) ^ exists_{?s : stage} [current(?j, ?s) ^ ON(?j, ?s, ?m)]) * finish(?j)]];
+	};
+
+	// the growth of the makespan, so the return is the negative of the makespan
+	reward = -(span-after - span);
+
+	state-invariants {
+		forall_{?j : job} [done(?j) >= 0];
+		forall_{?m : machine} [machine-ready(?m) >= 0];
+	};
+}

@@ -85,6 +85,7 @@ SHORT = {
     'AirlineRevenue': 'Sell airline seats over a hub-and-spoke network',
     'BinPacking': 'Pack random items into few bins',
     'CarRental': 'Move rental cars between locations',
+    'JobShop': 'Dispatch operations to machines for the shortest makespan',
     'Knapsack': 'Fill knapsacks with valuable items',
     'Option': 'Exercise an American option',
     'StructuralMaintenance': 'Inspect and repair a cracking structure',
