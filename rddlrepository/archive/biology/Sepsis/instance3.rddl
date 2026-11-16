@@ -1,0 +1,51 @@
+// Six patients admitted in chosen states, each treated for 20 steps:
+//   p1  septic shock: high heart rate and low pressure,
+//   p2  respiratory failure: high heart rate and low oxygen,
+//   p3  diabetic, hypotensive and hyperglycemic, whom vasopressors push to a higher glucose,
+//   p4  diabetic with a very high glucose, otherwise stable,
+//   p5  high heart rate and high pressure, whom vasopressors would harm,
+//   p6  low oxygen and low glucose.
+
+non-fluents sepsis_nf3 {
+	domain = sepsis;
+
+	objects {
+		patient : { p1, p2, p3, p4, p5, p6 };
+	};
+}
+
+instance sepsis_inst3 {
+	domain = sepsis;
+	non-fluents = sepsis_nf3;
+
+	init-state {
+		admitted(p1) = true;
+		hr(p1) = 2;
+		sysbp(p1) = 0;
+
+		admitted(p2) = true;
+		hr(p2) = 2;
+		oxygen(p2) = 0;
+
+		admitted(p3) = true;
+		diabetic(p3) = true;
+		sysbp(p3) = 0;
+		glucose(p3) = 3;
+
+		admitted(p4) = true;
+		diabetic(p4) = true;
+		glucose(p4) = 4;
+
+		admitted(p5) = true;
+		hr(p5) = 2;
+		sysbp(p5) = 2;
+
+		admitted(p6) = true;
+		oxygen(p6) = 0;
+		glucose(p6) = 1;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 20;
+	discount = 0.99;	// as the paper computes its policies
+}

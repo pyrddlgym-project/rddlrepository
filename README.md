@@ -158,7 +158,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**134 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (4) &middot; [or](#or) (10) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**135 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (5) &middot; [or](#or) (10) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -214,6 +214,7 @@ Biology, medicine and ecology.
 | <img src="docs/thumbnails/Epidemic_biology.png" width="64" alt=""> | <code>Epidemic_<wbr>biology</code> | 0 | Contain an epidemic with interventions |
 | <img src="docs/thumbnails/Fishery_biology.png" width="64" alt=""> | <code>Fishery_<wbr>biology</code> | 0 | Harvest competing fish stocks |
 | <img src="docs/thumbnails/HIV_biology.png" width="64" alt=""> | <code>HIV_<wbr>biology</code> | 0&ndash;4 | Interrupt HIV treatment to boost immunity |
+| <img src="docs/thumbnails/Sepsis_biology.png" width="64" alt=""> | <code>Sepsis_<wbr>biology</code> | 0&ndash;4 | Treat sepsis patients in intensive care until discharge |
 
 <sub>[back to contexts](#domain-gallery)</sub>
 

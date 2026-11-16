@@ -70,6 +70,7 @@ SHORT = {
     'Epidemic': 'Contain an epidemic with interventions',
     'Fishery': 'Harvest competing fish stocks',
     'HIV': 'Interrupt HIV treatment to boost immunity',
+    'Sepsis': 'Treat sepsis patients in intensive care until discharge',
     # physics
     'Bicycle': 'Balance and ride a bicycle',
     'CartPoleChain': 'Swing up a chain of poles on a cart',

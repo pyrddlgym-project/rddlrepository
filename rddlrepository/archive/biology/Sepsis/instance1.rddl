@@ -1,0 +1,19 @@
+// Four patients admitted at random, as in Oberst and Sontag (2019), each treated for at most 20
+// steps; the horizon leaves room for the draws rejected at admission.
+
+non-fluents sepsis_nf1 {
+	domain = sepsis;
+
+	objects {
+		patient : { p1, p2, p3, p4 };
+	};
+}
+
+instance sepsis_inst1 {
+	domain = sepsis;
+	non-fluents = sepsis_nf1;
+
+	max-nondef-actions = pos-inf;
+	horizon = 30;
+	discount = 0.99;	// as the paper computes its policies
+}

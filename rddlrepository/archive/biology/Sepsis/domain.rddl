@@ -1,0 +1,321 @@
+////////////////////////////////////////////////////////////////////
+// Treatment of patients with sepsis in an intensive care unit, with
+// the sepsis simulator of Oberst and Sontag (2019), a benchmark for
+// reinforcement learning and off-policy evaluation in healthcare.
+//
+// Each patient has four vital signs, each in one of a few levels:
+//   hr       heart rate:          0 low, 1 normal, 2 high,
+//   sysbp    systolic pressure:   0 low, 1 normal, 2 high,
+//   oxygen   oxygen saturation:   0 low, 1 normal,
+//   glucose  blood glucose:       0 very low, 1 low, 2 normal, 3 high,
+//                                 4 very high,
+// and is diabetic or not, which changes how the glucose and the blood
+// pressure respond. Each step the doctor chooses, for each patient,
+// whether to give antibiotics, vasopressors and mechanical ventilation.
+// A treatment given on a step is in effect until the next step; one
+// that was in effect and is not given again is withdrawn.
+//
+// Each step the treatments act in this order, each on the vital signs
+// left by the one before:
+//
+//   antibiotics   given: a high heart rate and a high pressure each
+//                 become normal w.p. ABX-CURE;
+//                 withdrawn: a normal heart rate and a normal pressure
+//                 each become high w.p. ABX-WITHDRAW;
+//   ventilation   given: a low oxygen becomes normal w.p. VENT-CURE;
+//                 withdrawn: a normal oxygen becomes low w.p.
+//                 VENT-WITHDRAW;
+//   vasopressors  given, not diabetic: the pressure rises one level
+//                 (up to high) w.p. VASO-RAISE;
+//                 given, diabetic: a normal pressure becomes high w.p.
+//                 VASO-RAISE-DIAB, a low one becomes normal w.p.
+//                 VASO-LOW-NORMAL-DIAB and high w.p. VASO-LOW-HIGH-DIAB,
+//                 and the glucose rises one level w.p. VASO-GLUCOSE-DIAB;
+//                 withdrawn: the pressure falls one level w.p.
+//                 VASO-WITHDRAW (VASO-WITHDRAW-DIAB if diabetic);
+//
+// and then each vital sign that no treatment acted on, given or
+// withdrawn, fluctuates: it falls one level w.p. FLUCTUATE and rises one
+// level w.p. FLUCTUATE, within its levels. The glucose fluctuates
+// unless vasopressors are given, w.p. GLUCOSE-FLUCTUATE-DIAB each way if
+// the patient is diabetic. A vital sign is abnormal if it is not normal.
+// A patient with DEATH-ABNORMAL or more abnormal vital signs dies, and a
+// patient with none, on no treatment, is discharged; either ends the
+// patient's stay, with a reward of DEATH-REWARD or DISCHARGE-REWARD.
+// The stay also ends after MAX-STEPS steps of treatment.
+//
+// A patient is admitted at random: on the first step, the patient is
+// diabetic w.p. P-DIABETES, and the vital signs are drawn independently,
+// the glucose from a distribution that depends on diabetes. A patient
+// that would be dead or discharged on admission is drawn again, diabetes
+// included, on the next step, until the patient is admitted; about 30%
+// of the draws are rejected. The actions are ignored until then. An
+// instance can instead admit a patient in a chosen state by setting
+// admitted to true in its initial state.
+//
+// The model, its probabilities, the admission and the rewards are those
+// of the authors' code, which the paper describes; their experiments
+// treat each patient for at most 20 steps, compute their policies with
+// a discount of 0.99, and hide the diabetes, and in the main results
+// the glucose, from the policy being evaluated. Here all of the state is
+// observed.
+//
+// One deviation from the code: there, the glucose of a non-diabetic
+// that fluctuates up becomes min(1, glucose + 1), where every other
+// fluctuation caps at the highest level, as the comments of the code
+// describe ("all (non-treatment) states fluctuate +/- 1"). A rise thus
+// takes a normal or high glucose down to low: a non-diabetic's normal
+// glucose falls to low w.p. 2 GLUCOSE-FLUCTUATE each step it
+// fluctuates, and, once abnormal, can never return to normal
+// (vasopressors raise the glucose of diabetics only), so the patient can
+// never be discharged. Here the rise is min(4, glucose + 1), as for
+// diabetics. Before this
+// change, the domain was checked against the unmodified code: for each
+// of the 1440 states and 8 actions, 3000 steps of each matched in
+// distribution (chi-square tests, uniform p-values), as did 100000
+// admissions and 100000 stays under random treatment; after it, only the
+// steps that the change touches differ.
+//
+// References:
+//
+//		M. Oberst and D. Sontag. Counterfactual off-policy evaluation
+//		with Gumbel-max structural causal models. International
+//		Conference on Machine Learning, 2019.
+//
+//		M. Oberst and D. Sontag. gumbel-max-scm (2019).
+//		https://github.com/clinicalml/gumbel-max-scm
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain sepsis {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		patient : object;
+	};
+
+	pvariables {
+
+		// admission
+		P-DIABETES 				: { non-fluent, real, default = 0.2 };		// probability that a patient is diabetic
+		HR-INIT-LOW 			: { non-fluent, real, default = 0.25 };		// probability of a low heart rate
+		HR-INIT-HIGH 			: { non-fluent, real, default = 0.25 };		// probability of a high heart rate
+		SYSBP-INIT-LOW 			: { non-fluent, real, default = 0.25 };		// probability of a low pressure
+		SYSBP-INIT-HIGH 		: { non-fluent, real, default = 0.25 };		// probability of a high pressure
+		OXYGEN-INIT-LOW 		: { non-fluent, real, default = 0.2 };		// probability of a low oxygen
+		GLUCOSE-INIT-0 			: { non-fluent, real, default = 0.05 };		// probabilities of the glucose levels,
+		GLUCOSE-INIT-1 			: { non-fluent, real, default = 0.15 };		// not diabetic
+		GLUCOSE-INIT-2 			: { non-fluent, real, default = 0.6 };
+		GLUCOSE-INIT-3 			: { non-fluent, real, default = 0.15 };
+		GLUCOSE-INIT-0-DIAB 	: { non-fluent, real, default = 0.01 };		// probabilities of the glucose levels,
+		GLUCOSE-INIT-1-DIAB 	: { non-fluent, real, default = 0.05 };		// diabetic
+		GLUCOSE-INIT-2-DIAB 	: { non-fluent, real, default = 0.15 };
+		GLUCOSE-INIT-3-DIAB 	: { non-fluent, real, default = 0.6 };
+
+		// treatments
+		ABX-CURE 				: { non-fluent, real, default = 0.5 };		// antibiotics: high to normal
+		ABX-WITHDRAW 			: { non-fluent, real, default = 0.1 };		// antibiotics withdrawn: normal to high
+		VENT-CURE 				: { non-fluent, real, default = 0.7 };		// ventilation: low to normal oxygen
+		VENT-WITHDRAW 			: { non-fluent, real, default = 0.1 };		// ventilation withdrawn: normal to low oxygen
+		VASO-RAISE 				: { non-fluent, real, default = 0.7 };		// vasopressors: pressure up one level
+		VASO-RAISE-DIAB 		: { non-fluent, real, default = 0.9 };		// vasopressors, diabetic: normal to high
+		VASO-LOW-NORMAL-DIAB 	: { non-fluent, real, default = 0.5 };		// vasopressors, diabetic: low to normal
+		VASO-LOW-HIGH-DIAB 		: { non-fluent, real, default = 0.4 };		// vasopressors, diabetic: low to high
+		VASO-GLUCOSE-DIAB 		: { non-fluent, real, default = 0.5 };		// vasopressors, diabetic: glucose up one level
+		VASO-WITHDRAW 			: { non-fluent, real, default = 0.1 };		// vasopressors withdrawn: pressure down one level
+		VASO-WITHDRAW-DIAB 		: { non-fluent, real, default = 0.05 };		// same, diabetic
+
+		// fluctuations, each way
+		FLUCTUATE 				: { non-fluent, real, default = 0.1 };		// heart rate, pressure and oxygen
+		GLUCOSE-FLUCTUATE 		: { non-fluent, real, default = 0.1 };		// glucose, not diabetic
+		GLUCOSE-FLUCTUATE-DIAB 	: { non-fluent, real, default = 0.3 };		// glucose, diabetic
+
+		// outcomes
+		DEATH-ABNORMAL 			: { non-fluent, int, default = 3 };			// abnormal vital signs at which a patient dies
+		DEATH-REWARD 			: { non-fluent, real, default = -1.0 };
+		DISCHARGE-REWARD 		: { non-fluent, real, default = 1.0 };
+		MAX-STEPS 				: { non-fluent, int, default = 20 };		// longest stay (steps of treatment)
+
+		// admission
+		diabetic-draw(patient) 	: { interm-fluent, bool };
+		hr-draw(patient) 		: { interm-fluent, int };
+		sysbp-draw(patient) 	: { interm-fluent, int };
+		oxygen-draw(patient) 	: { interm-fluent, int };
+		glucose-draw(patient) 	: { interm-fluent, int };
+		u-hr-draw(patient) 		: { interm-fluent, real };
+		u-sysbp-draw(patient) 	: { interm-fluent, real };
+		u-glucose-draw(patient) : { interm-fluent, real };
+		admit(patient) 			: { interm-fluent, bool };
+
+		// the vital signs after antibiotics (a), ventilation (v), vasopressors (v) and fluctuations (f)
+		treated(patient) 		: { interm-fluent, bool };
+		hr-a(patient) 			: { interm-fluent, int };
+		sysbp-a(patient) 		: { interm-fluent, int };
+		oxygen-v(patient) 		: { interm-fluent, int };
+		sysbp-v(patient) 		: { interm-fluent, int };
+		glucose-v(patient) 		: { interm-fluent, int };
+		u-vaso(patient) 		: { interm-fluent, real };
+		u-hr(patient) 			: { interm-fluent, real };
+		u-sysbp(patient) 		: { interm-fluent, real };
+		u-oxygen(patient) 		: { interm-fluent, real };
+		u-glucose(patient) 		: { interm-fluent, real };
+		glucose-step(patient) 	: { interm-fluent, real };
+		hr-f(patient) 			: { interm-fluent, int };
+		sysbp-f(patient) 		: { interm-fluent, int };
+		oxygen-f(patient) 		: { interm-fluent, int };
+		glucose-f(patient) 		: { interm-fluent, int };
+		abnormal(patient) 		: { interm-fluent, int };
+		dies(patient) 			: { interm-fluent, bool };
+		leaves(patient) 		: { interm-fluent, bool };
+
+		// states
+		hr(patient) 			: { state-fluent, int, default = 1 };
+		sysbp(patient) 			: { state-fluent, int, default = 1 };
+		oxygen(patient) 		: { state-fluent, int, default = 1 };
+		glucose(patient) 		: { state-fluent, int, default = 2 };
+		diabetic(patient) 		: { state-fluent, bool, default = false };
+		antibiotics(patient) 	: { state-fluent, bool, default = false };	// in effect (given on the last step)
+		vasopressors(patient) 	: { state-fluent, bool, default = false };
+		ventilation(patient) 	: { state-fluent, bool, default = false };
+		admitted(patient) 		: { state-fluent, bool, default = false };
+		dead(patient) 			: { state-fluent, bool, default = false };
+		discharged(patient) 	: { state-fluent, bool, default = false };
+		steps(patient) 			: { state-fluent, int, default = 0 };		// steps of treatment so far
+
+		// actions
+		give-antibiotics(patient) 	: { action-fluent, bool, default = false };
+		give-vasopressors(patient) 	: { action-fluent, bool, default = false };
+		give-ventilation(patient) 	: { action-fluent, bool, default = false };
+	};
+
+	cpfs {
+
+		// admission: draw a patient, kept unless dead or discharged on arrival
+		diabetic-draw(?p) = Bernoulli(P-DIABETES);
+		u-hr-draw(?p) = Uniform(0, 1);
+		u-sysbp-draw(?p) = Uniform(0, 1);
+		u-glucose-draw(?p) = Uniform(0, 1);
+		hr-draw(?p) = if (u-hr-draw(?p) < HR-INIT-LOW) then 0
+					  else if (u-hr-draw(?p) < 1 - HR-INIT-HIGH) then 1 else 2;
+		sysbp-draw(?p) = if (u-sysbp-draw(?p) < SYSBP-INIT-LOW) then 0
+						 else if (u-sysbp-draw(?p) < 1 - SYSBP-INIT-HIGH) then 1 else 2;
+		oxygen-draw(?p) = if (Bernoulli(OXYGEN-INIT-LOW)) then 0 else 1;
+		glucose-draw(?p) = if (diabetic-draw(?p)) then [
+				if (u-glucose-draw(?p) < GLUCOSE-INIT-0-DIAB) then 0
+				else if (u-glucose-draw(?p) < GLUCOSE-INIT-0-DIAB + GLUCOSE-INIT-1-DIAB) then 1
+				else if (u-glucose-draw(?p) < GLUCOSE-INIT-0-DIAB + GLUCOSE-INIT-1-DIAB + GLUCOSE-INIT-2-DIAB) then 2
+				else if (u-glucose-draw(?p) < GLUCOSE-INIT-0-DIAB + GLUCOSE-INIT-1-DIAB + GLUCOSE-INIT-2-DIAB
+											  + GLUCOSE-INIT-3-DIAB) then 3
+				else 4 ]
+			else [
+				if (u-glucose-draw(?p) < GLUCOSE-INIT-0) then 0
+				else if (u-glucose-draw(?p) < GLUCOSE-INIT-0 + GLUCOSE-INIT-1) then 1
+				else if (u-glucose-draw(?p) < GLUCOSE-INIT-0 + GLUCOSE-INIT-1 + GLUCOSE-INIT-2) then 2
+				else if (u-glucose-draw(?p) < GLUCOSE-INIT-0 + GLUCOSE-INIT-1 + GLUCOSE-INIT-2 + GLUCOSE-INIT-3) then 3
+				else 4 ];
+		admit(?p) = ~admitted(?p)
+			^ ((hr-draw(?p) ~= 1) + (sysbp-draw(?p) ~= 1) + (oxygen-draw(?p) ~= 1) + (glucose-draw(?p) ~= 2) >= 1)
+			^ ((hr-draw(?p) ~= 1) + (sysbp-draw(?p) ~= 1) + (oxygen-draw(?p) ~= 1) + (glucose-draw(?p) ~= 2)
+				< DEATH-ABNORMAL);
+
+		// a patient is treated from admission until death, discharge or the end of the stay
+		treated(?p) = admitted(?p) ^ ~dead(?p) ^ ~discharged(?p) ^ (steps(?p) < MAX-STEPS);
+
+		// antibiotics
+		hr-a(?p) = if (give-antibiotics(?p)) then [
+						if ((hr(?p) == 2) ^ Bernoulli(ABX-CURE)) then 1 else hr(?p) ]
+				   else if (antibiotics(?p)) then [
+						if ((hr(?p) == 1) ^ Bernoulli(ABX-WITHDRAW)) then 2 else hr(?p) ]
+				   else hr(?p);
+		sysbp-a(?p) = if (give-antibiotics(?p)) then [
+						if ((sysbp(?p) == 2) ^ Bernoulli(ABX-CURE)) then 1 else sysbp(?p) ]
+					  else if (antibiotics(?p)) then [
+						if ((sysbp(?p) == 1) ^ Bernoulli(ABX-WITHDRAW)) then 2 else sysbp(?p) ]
+					  else sysbp(?p);
+
+		// ventilation
+		oxygen-v(?p) = if (give-ventilation(?p)) then [
+						if ((oxygen(?p) == 0) ^ Bernoulli(VENT-CURE)) then 1 else oxygen(?p) ]
+					   else if (ventilation(?p)) then [
+						if ((oxygen(?p) == 1) ^ Bernoulli(VENT-WITHDRAW)) then 0 else oxygen(?p) ]
+					   else oxygen(?p);
+
+		// vasopressors
+		u-vaso(?p) = Uniform(0, 1);
+		sysbp-v(?p) = if (give-vasopressors(?p) ^ ~diabetic(?p)) then [
+						if (Bernoulli(VASO-RAISE)) then min[sysbp-a(?p) + 1, 2] else sysbp-a(?p) ]
+					  else if (give-vasopressors(?p)) then [
+						if (sysbp-a(?p) == 1) then [ if (Bernoulli(VASO-RAISE-DIAB)) then 2 else 1 ]
+						else if (sysbp-a(?p) == 0) then [
+							if (u-vaso(?p) < VASO-LOW-NORMAL-DIAB) then 1
+							else if (u-vaso(?p) < VASO-LOW-NORMAL-DIAB + VASO-LOW-HIGH-DIAB) then 2
+							else 0 ]
+						else sysbp-a(?p) ]
+					  else if (vasopressors(?p)) then [
+						if (Bernoulli(if (diabetic(?p)) then VASO-WITHDRAW-DIAB else VASO-WITHDRAW))
+							then max[sysbp-a(?p) - 1, 0] else sysbp-a(?p) ]
+					  else sysbp-a(?p);
+		glucose-v(?p) = if (give-vasopressors(?p) ^ diabetic(?p) ^ Bernoulli(VASO-GLUCOSE-DIAB))
+							then min[glucose(?p) + 1, 4] else glucose(?p);
+
+		// fluctuations of the vital signs that no treatment acted on, given or withdrawn
+		u-hr(?p) = Uniform(0, 1);
+		u-sysbp(?p) = Uniform(0, 1);
+		u-oxygen(?p) = Uniform(0, 1);
+		u-glucose(?p) = Uniform(0, 1);
+		hr-f(?p) = if (give-antibiotics(?p) | antibiotics(?p)) then hr-a(?p)
+				   else if (u-hr(?p) < FLUCTUATE) then max[hr-a(?p) - 1, 0]
+				   else if (u-hr(?p) < 2 * FLUCTUATE) then min[hr-a(?p) + 1, 2]
+				   else hr-a(?p);
+		sysbp-f(?p) = if (give-antibiotics(?p) | antibiotics(?p) | give-vasopressors(?p) | vasopressors(?p))
+						then sysbp-v(?p)
+					  else if (u-sysbp(?p) < FLUCTUATE) then max[sysbp-v(?p) - 1, 0]
+					  else if (u-sysbp(?p) < 2 * FLUCTUATE) then min[sysbp-v(?p) + 1, 2]
+					  else sysbp-v(?p);
+		oxygen-f(?p) = if (give-ventilation(?p) | ventilation(?p)) then oxygen-v(?p)
+					   else if (u-oxygen(?p) < FLUCTUATE) then max[oxygen-v(?p) - 1, 0]
+					   else if (u-oxygen(?p) < 2 * FLUCTUATE) then min[oxygen-v(?p) + 1, 1]
+					   else oxygen-v(?p);
+		glucose-step(?p) = if (diabetic(?p)) then GLUCOSE-FLUCTUATE-DIAB else GLUCOSE-FLUCTUATE;
+		// DEVIATION from the authors' code, which caps the rise of a non-diabetic's glucose at level 1
+		// (min(1, glucose + 1)), so that a rise takes a normal or high glucose down to low, and a
+		// non-diabetic's glucose, once abnormal, can never return to normal; here it rises one level up
+		// to 4, as the diabetic's does and as the other vital signs do (see the header)
+		glucose-f(?p) = if (give-vasopressors(?p)) then glucose-v(?p)
+						else if (u-glucose(?p) < glucose-step(?p)) then max[glucose-v(?p) - 1, 0]
+						else if (u-glucose(?p) < 2 * glucose-step(?p)) then min[glucose-v(?p) + 1, 4]
+						else glucose-v(?p);
+
+		// outcomes
+		abnormal(?p) = (hr-f(?p) ~= 1) + (sysbp-f(?p) ~= 1) + (oxygen-f(?p) ~= 1) + (glucose-f(?p) ~= 2);
+		dies(?p) = treated(?p) ^ (abnormal(?p) >= DEATH-ABNORMAL);
+		leaves(?p) = treated(?p) ^ (abnormal(?p) == 0)
+			^ ~give-antibiotics(?p) ^ ~give-vasopressors(?p) ^ ~give-ventilation(?p);
+
+		// next state
+		hr'(?p) = if (treated(?p)) then hr-f(?p) else if (~admitted(?p)) then hr-draw(?p) else hr(?p);
+		sysbp'(?p) = if (treated(?p)) then sysbp-f(?p) else if (~admitted(?p)) then sysbp-draw(?p) else sysbp(?p);
+		oxygen'(?p) = if (treated(?p)) then oxygen-f(?p) else if (~admitted(?p)) then oxygen-draw(?p) else oxygen(?p);
+		glucose'(?p) = if (treated(?p)) then glucose-f(?p) else if (~admitted(?p)) then glucose-draw(?p) else glucose(?p);
+		diabetic'(?p) = if (~admitted(?p)) then diabetic-draw(?p) else diabetic(?p);
+		antibiotics'(?p) = if (treated(?p)) then give-antibiotics(?p) else antibiotics(?p);
+		vasopressors'(?p) = if (treated(?p)) then give-vasopressors(?p) else vasopressors(?p);
+		ventilation'(?p) = if (treated(?p)) then give-ventilation(?p) else ventilation(?p);
+		admitted'(?p) = admitted(?p) | admit(?p);
+		dead'(?p) = dead(?p) | dies(?p);
+		discharged'(?p) = discharged(?p) | leaves(?p);
+		steps'(?p) = if (treated(?p)) then steps(?p) + 1 else steps(?p);
+	};
+
+	// the patients discharged and the patients who die on this step
+	reward = sum_{?p : patient} [if (leaves(?p)) then DISCHARGE-REWARD else if (dies(?p)) then DEATH-REWARD else 0.0];
+
+	termination {
+		forall_{?p : patient} [dead(?p) | discharged(?p) | (steps(?p) >= MAX-STEPS)];
+	};
+}
