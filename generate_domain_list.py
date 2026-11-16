@@ -66,6 +66,7 @@ SHORT = {
     'Reservoir': 'Manage water in linked reservoirs',
     'TrafficBLX': 'Time traffic signals to cut travel time',
     # biology
+    'Diabetes': 'Dose insulin to keep blood glucose in range',
     'Epidemic': 'Contain an epidemic with interventions',
     'Fishery': 'Harvest competing fish stocks',
     'HIV': 'Interrupt HIV treatment to boost immunity',

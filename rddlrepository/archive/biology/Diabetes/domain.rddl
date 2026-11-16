@@ -1,0 +1,451 @@
+////////////////////////////////////////////////////////////////////
+// Blood glucose control in type 1 diabetes: an insulin pump doses
+// each patient through a day of random meals, to keep the glucose
+// out of hypoglycemia and hyperglycemia. The model and the problem
+// are those of simglucose (Xie, 2018), the Python version of the
+// UVA/Padova T1D simulator (Kovatchev et al., 2009; Dalla Man et al.,
+// 2007, 2014) used as a benchmark for reinforcement learning, with
+// its 30 virtual patients (10 adolescents, 10 adults, 10 children),
+// its random meals, its CGM sensor and its pump.
+//
+// Each patient has 13 compartments, per kg of body weight:
+//   QSTO1, QSTO2  glucose of the meal in the stomach, solid and liquid (mg),
+//   QGUT          glucose in the intestine (mg),
+//   GP, GT        glucose in the plasma and in the tissues (mg/kg),
+//   IP, IL        insulin in the plasma and in the liver (pmol/kg),
+//   X             insulin action on glucose utilization (pmol/L),
+//   I1, ID        delayed insulin signals on glucose production (pmol/L),
+//   ISC1, ISC2    subcutaneous insulin (pmol/kg),
+//   GS            subcutaneous glucose (mg/kg),
+// which follow, per minute, with D the carbohydrates eaten (mg/min),
+// U the insulin infused (pmol/kg/min) and I = IP / VI:
+//
+//   QSTO1' = -KMAX QSTO1 + D
+//   QSTO2' = KMAX QSTO1 - KGUT QSTO2
+//   QGUT'  = KGUT QSTO2 - KABS QGUT
+//   GP'    = max(KP1 - KP2 GP - KP3 ID, 0) + F KABS QGUT / BW - FSNC
+//            - KE1 max(GP - KE2, 0) - K1 GP + K2 GT
+//   GT'    = -(VM0 + VMX X) GT / (KM0 + GT) + K1 GP - K2 GT
+//   IP'    = -(M2 + M4) IP + M1 IL + KA1 ISC1 + KA2 ISC2
+//   X'     = -P2U X + P2U (I - IB)
+//   I1'    = -KI (I1 - I)
+//   ID'    = -KI (ID - I1)
+//   IL'    = -(M1 + M30) IL + M2 IP
+//   ISC1'  = U - (KA1 + KD) ISC1
+//   ISC2'  = KD ISC1 - KA2 ISC2
+//   GS'    = -KSC GS + KSC GP
+//
+// where the gastric emptying KGUT slows down as the stomach empties
+// after a meal of DBAR mg:
+//
+//   KGUT = KMIN + (KMAX - KMIN) / 2 (tanh(a (QSTO - B DBAR))
+//          - tanh(c (QSTO - D DBAR)) + 2),
+//   a = 5 / (2 DBAR (1 - B)),  c = 5 / (2 DBAR D),  QSTO = QSTO1 + QSTO2.
+//
+// The blood glucose BG is GS / VG (mg/dL), as in simglucose.
+//
+// Meals: at midnight, each meal of the day (breakfast, lunch, dinner
+// and three snacks) is taken with probability MEAL-PROB, at a time drawn
+// from a normal distribution truncated to [MEAL-EARLIEST, MEAL-LATEST]
+// and rounded to the minute, with a normal amount of carbohydrates,
+// rounded to the gram and at least 0. The truncated time is drawn by
+// rejection: the time is drawn again on the next step until it falls in
+// the bounds, which takes a few steps at most and ends long before the
+// earliest meal. A meal is eaten at EAT-RATE g/min, and DBAR is the
+// glucose in the stomach when the meal began plus what has been eaten of
+// it since, averaged over the minutes of the step.
+//
+// Each step lasts DT minutes, the time between two readings of the CGM
+// sensor: the action insulin sets the rate of the pump (U/min, at most
+// MAX-RATE) for the step, and the reading at its end is BG plus noise,
+// between CGM-MIN and CGM-MAX. The noise follows Breton & Kovatchev
+// (2008), as in simglucose: every NOISE-MINUTES minutes
+// e = PACF (e + N(0, 1)), and the noise is XI + LAMBDA sinh((e - GAMMA)
+// / DELTA). simglucose interpolates the noise between these times by a
+// cubic spline through the next ten, which RDDL cannot look ahead to;
+// here it is interpolated linearly between the two nearest. The basal
+// rate that keeps a patient in its steady state is U2SS BW / 6000 U/min,
+// and a meal needs about one unit per CR grams.
+//
+// The cost of each step is the risk index of Kovatchev et al. (1997),
+// as computed by simglucose, which is 0 at BG = 112.5 mg/dL and rises
+// to 100 at 20 and at 600 mg/dL:
+//
+//   risk = 10 (1.509 (ln(BG)^1.084 - 5.381))^2,
+//
+// and the reward is minus the sum of the risks of the patients. The
+// gym environment of simglucose rewards instead the decrease of the
+// risk of the CGM reading from one reading to the next, which adds up
+// to the risk of the first reading minus that of the last, and ends the
+// episode when BG leaves [10, 600]; a cost cannot end the episode there
+// without rewarding the patient's death, so here the risk stays at its
+// largest instead.
+//
+// The model is integrated over each step by an exponential scheme of
+// second order: each compartment is written as x' = P - L x with the
+// inflow P and the outflow rate L, and
+//
+//   x~ = x e^(-L DT) + P (1 - e^(-L DT)) / L
+//   x+ = x e^(-L' DT) + P' (1 - e^(-L' DT)) / L'
+//
+// with P' and L' the averages of P and L at x and at x~, which is exact
+// for P and L held over the step and stable at DT = 3, where Euler and
+// Heun steps are not. Against the dopri5 solver of simglucose, which
+// steps the patient every minute, over a day of meals for each of the 30
+// patients under the basal-bolus controller of simglucose and under
+// random insulin, BG is within 0.8 mg/dL of it on average and within 10
+// mg/dL at worst (a child in a swing from 9 to 410 mg/dL); the sensor
+// noise is larger.
+//
+// The other differences from simglucose: the patients start in their
+// steady state (simglucose can perturb it at random), at START-MINUTE
+// (simglucose draws the hour at random), a meal falling within a step
+// is eaten from the start of the step, and the reading is the one at
+// the end of the step (simglucose's gym averages the readings it holds
+// over the step, which is two thirds of the previous reading and one
+// third of the new one); the pump does not round the rate to its
+// increments of 0.05 pmol/min.
+//
+// References:
+//
+//		J. Xie. Simglucose v0.2.1 (2018). https://github.com/jxx123/simglucose
+//
+//		C. Dalla Man, R. A. Rizza, and C. Cobelli. Meal simulation model
+//		of the glucose-insulin system. IEEE Transactions on Biomedical
+//		Engineering 54(10), 2007.
+//
+//		B. P. Kovatchev, M. Breton, C. Dalla Man, and C. Cobelli. In
+//		silico preclinical trials: a proof of concept in closed-loop
+//		control of type 1 diabetes. Journal of Diabetes Science and
+//		Technology 3(1), 2009.
+//
+//		C. Dalla Man, F. Micheletto, D. Lv, M. Breton, B. Kovatchev, and
+//		C. Cobelli. The UVA/PADOVA type 1 diabetes simulator: new
+//		features. Journal of Diabetes Science and Technology 8(1), 2014.
+//
+//		M. Breton and B. Kovatchev. Analysis, modeling, and simulation
+//		of the accuracy of continuous glucose sensors. Journal of
+//		Diabetes Science and Technology 2(5), 2008.
+//
+//		B. P. Kovatchev, D. J. Cox, L. A. Gonder-Frederick, and W. Clarke.
+//		Symmetrization of the blood glucose measurement scale and its
+//		applications. Diabetes Care 20(11), 1997.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain diabetes {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		patient : object;
+		meal : object;
+	};
+
+	pvariables {
+
+		// the patient (per minute), by default adolescent#001 of simglucose
+		BW(patient) 		: { non-fluent, real, default = 68.706 };			// body weight (kg)
+		KMAX(patient) 		: { non-fluent, real, default = 0.015865 };			// largest gastric emptying
+		KMIN(patient) 		: { non-fluent, real, default = 0.0083338 };		// smallest gastric emptying
+		KABS(patient) 		: { non-fluent, real, default = 0.091043 };			// intestinal absorption
+		B(patient) 			: { non-fluent, real, default = 0.83072 };			// stomach fraction where emptying slows
+		D(patient) 			: { non-fluent, real, default = 0.32294 };			// stomach fraction where it speeds up again
+		F(patient) 			: { non-fluent, real, default = 0.9 };				// fraction of the meal absorbed
+		VG(patient) 		: { non-fluent, real, default = 1.6818 };			// glucose distribution volume (dL/kg)
+		K1(patient) 		: { non-fluent, real, default = 0.057252 };			// glucose from plasma to tissues
+		K2(patient) 		: { non-fluent, real, default = 0.067738 };			// glucose from tissues to plasma
+		KP1(patient) 		: { non-fluent, real, default = 11.5048231338 };	// largest glucose production
+		KP2(patient) 		: { non-fluent, real, default = 0.023318 };			// production lowered by glucose
+		KP3(patient) 		: { non-fluent, real, default = 0.023253 };			// production lowered by insulin
+		FSNC(patient) 		: { non-fluent, real, default = 1.0 };				// insulin-independent utilization
+		VM0(patient) 		: { non-fluent, real, default = 5.92854753098 };	// basal insulin-dependent utilization
+		VMX(patient) 		: { non-fluent, real, default = 0.074667 };			// utilization raised by insulin
+		KM0(patient) 		: { non-fluent, real, default = 260.89 };			// saturation of utilization
+		KE1(patient) 		: { non-fluent, real, default = 0.0005 };			// renal excretion rate
+		KE2(patient) 		: { non-fluent, real, default = 339.0 };			// renal threshold (mg/kg)
+		VI(patient) 		: { non-fluent, real, default = 0.048153 };			// insulin distribution volume (L/kg)
+		IB(patient) 		: { non-fluent, real, default = 97.554 };			// basal insulin (pmol/L)
+		M1(patient) 		: { non-fluent, real, default = 0.15221 };			// insulin from liver to plasma
+		M2(patient) 		: { non-fluent, real, default = 0.259067825939 };	// insulin from plasma to liver
+		M4(patient) 		: { non-fluent, real, default = 0.103627130376 };	// peripheral insulin degradation
+		M30(patient) 		: { non-fluent, real, default = 0.228315 };			// hepatic insulin extraction
+		P2U(patient) 		: { non-fluent, real, default = 0.021344 };			// insulin action on utilization
+		KI(patient) 		: { non-fluent, real, default = 0.0088838 };		// insulin action on production
+		KD(patient) 		: { non-fluent, real, default = 0.0185 };			// subcutaneous insulin, first to second
+		KA1(patient) 		: { non-fluent, real, default = 0.0025 };			// absorption of the first
+		KA2(patient) 		: { non-fluent, real, default = 0.0115 };			// absorption of the second
+		KSC(patient) 		: { non-fluent, real, default = 0.056 };			// glucose from plasma to sensor
+		U2SS(patient) 		: { non-fluent, real, default = 1.21697571391 };	// basal insulin (pmol/kg/min)
+		CR(patient) 		: { non-fluent, real, default = 12.0 };				// carbohydrate ratio (g/U)
+		CF(patient) 		: { non-fluent, real, default = 15.0360283441 };	// correction factor (mg/dL/U)
+
+		// the meals of a day (minutes after midnight, grams of carbohydrates)
+		MEAL-PROB(meal) 		: { non-fluent, real, default = 0.95 };
+		MEAL-EARLIEST(meal) 	: { non-fluent, real, default = 300.0 };
+		MEAL-LATEST(meal) 		: { non-fluent, real, default = 540.0 };
+		MEAL-TIME-MEAN(meal) 	: { non-fluent, real, default = 420.0 };
+		MEAL-TIME-SD(meal) 		: { non-fluent, real, default = 60.0 };
+		MEAL-CARBS-MEAN(meal) 	: { non-fluent, real, default = 45.0 };
+		MEAL-CARBS-SD(meal) 	: { non-fluent, real, default = 10.0 };
+		EAT-RATE 				: { non-fluent, real, default = 5.0 };		// g/min
+
+		// the sensor (Dexcom) and the pump (Insulet)
+		NOISE-MINUTES 		: { non-fluent, real, default = 15.0 };		// time between noise draws
+		PACF 				: { non-fluent, real, default = 0.7 };
+		GAMMA 				: { non-fluent, real, default = -0.5444 };
+		LAMBDA 				: { non-fluent, real, default = 15.9574 };
+		DELTA 				: { non-fluent, real, default = 1.6898 };
+		XI 					: { non-fluent, real, default = -5.47 };
+		CGM-MIN 			: { non-fluent, real, default = 39.0 };		// mg/dL
+		CGM-MAX 			: { non-fluent, real, default = 600.0 };	// mg/dL
+		MAX-RATE 			: { non-fluent, real, default = 30.0 };		// U/min
+
+		// time (minutes)
+		DT 					: { non-fluent, real, default = 3.0 };		// length of a step, between readings
+		START-MINUTE 		: { non-fluent, real, default = 0.0 };		// time of day at the start
+
+		// the time of day
+		minute 				: { interm-fluent, real };		// minutes after midnight
+		new-day 			: { interm-fluent, bool };		// the meals of the day are drawn
+		knot 				: { interm-fluent, bool };		// the noise is drawn at the end of the step
+
+		// the meals
+		today(patient, meal) 		: { interm-fluent, bool };
+		draw(patient, meal) 		: { interm-fluent, real };
+		accept(patient, meal) 		: { interm-fluent, bool };
+		announced(patient) 			: { interm-fluent, real };	// g
+		eat(patient) 				: { interm-fluent, real };	// g eaten in the step
+		begin(patient) 				: { interm-fluent, bool };	// a meal begins
+		meal-qsto(patient) 			: { interm-fluent, real };	// mg
+		eaten(patient) 				: { interm-fluent, real };	// g
+		dbar(patient) 				: { interm-fluent, real };	// mg
+
+		// the model as x' = P - L x, at the state and at the predicted state
+		kgut(patient) : { interm-fluent, real };		kgut-pred(patient) : { interm-fluent, real };
+		pqsto1(patient) : { interm-fluent, real };
+		pqsto2(patient) : { interm-fluent, real };		pqsto2-pred(patient) : { interm-fluent, real };
+		pqgut(patient) : { interm-fluent, real };		pqgut-pred(patient) : { interm-fluent, real };
+		pgp(patient) : { interm-fluent, real };			pgp-pred(patient) : { interm-fluent, real };
+		lgp(patient) : { interm-fluent, real };			lgp-pred(patient) : { interm-fluent, real };
+		pgt(patient) : { interm-fluent, real };			pgt-pred(patient) : { interm-fluent, real };
+		lgt(patient) : { interm-fluent, real };			lgt-pred(patient) : { interm-fluent, real };
+		pip(patient) : { interm-fluent, real };			pip-pred(patient) : { interm-fluent, real };
+		px(patient) : { interm-fluent, real };			px-pred(patient) : { interm-fluent, real };
+		pi1(patient) : { interm-fluent, real };			pi1-pred(patient) : { interm-fluent, real };
+		pid(patient) : { interm-fluent, real };			pid-pred(patient) : { interm-fluent, real };
+		pil(patient) : { interm-fluent, real };			pil-pred(patient) : { interm-fluent, real };
+		pisc2(patient) : { interm-fluent, real };		pisc2-pred(patient) : { interm-fluent, real };
+		pgs(patient) : { interm-fluent, real };			pgs-pred(patient) : { interm-fluent, real };
+		qsto1-pred(patient) : { interm-fluent, real };	qsto2-pred(patient) : { interm-fluent, real };
+		qgut-pred(patient) : { interm-fluent, real };	gp-pred(patient) : { interm-fluent, real };
+		gt-pred(patient) : { interm-fluent, real };		ip-pred(patient) : { interm-fluent, real };
+		x-pred(patient) : { interm-fluent, real };		i1-pred(patient) : { interm-fluent, real };
+		id-pred(patient) : { interm-fluent, real };		il-pred(patient) : { interm-fluent, real };
+		isc1-pred(patient) : { interm-fluent, real };	isc2-pred(patient) : { interm-fluent, real };
+		gs-pred(patient) : { interm-fluent, real };		gs-next(patient) : { interm-fluent, real };
+
+		// the sensor noise
+		e-lo-now(patient) 			: { interm-fluent, real };
+		e-hi-now(patient) 			: { interm-fluent, real };
+		noise(patient) 				: { interm-fluent, real };	// at the end of the step (mg/dL)
+
+		// the cost
+		bg(patient) 				: { interm-fluent, real };	// mg/dL
+		risk(patient) 				: { interm-fluent, real };
+
+		// states: the compartments, by default the steady state of adolescent#001
+		qsto1(patient) 		: { state-fluent, real, default = 0.0 };
+		qsto2(patient) 		: { state-fluent, real, default = 0.0 };
+		qgut(patient) 		: { state-fluent, real, default = 0.0 };
+		gp(patient) 		: { state-fluent, real, default = 250.621836 };
+		gt(patient) 		: { state-fluent, real, default = 176.506559902 };
+		ip(patient) 		: { state-fluent, real, default = 4.697517762 };
+		x(patient) 			: { state-fluent, real, default = 0.0 };
+		i1(patient) 		: { state-fluent, real, default = 97.554 };
+		id(patient) 		: { state-fluent, real, default = 97.554 };
+		il(patient) 		: { state-fluent, real, default = 3.19814917262 };
+		isc1(patient) 		: { state-fluent, real, default = 57.951224472 };
+		isc2(patient) 		: { state-fluent, real, default = 93.2258828462 };
+		gs(patient) 		: { state-fluent, real, default = 250.621836 };
+
+		// states: the meals
+		taken(patient, meal) 		: { state-fluent, bool, default = false };	// the meal is taken today
+		meal-time(patient, meal) 	: { state-fluent, real, default = -1.0 };	// its time, or -1 until drawn
+		meal-carbs(patient, meal) 	: { state-fluent, real, default = 0.0 };	// its carbohydrates (g)
+		to-eat(patient) 			: { state-fluent, real, default = 0.0 };	// what is left to eat (g)
+		eating(patient) 			: { state-fluent, bool, default = false };	// ate in the last step
+		last-qsto(patient) 			: { state-fluent, real, default = 0.0 };	// stomach when the meal began (mg)
+		food(patient) 				: { state-fluent, real, default = 0.0 };	// eaten of the meal (g)
+
+		// states: the sensor and the clock
+		cgm(patient) 		: { state-fluent, real, default = 149.02 };		// last reading (mg/dL)
+		e-lo(patient) 		: { state-fluent, real, default = 0.0 };		// noise process at the last draw
+		e-hi(patient) 		: { state-fluent, real, default = 0.0 };		// and at the next
+		t 					: { state-fluent, real, default = 0.0 };		// minutes since the start
+
+		// action
+		insulin(patient) 	: { action-fluent, real, default = 0.0 };		// pump rate (U/min)
+	};
+
+	cpfs {
+
+		// the time of day
+		minute = fmod[START-MINUTE + t, 1440];
+		new-day = (t < DT / 2) | (minute < DT);
+		knot = fmod[t + DT, NOISE-MINUTES] < DT / 2;
+
+		// the meals of the day, drawn at midnight, the times by rejection
+		today(?p, ?m) = if (new-day) then Bernoulli(MEAL-PROB(?m)) else taken(?p, ?m);
+		draw(?p, ?m) = Normal(MEAL-TIME-MEAN(?m), pow[MEAL-TIME-SD(?m), 2]);
+		accept(?p, ?m) = today(?p, ?m) ^ (new-day | (meal-time(?p, ?m) < 0))
+						 ^ (draw(?p, ?m) >= MEAL-EARLIEST(?m)) ^ (draw(?p, ?m) <= MEAL-LATEST(?m));
+
+		// eating, from the meals whose minute falls in the step
+		announced(?p) = sum_{?m : meal} [if (taken(?p, ?m) ^ (meal-time(?p, ?m) >= minute - 0.5)
+											 ^ (meal-time(?p, ?m) < minute + DT - 0.5))
+										 then meal-carbs(?p, ?m) else 0.0];
+		eat(?p) = min[EAT-RATE * DT, to-eat(?p) + announced(?p)];
+		begin(?p) = (eat(?p) > 0) ^ ~eating(?p);
+		meal-qsto(?p) = if (begin(?p)) then qsto1(?p) + qsto2(?p) else last-qsto(?p);
+		eaten(?p) = if (begin(?p)) then eat(?p) else if (eating(?p)) then food(?p) + eat(?p) else food(?p);
+		dbar(?p) = meal-qsto(?p) + 1000 * (eaten(?p) - eat(?p) * (DT - 1) / (2 * DT));
+
+		// the model at the state
+		kgut(?p) = if (dbar(?p) > 0)
+				   then KMIN(?p) + (KMAX(?p) - KMIN(?p)) / 2 * (
+						tanh[5 / (2 * dbar(?p) * (1 - B(?p))) * (qsto1(?p) + qsto2(?p) - B(?p) * dbar(?p))]
+						- tanh[5 / (2 * dbar(?p) * D(?p)) * (qsto1(?p) + qsto2(?p) - D(?p) * dbar(?p))] + 2)
+				   else KMAX(?p);
+		pqsto1(?p) = 1000 * eat(?p) / DT;
+		pqsto2(?p) = KMAX(?p) * qsto1(?p);
+		pqgut(?p) = kgut(?p) * qsto2(?p);
+		pgp(?p) = max[KP1(?p) - KP2(?p) * gp(?p) - KP3(?p) * id(?p), 0] + F(?p) * KABS(?p) * qgut(?p) / BW(?p)
+				  + K2(?p) * gt(?p) - FSNC(?p) + (if (gp(?p) > KE2(?p)) then KE1(?p) * KE2(?p) else 0.0);
+		lgp(?p) = K1(?p) + (if (gp(?p) > KE2(?p)) then KE1(?p) else 0.0);
+		pgt(?p) = K1(?p) * gp(?p);
+		lgt(?p) = K2(?p) + (VM0(?p) + VMX(?p) * x(?p)) / (KM0(?p) + gt(?p));
+		pip(?p) = M1(?p) * il(?p) + KA1(?p) * isc1(?p) + KA2(?p) * isc2(?p);
+		px(?p) = P2U(?p) * (ip(?p) / VI(?p) - IB(?p));
+		pi1(?p) = KI(?p) * ip(?p) / VI(?p);
+		pid(?p) = KI(?p) * i1(?p);
+		pil(?p) = M2(?p) * ip(?p);
+		pisc2(?p) = KD(?p) * isc1(?p);
+		pgs(?p) = KSC(?p) * gp(?p);
+
+		// the predicted state
+		qsto1-pred(?p) = qsto1(?p) * exp[-KMAX(?p) * DT] + pqsto1(?p) * (1 - exp[-KMAX(?p) * DT]) / KMAX(?p);
+		qsto2-pred(?p) = qsto2(?p) * exp[-kgut(?p) * DT] + pqsto2(?p) * (1 - exp[-kgut(?p) * DT]) / kgut(?p);
+		qgut-pred(?p) = qgut(?p) * exp[-KABS(?p) * DT] + pqgut(?p) * (1 - exp[-KABS(?p) * DT]) / KABS(?p);
+		gp-pred(?p) = max[gp(?p) * exp[-lgp(?p) * DT] + pgp(?p) * (1 - exp[-lgp(?p) * DT]) / lgp(?p), 0];
+		gt-pred(?p) = max[gt(?p) * exp[-lgt(?p) * DT] + pgt(?p) * (1 - exp[-lgt(?p) * DT]) / lgt(?p), 0];
+		ip-pred(?p) = ip(?p) * exp[-(M2(?p) + M4(?p)) * DT] + pip(?p) * (1 - exp[-(M2(?p) + M4(?p)) * DT]) / (M2(?p) + M4(?p));
+		x-pred(?p) = x(?p) * exp[-P2U(?p) * DT] + px(?p) * (1 - exp[-P2U(?p) * DT]) / P2U(?p);
+		i1-pred(?p) = i1(?p) * exp[-KI(?p) * DT] + pi1(?p) * (1 - exp[-KI(?p) * DT]) / KI(?p);
+		id-pred(?p) = id(?p) * exp[-KI(?p) * DT] + pid(?p) * (1 - exp[-KI(?p) * DT]) / KI(?p);
+		il-pred(?p) = il(?p) * exp[-(M1(?p) + M30(?p)) * DT] + pil(?p) * (1 - exp[-(M1(?p) + M30(?p)) * DT]) / (M1(?p) + M30(?p));
+		isc1-pred(?p) = isc1(?p) * exp[-(KA1(?p) + KD(?p)) * DT]
+						+ insulin(?p) * 6000 / BW(?p) * (1 - exp[-(KA1(?p) + KD(?p)) * DT]) / (KA1(?p) + KD(?p));
+		isc2-pred(?p) = isc2(?p) * exp[-KA2(?p) * DT] + pisc2(?p) * (1 - exp[-KA2(?p) * DT]) / KA2(?p);
+		gs-pred(?p) = gs(?p) * exp[-KSC(?p) * DT] + pgs(?p) * (1 - exp[-KSC(?p) * DT]) / KSC(?p);
+
+		// the model at the predicted state
+		kgut-pred(?p) = if (dbar(?p) > 0)
+						then KMIN(?p) + (KMAX(?p) - KMIN(?p)) / 2 * (
+							 tanh[5 / (2 * dbar(?p) * (1 - B(?p))) * (qsto1-pred(?p) + qsto2-pred(?p) - B(?p) * dbar(?p))]
+							 - tanh[5 / (2 * dbar(?p) * D(?p)) * (qsto1-pred(?p) + qsto2-pred(?p) - D(?p) * dbar(?p))] + 2)
+						else KMAX(?p);
+		pqsto2-pred(?p) = KMAX(?p) * qsto1-pred(?p);
+		pqgut-pred(?p) = kgut-pred(?p) * qsto2-pred(?p);
+		pgp-pred(?p) = max[KP1(?p) - KP2(?p) * gp-pred(?p) - KP3(?p) * id-pred(?p), 0]
+					   + F(?p) * KABS(?p) * qgut-pred(?p) / BW(?p) + K2(?p) * gt-pred(?p) - FSNC(?p)
+					   + (if (gp-pred(?p) > KE2(?p)) then KE1(?p) * KE2(?p) else 0.0);
+		lgp-pred(?p) = K1(?p) + (if (gp-pred(?p) > KE2(?p)) then KE1(?p) else 0.0);
+		pgt-pred(?p) = K1(?p) * gp-pred(?p);
+		lgt-pred(?p) = K2(?p) + (VM0(?p) + VMX(?p) * x-pred(?p)) / (KM0(?p) + gt-pred(?p));
+		pip-pred(?p) = M1(?p) * il-pred(?p) + KA1(?p) * isc1-pred(?p) + KA2(?p) * isc2-pred(?p);
+		px-pred(?p) = P2U(?p) * (ip-pred(?p) / VI(?p) - IB(?p));
+		pi1-pred(?p) = KI(?p) * ip-pred(?p) / VI(?p);
+		pid-pred(?p) = KI(?p) * i1-pred(?p);
+		pil-pred(?p) = M2(?p) * ip-pred(?p);
+		pisc2-pred(?p) = KD(?p) * isc1-pred(?p);
+		pgs-pred(?p) = KSC(?p) * gp-pred(?p);
+		gs-next(?p) = gs(?p) * exp[-KSC(?p) * DT] + (pgs(?p) + pgs-pred(?p)) / 2 * (1 - exp[-KSC(?p) * DT]) / KSC(?p);
+
+		// the sensor noise at the end of the step, between the draws around it
+		e-lo-now(?p) = if (t < DT / 2) then Normal(0, 1) else e-lo(?p);
+		e-hi-now(?p) = if (t < DT / 2) then PACF * (e-lo-now(?p) + Normal(0, 1)) else e-hi(?p);
+		noise(?p) = if (knot) then XI + LAMBDA * sinh[(e-hi-now(?p) - GAMMA) / DELTA]
+					else XI + LAMBDA * sinh[(e-lo-now(?p) - GAMMA) / DELTA]
+						 + LAMBDA * (sinh[(e-hi-now(?p) - GAMMA) / DELTA] - sinh[(e-lo-now(?p) - GAMMA) / DELTA])
+						 * fmod[t + DT, NOISE-MINUTES] / NOISE-MINUTES;
+
+		// the risk of the blood glucose
+		bg(?p) = gs(?p) / VG(?p);
+		risk(?p) = if (bg(?p) <= 20) then 100.0
+				   else if (bg(?p) >= 600) then 100.0
+				   else 10 * pow[1.509 * (pow[ln[bg(?p)], 1.084] - 5.381), 2];
+
+		// the next state: the compartments, with the averages of the model at the state and the predicted state
+		qsto1'(?p) = qsto1(?p) * exp[-KMAX(?p) * DT] + pqsto1(?p) * (1 - exp[-KMAX(?p) * DT]) / KMAX(?p);
+		qsto2'(?p) = qsto2(?p) * exp[-(kgut(?p) + kgut-pred(?p)) / 2 * DT]
+					 + (pqsto2(?p) + pqsto2-pred(?p)) / 2 * (1 - exp[-(kgut(?p) + kgut-pred(?p)) / 2 * DT])
+					 / ((kgut(?p) + kgut-pred(?p)) / 2);
+		qgut'(?p) = qgut(?p) * exp[-KABS(?p) * DT]
+					+ (pqgut(?p) + pqgut-pred(?p)) / 2 * (1 - exp[-KABS(?p) * DT]) / KABS(?p);
+		gp'(?p) = max[gp(?p) * exp[-(lgp(?p) + lgp-pred(?p)) / 2 * DT]
+					  + (pgp(?p) + pgp-pred(?p)) / 2 * (1 - exp[-(lgp(?p) + lgp-pred(?p)) / 2 * DT])
+					  / ((lgp(?p) + lgp-pred(?p)) / 2), 0];
+		gt'(?p) = max[gt(?p) * exp[-(lgt(?p) + lgt-pred(?p)) / 2 * DT]
+					  + (pgt(?p) + pgt-pred(?p)) / 2 * (1 - exp[-(lgt(?p) + lgt-pred(?p)) / 2 * DT])
+					  / ((lgt(?p) + lgt-pred(?p)) / 2), 0];
+		ip'(?p) = ip(?p) * exp[-(M2(?p) + M4(?p)) * DT]
+				  + (pip(?p) + pip-pred(?p)) / 2 * (1 - exp[-(M2(?p) + M4(?p)) * DT]) / (M2(?p) + M4(?p));
+		x'(?p) = x(?p) * exp[-P2U(?p) * DT] + (px(?p) + px-pred(?p)) / 2 * (1 - exp[-P2U(?p) * DT]) / P2U(?p);
+		i1'(?p) = i1(?p) * exp[-KI(?p) * DT] + (pi1(?p) + pi1-pred(?p)) / 2 * (1 - exp[-KI(?p) * DT]) / KI(?p);
+		id'(?p) = id(?p) * exp[-KI(?p) * DT] + (pid(?p) + pid-pred(?p)) / 2 * (1 - exp[-KI(?p) * DT]) / KI(?p);
+		il'(?p) = il(?p) * exp[-(M1(?p) + M30(?p)) * DT]
+				  + (pil(?p) + pil-pred(?p)) / 2 * (1 - exp[-(M1(?p) + M30(?p)) * DT]) / (M1(?p) + M30(?p));
+		isc1'(?p) = isc1-pred(?p);
+		isc2'(?p) = isc2(?p) * exp[-KA2(?p) * DT]
+					+ (pisc2(?p) + pisc2-pred(?p)) / 2 * (1 - exp[-KA2(?p) * DT]) / KA2(?p);
+		gs'(?p) = gs-next(?p);
+
+		// the next state: the meals
+		taken'(?p, ?m) = today(?p, ?m);
+		meal-time'(?p, ?m) = if (accept(?p, ?m)) then round[draw(?p, ?m)]
+							 else if (new-day) then -1.0
+							 else meal-time(?p, ?m);
+		meal-carbs'(?p, ?m) = if (accept(?p, ?m))
+							  then max[round[Normal(MEAL-CARBS-MEAN(?m), pow[MEAL-CARBS-SD(?m), 2])], 0]
+							  else meal-carbs(?p, ?m);
+		to-eat'(?p) = to-eat(?p) + announced(?p) - eat(?p);
+		eating'(?p) = eat(?p) > 0;
+		last-qsto'(?p) = meal-qsto(?p);
+		food'(?p) = eaten(?p);
+
+		// the next state: the sensor and the clock
+		cgm'(?p) = max[CGM-MIN, min[CGM-MAX, gs-next(?p) / VG(?p) + noise(?p)]];
+		e-lo'(?p) = if (knot) then e-hi-now(?p) else e-lo-now(?p);
+		e-hi'(?p) = if (knot) then PACF * (e-hi-now(?p) + Normal(0, 1)) else e-hi-now(?p);
+		t' = t + DT;
+	};
+
+	// the risk of each patient at the start of the step
+	reward = -(sum_{?p : patient} [risk(?p)]);
+
+	action-preconditions {
+		forall_{?p : patient} [(insulin(?p) >= 0) ^ (insulin(?p) <= MAX-RATE)];
+	};
+
+	state-invariants {
+		DT > 0;
+		NOISE-MINUTES >= DT;
+		EAT-RATE > 0;
+		forall_{?p : patient} [(gp(?p) >= 0) ^ (gt(?p) >= 0) ^ (ip(?p) >= 0) ^ (gs(?p) >= 0)];
+	};
+}

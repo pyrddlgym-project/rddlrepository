@@ -158,7 +158,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**131 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (3) &middot; [or](#or) (8) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**132 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (14) &middot; [biology](#biology) (4) &middot; [or](#or) (8) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -210,6 +210,7 @@ Biology, medicine and ecology.
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Domain | Instances | Description |
 |:-:|:--|:--|:--|
+| <img src="docs/thumbnails/Diabetes_biology.png" width="64" alt=""> | <code>Diabetes_<wbr>biology</code> | 0&ndash;4 | Dose insulin to keep blood glucose in range |
 | <img src="docs/thumbnails/Epidemic_biology.png" width="64" alt=""> | <code>Epidemic_<wbr>biology</code> | 0 | Contain an epidemic with interventions |
 | <img src="docs/thumbnails/Fishery_biology.png" width="64" alt=""> | <code>Fishery_<wbr>biology</code> | 0 | Harvest competing fish stocks |
 | <img src="docs/thumbnails/HIV_biology.png" width="64" alt=""> | <code>HIV_<wbr>biology</code> | 0&ndash;4 | Interrupt HIV treatment to boost immunity |

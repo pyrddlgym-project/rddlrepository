@@ -1,0 +1,112 @@
+// child#001 of simglucose for a day of random meals from midnight, in steps of 3 minutes.
+
+non-fluents diabetes_nf2 {
+	domain = diabetes;
+
+	objects {
+		patient : { child001 };
+		meal : { breakfast, morning-snack, lunch, afternoon-snack, dinner, evening-snack };
+	};
+
+	non-fluents {
+		MEAL-PROB(breakfast) = 0.95;
+		MEAL-EARLIEST(breakfast) = 300;
+		MEAL-LATEST(breakfast) = 540;
+		MEAL-TIME-MEAN(breakfast) = 420;
+		MEAL-TIME-SD(breakfast) = 60;
+		MEAL-CARBS-MEAN(breakfast) = 45;
+		MEAL-CARBS-SD(breakfast) = 10;
+		MEAL-PROB(morning-snack) = 0.3;
+		MEAL-EARLIEST(morning-snack) = 540;
+		MEAL-LATEST(morning-snack) = 600;
+		MEAL-TIME-MEAN(morning-snack) = 570;
+		MEAL-TIME-SD(morning-snack) = 30;
+		MEAL-CARBS-MEAN(morning-snack) = 10;
+		MEAL-CARBS-SD(morning-snack) = 5;
+		MEAL-PROB(lunch) = 0.95;
+		MEAL-EARLIEST(lunch) = 600;
+		MEAL-LATEST(lunch) = 840;
+		MEAL-TIME-MEAN(lunch) = 720;
+		MEAL-TIME-SD(lunch) = 60;
+		MEAL-CARBS-MEAN(lunch) = 70;
+		MEAL-CARBS-SD(lunch) = 10;
+		MEAL-PROB(afternoon-snack) = 0.3;
+		MEAL-EARLIEST(afternoon-snack) = 840;
+		MEAL-LATEST(afternoon-snack) = 960;
+		MEAL-TIME-MEAN(afternoon-snack) = 900;
+		MEAL-TIME-SD(afternoon-snack) = 30;
+		MEAL-CARBS-MEAN(afternoon-snack) = 10;
+		MEAL-CARBS-SD(afternoon-snack) = 5;
+		MEAL-PROB(dinner) = 0.95;
+		MEAL-EARLIEST(dinner) = 960;
+		MEAL-LATEST(dinner) = 1200;
+		MEAL-TIME-MEAN(dinner) = 1080;
+		MEAL-TIME-SD(dinner) = 60;
+		MEAL-CARBS-MEAN(dinner) = 80;
+		MEAL-CARBS-SD(dinner) = 10;
+		MEAL-PROB(evening-snack) = 0.3;
+		MEAL-EARLIEST(evening-snack) = 1200;
+		MEAL-LATEST(evening-snack) = 1380;
+		MEAL-TIME-MEAN(evening-snack) = 1290;
+		MEAL-TIME-SD(evening-snack) = 30;
+		MEAL-CARBS-MEAN(evening-snack) = 10;
+		MEAL-CARBS-SD(evening-snack) = 5;
+		// child#001
+		BW(child001) = 34.55648182;
+		KMAX(child001) = 0.068714386;
+		KMIN(child001) = 0.007997018;
+		KABS(child001) = 0.127494918;
+		B(child001) = 0.754915658;
+		D(child001) = 0.089529251;
+		F(child001) = 0.9;
+		VG(child001) = 1.919425692;
+		K1(child001) = 0.070852519;
+		K2(child001) = 0.128243663;
+		KP1(child001) = 4.1652828427;
+		KP2(child001) = 0.002522654;
+		KP3(child001) = 0.008379266;
+		FSNC(child001) = 1;
+		VM0(child001) = 3.65981019497;
+		VMX(child001) = 0.152308243;
+		KM0(child001) = 185.8820726;
+		KE1(child001) = 0.0005;
+		KE2(child001) = 339;
+		VI(child001) = 0.067013558;
+		IB(child001) = 110.3648078;
+		M1(child001) = 0.314270832;
+		M2(child001) = 0.154436596254;
+		M4(child001) = 0.0617746385016;
+		M30(child001) = 0.471406248;
+		P2U(child001) = 0.042802541;
+		KI(child001) = 0.010902381;
+		KD(child001) = 0.0131;
+		KA1(child001) = 0.0041;
+		KA2(child001) = 0.0243;
+		KSC(child001) = 0.0684;
+		U2SS(child001) = 1.14220356012;
+		CR(child001) = 25;
+		CF(child001) = 42.7177301243;
+	};
+}
+
+instance diabetes_inst2 {
+	domain = diabetes;
+	non-fluents = diabetes_nf2;
+
+	init-state {
+		gp(child001) = 271.031853002;
+		gt(child001) = 137.60135923;
+		ip(child001) = 7.39593844866;
+		i1(child001) = 110.3648078;
+		id(child001) = 110.3648078;
+		il(child001) = 1.45378246253;
+		isc1(child001) = 66.4071837276;
+		isc2(child001) = 35.7997574828;
+		gs(child001) = 271.031853002;
+		cgm(child001) = 141.2047;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 480;
+	discount = 1.0;
+}
