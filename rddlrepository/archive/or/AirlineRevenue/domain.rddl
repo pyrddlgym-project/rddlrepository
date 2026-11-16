@@ -1,0 +1,136 @@
+////////////////////////////////////////////////////////////////////
+// Network revenue management of an airline (Topaloglu 2009), for any
+// network of flight legs and itineraries.
+//
+// The seats on the flight legs of a network are sold over a booking
+// horizon of PERIODS periods before departure. In each period at most one
+// customer asks for an itinerary, which uses one seat on each of its legs
+// (one leg, or two with a connection) and pays its FARE. Before the
+// period, the airline decides which itineraries are open for sale: a
+// request for an open itinerary with a seat left on all of its legs is
+// booked, and any other request is lost. Seats left at departure are
+// worth nothing. This is the dynamic program of network revenue
+// management (Talluri and van Ryzin 1998, 2004), whose state is the seats
+// left on each leg and the period.
+//
+// Each itinerary is sold in a low and a high fare class. The probability
+// of a request for the low or high fare of an origin-destination pair, in
+// period t = 0, 1, ..., PERIODS - 1, is
+//
+//   x = (PERIODS - t) / PERIODS              (fraction of the horizon left)
+//   r = max[1 / x - ONSET, 0]                (high-fare to low-fare requests)
+//   p(low) = OD-PROB / (1 + r)
+//   p(high) = OD-PROB * r / (1 + r)
+//
+// so the pair is asked for with probability OD-PROB in every period, by
+// low-fare customers only until the fraction of the horizon left falls to
+// 1 / ONSET, and then more and more by high-fare customers who book late.
+// The single request of a period is drawn from these probabilities with
+// one uniform number, the itineraries taking their shares of [0, 1) in
+// the order of INDEX.
+//
+// The instances are test problems of Topaloglu (2009): an airline serving
+// N spokes out of one hub, with a leg from each spoke to the hub and one
+// back, so 2N legs and a low- and a high-fare itinerary between every two
+// of the N + 1 airports, 2N(N + 1) in all, those between two spokes
+// connecting at the hub. A high fare is KAPPA times the low fare, and the
+// capacities are set so that the expected demand on the legs is ALPHA
+// times their seats. The problems are named (T, N, ALPHA, KAPPA), and
+// their data files are on Topaloglu's web page; the probabilities above
+// are those of the files, to within 1e-16. The page also lists bounds on
+// the optimal expected revenue (the deterministic linear program among
+// them) and the revenue of bid-price policies for each problem.
+//
+// The legs and itineraries can form any network: an itinerary uses the
+// legs marked by USES, and the airports (FROM and TO of each leg) only
+// place them on the map of the visualizer.
+//
+// References:
+//
+//		Huseyin Topaloglu. Using Lagrangian relaxation to compute
+//		capacity-dependent bid prices in network revenue management.
+//		Operations Research 57(3):637-649, 2009.
+//
+//		Kalyan T. Talluri and Garrett J. van Ryzin. An analysis of
+//		bid-price controls for network revenue management. Management
+//		Science 44(11):1577-1593, 1998.
+//
+//		Kalyan T. Talluri and Garrett J. van Ryzin. The Theory and
+//		Practice of Revenue Management. Springer, 2004. Chapter 3.
+//
+//		Network revenue management datasets:
+//		https://people.orie.cornell.edu/huseyin/research/rm_datasets/rm_datasets.html
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain airline_revenue {
+
+	requirements = {
+		reward-deterministic,
+		integer-valued
+	};
+
+	types {
+		airport : object;
+		leg : object;
+		itinerary : object;
+	};
+
+	pvariables {
+
+		// network
+		FROM(leg, airport)				: { non-fluent, bool, default = false };	// leg departs from the airport
+		TO(leg, airport)				: { non-fluent, bool, default = false };	// leg arrives at the airport
+		USES(leg, itinerary)			: { non-fluent, bool, default = false };	// itinerary takes a seat on the leg
+
+		// itineraries
+		FARE(itinerary)					: { non-fluent, real, default = 100.0 };	// earned per booking
+		HIGH(itinerary)					: { non-fluent, bool, default = false };	// high fare class, else low
+		OD-PROB(itinerary)				: { non-fluent, real, default = 0.0 };		// probability of a request for its origin-destination pair per period
+		ONSET(itinerary)				: { non-fluent, real, default = 2.0 };		// high-fare requests start at 1 / ONSET of the horizon left
+		INDEX(itinerary)				: { non-fluent, int, default = 0 };			// order of the itineraries in the draw of a request
+
+		// horizon
+		PERIODS							: { non-fluent, int, default = 200 };		// booking periods before departure
+
+		// the period
+		left							: { interm-fluent, real };					// fraction of the horizon left
+		ratio(itinerary)				: { interm-fluent, real };					// high-fare to low-fare requests of its pair
+		prob(itinerary)					: { interm-fluent, real };					// probability of a request
+		below(itinerary)				: { interm-fluent, real };					// probability of the itineraries before it
+		draw							: { interm-fluent, real };
+		request(itinerary)				: { interm-fluent, bool };
+		sold(itinerary)					: { interm-fluent, bool };
+
+		// states
+		seats(leg)						: { state-fluent, int, default = 0 };		// seats left
+		t								: { state-fluent, int, default = 0 };		// period
+
+		// actions
+		open(itinerary)					: { action-fluent, bool, default = false };	// itinerary for sale this period
+	};
+
+	cpfs {
+
+		left = (PERIODS - t) / PERIODS;
+		ratio(?j) = max[1.0 / left - ONSET(?j), 0.0];
+		prob(?j) = OD-PROB(?j) * (if (HIGH(?j)) then ratio(?j) / (1.0 + ratio(?j))
+								  else 1.0 / (1.0 + ratio(?j)));
+		below(?j) = sum_{?k : itinerary} [(INDEX(?k) < INDEX(?j)) * prob(?k)];
+		draw = Uniform(0, 1);
+		request(?j) = (draw >= below(?j)) ^ (draw < below(?j) + prob(?j));
+		sold(?j) = request(?j) ^ open(?j) ^ forall_{?l : leg} [USES(?l, ?j) => (seats(?l) >= 1)];
+
+		seats'(?l) = seats(?l) - (sum_{?j : itinerary} [USES(?l, ?j) ^ sold(?j)]);
+		t' = t + 1;
+	};
+
+	reward = sum_{?j : itinerary} [FARE(?j) * sold(?j)];
+
+	state-invariants {
+		forall_{?l : leg} [seats(?l) >= 0];
+		t >= 0;
+	};
+}

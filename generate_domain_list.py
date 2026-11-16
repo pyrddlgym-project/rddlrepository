@@ -82,6 +82,7 @@ SHORT = {
     'Reactor': 'Control a chemical reactor',
     'UAV': 'Fly drones to goal positions',
     # or
+    'AirlineRevenue': 'Sell airline seats over a hub-and-spoke network',
     'BinPacking': 'Pack random items into few bins',
     'CarRental': 'Move rental cars between locations',
     'Knapsack': 'Fill knapsacks with valuable items',
