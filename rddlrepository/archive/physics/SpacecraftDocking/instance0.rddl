@@ -1,0 +1,26 @@
+// The deputy starts about 127 m from the chief and 40 m out of the plane of the
+// orbit, drifting at 0.25 m/s, with the initial state of the AFRL 3D docking
+// environment after a reset with seed 0. The horizon leaves room for the timeout,
+// which ends the episode after step 2001.
+
+non-fluents spacecraft_docking_nf0 {
+	domain = spacecraft_docking;
+}
+
+instance spacecraft_docking_inst0 {
+	domain = spacecraft_docking;
+	non-fluents = spacecraft_docking_nf0;
+
+	init-state {
+		x = -26.223748166396025;
+		y = -117.97749755299263;
+		z = -40.43205161434151;
+		vx = -0.20017210478086356;
+		vy = 0.10413317445264873;
+		vz = -0.11132600519684531;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 2001;
+	discount = 1.0;
+}

@@ -81,6 +81,7 @@ SHORT = {
     'Quadcopter': 'Fly a swarm of quadcopters',
     'Reacher': 'Reach a target with a robot arm',
     'Reactor': 'Control a chemical reactor',
+    'SpacecraftDocking': 'Dock a spacecraft in orbit under a speed limit',
     'UAV': 'Fly drones to goal positions',
     # or
     'AirlineRevenue': 'Sell airline seats over a hub-and-spoke network',

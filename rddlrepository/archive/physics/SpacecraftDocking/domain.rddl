@@ -1,0 +1,203 @@
+////////////////////////////////////////////////////////////////////
+// Spacecraft docking, as in the 3D docking task of the safe
+// reinforcement learning benchmarks of the Air Force Research
+// Laboratory (AFRL).
+//
+// A small spacecraft (the deputy) must dock with a larger one (the
+// chief) in low Earth orbit. The chief flies a circular orbit and does
+// not move in its own frame: x points radially away from the Earth, y
+// points along the orbit, z points out of the plane of the orbit, and
+// the chief sits at the origin. The deputy moves under the
+// Clohessy-Wiltshire equations, the linearized motion of one spacecraft
+// relative to another nearby,
+//   x'' = 3 n^2 x + 2 n y' + Fx / MASS,
+//   y'' = -2 n x'          + Fy / MASS,
+//   z'' = -n^2 z           + Fz / MASS,
+// where n is the mean motion of the orbit, and it is pushed by
+// thrusters along x, y and z of at most THRUST-MAX each. Motion in the
+// plane of the orbit drifts and loops, while motion out of the plane
+// swings back and forth once per orbit.
+//
+// The deputy docks when it is within DOCK-RADIUS of the chief. Its
+// speed relative to the chief must stay below a limit that shrinks as
+// it gets closer,
+//   limit = SPEED-LIMIT-MIN + SPEED-LIMIT-SLOPE * n * max(0, distance - DOCK-RADIUS).
+// The episode ends when one of these happens, checked in this order:
+//   - timeout: more than TIMEOUT seconds have passed;
+//   - lost: the deputy is MAX-DISTANCE or more from the chief;
+//   - crash: the deputy is in the docking region above the speed limit;
+//   - docked: the deputy is in the docking region within the speed limit;
+//   - over budget: the total penalty for speeding goes over
+//     VIOLATION-BUDGET (only when none of the above happened).
+//
+// The reward of each step is the sum of
+//   - a reward for getting closer, SHAPING-SCALE * (exp(-a d') - exp(-a d)),
+//     where d and d' are the distances before and after the step and
+//     a = ln(2) / SHAPING-PIVOT;
+//   - a fuel cost, FUEL-COST * (|Fx| + |Fy| + |Fz|) / MASS * TIME-STEP,
+//     the scaled change in velocity the thrusters produce;
+//   - a speeding penalty while above the limit,
+//     VIOLATION-COST * (speed - limit) + VIOLATION-BIAS;
+//   - FAILURE-PENALTY on timeout, getting lost or crashing (but not on
+//     going over budget);
+//   - on docking, DOCK-REWARD plus the fraction of the time left,
+//     1 - time / TIMEOUT.
+//
+// The state is integrated with Heun's method: an Euler step predicts
+// the end of the step, and the velocities then change by the average of
+// the accelerations at the start and at the predicted end. The
+// positions change by the average of the old and new velocities, which
+// is exact for a constant thrust. Over 2000 s of random thrust, the
+// position stays within 2 mm of the exact solution.
+//
+// The parameters, termination and reward are those of the AFRL docking
+// environment (act3-ace/SafeRL, configs/docking/docking_3d_default.yaml).
+// It integrates the same equations with an adaptive Runge-Kutta method
+// (RK45), clips the thrust instead of rejecting actions out of range,
+// and draws a new random initial state on every reset.
+//
+// References:
+//
+//		W. H. Clohessy and R. S. Wiltshire. Terminal guidance system for
+//		satellite rendezvous. Journal of the Aerospace Sciences 27(9),
+//		653-658, 1960.
+//
+//		AFRL and ACT3. SafeRL: aerospace safe reinforcement learning
+//		benchmarks. https://github.com/act3-ace/SafeRL, 2021.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain spacecraft_docking {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		failure-kind : {@none, @timeout, @lost, @crash, @over-budget};
+	};
+
+	pvariables {
+
+		// orbit, deputy and thrusters
+		MEAN-MOTION 		: { non-fluent, real, default = 0.001027 };	// n of the chief's orbit (rad/s)
+		MASS 				: { non-fluent, real, default = 12.0 };		// deputy mass (kg)
+		THRUST-MAX 			: { non-fluent, real, default = 1.0 };		// strongest thrust along each axis (N)
+		TIME-STEP 			: { non-fluent, real, default = 1.0 };		// seconds per step
+
+		// docking and safety
+		DOCK-RADIUS 		: { non-fluent, real, default = 0.5 };		// docking region around the chief (m)
+		SPEED-LIMIT-MIN 	: { non-fluent, real, default = 0.2 };		// speed limit in the docking region (m/s)
+		SPEED-LIMIT-SLOPE 	: { non-fluent, real, default = 2.0 };		// growth of the limit with distance, times n
+		MAX-DISTANCE 		: { non-fluent, real, default = 40000.0 };	// the deputy is lost this far away (m)
+		TIMEOUT 			: { non-fluent, real, default = 2000.0 };	// seconds before the episode times out
+
+		// reward
+		SHAPING-SCALE 		: { non-fluent, real, default = 2.0 };
+		SHAPING-PIVOT 		: { non-fluent, real, default = 100.0 };		// distance at which the shaping halves (m)
+		FUEL-COST 			: { non-fluent, real, default = 0.01 };
+		VIOLATION-COST 		: { non-fluent, real, default = 0.01 };
+		VIOLATION-BIAS 		: { non-fluent, real, default = 0.01 };
+		VIOLATION-BUDGET 	: { non-fluent, real, default = 5.0 };
+		FAILURE-PENALTY 	: { non-fluent, real, default = 1.0 };
+		DOCK-REWARD 		: { non-fluent, real, default = 1.0 };
+
+		// interm fluents
+		ax 					: { interm-fluent, real };		// acceleration at the start of the step
+		ay 					: { interm-fluent, real };
+		az 					: { interm-fluent, real };
+		pred-x 				: { interm-fluent, real };		// end of the step predicted by Euler
+		pred-z 				: { interm-fluent, real };
+		pred-vx 			: { interm-fluent, real };
+		pred-vy 			: { interm-fluent, real };
+		pred-vz 			: { interm-fluent, real };
+		ax-end 				: { interm-fluent, real };		// acceleration at the predicted end
+		ay-end 				: { interm-fluent, real };
+		az-end 				: { interm-fluent, real };
+
+		// states
+		x 					: { state-fluent, real, default = 0.0 };		// position relative to the chief (m)
+		y 					: { state-fluent, real, default = 0.0 };
+		z 					: { state-fluent, real, default = 0.0 };
+		vx 					: { state-fluent, real, default = 0.0 };		// velocity relative to the chief (m/s)
+		vy 					: { state-fluent, real, default = 0.0 };
+		vz 					: { state-fluent, real, default = 0.0 };
+		time 				: { state-fluent, real, default = 0.0 };		// seconds since the start
+
+		// recomputed from the new position and velocity on every step,
+		// so their initial values are never used
+		dist 				: { state-fluent, real, default = 0.0 };		// distance to the chief
+		excess 				: { state-fluent, real, default = 0.0 };		// speed minus the speed limit
+		penalty 			: { state-fluent, real, default = 0.0 };		// total speeding penalty so far
+		docked 				: { state-fluent, bool, default = false };
+		failure 			: { state-fluent, failure-kind, default = @none };
+
+		// actions
+		fx 					: { action-fluent, real, default = 0.0 };		// thrust (N)
+		fy 					: { action-fluent, real, default = 0.0 };
+		fz 					: { action-fluent, real, default = 0.0 };
+	};
+
+	cpfs {
+
+		// Clohessy-Wiltshire equations at the start of the step
+		ax = 3 * pow[MEAN-MOTION, 2] * x + 2 * MEAN-MOTION * vy + fx / MASS;
+		ay = -2 * MEAN-MOTION * vx + fy / MASS;
+		az = -pow[MEAN-MOTION, 2] * z + fz / MASS;
+
+		// and at its end, as predicted by Euler (the acceleration does not depend on y)
+		pred-vx = vx + TIME-STEP * ax;
+		pred-vy = vy + TIME-STEP * ay;
+		pred-vz = vz + TIME-STEP * az;
+		pred-x = x + TIME-STEP * (vx + pred-vx) / 2;
+		pred-z = z + TIME-STEP * (vz + pred-vz) / 2;
+		ax-end = 3 * pow[MEAN-MOTION, 2] * pred-x + 2 * MEAN-MOTION * pred-vy + fx / MASS;
+		ay-end = -2 * MEAN-MOTION * pred-vx + fy / MASS;
+		az-end = -pow[MEAN-MOTION, 2] * pred-z + fz / MASS;
+
+		// Heun's method
+		vx' = vx + TIME-STEP * (ax + ax-end) / 2;
+		vy' = vy + TIME-STEP * (ay + ay-end) / 2;
+		vz' = vz + TIME-STEP * (az + az-end) / 2;
+		x' = x + TIME-STEP * (vx + vx') / 2;
+		y' = y + TIME-STEP * (vy + vy') / 2;
+		z' = z + TIME-STEP * (vz + vz') / 2;
+		time' = time + TIME-STEP;
+
+		// safety and outcome of the step
+		dist' = sqrt[pow[x', 2] + pow[y', 2] + pow[z', 2]];
+		excess' = sqrt[pow[vx', 2] + pow[vy', 2] + pow[vz', 2]]
+			- (SPEED-LIMIT-MIN + SPEED-LIMIT-SLOPE * MEAN-MOTION * max[0.0, dist' - DOCK-RADIUS]);
+		penalty' = penalty + (if (excess' > 0) then VIOLATION-COST * excess' + VIOLATION-BIAS else 0.0);
+		docked' = (dist' <= DOCK-RADIUS) ^ (excess' <= 0);
+		failure' = if (time' > TIMEOUT) then @timeout
+			else if (dist' >= MAX-DISTANCE) then @lost
+			else if ((dist' <= DOCK-RADIUS) ^ (excess' > 0)) then @crash
+			else if (~docked' ^ (penalty' > VIOLATION-BUDGET)) then @over-budget
+			else @none;
+	};
+
+	// getting closer - fuel - speeding - failure + docking
+	reward = SHAPING-SCALE * (exp[-ln[2] / SHAPING-PIVOT * dist']
+			- exp[-ln[2] / SHAPING-PIVOT * sqrt[pow[x, 2] + pow[y, 2] + pow[z, 2]]])
+		- FUEL-COST * (abs[fx] + abs[fy] + abs[fz]) / MASS * TIME-STEP
+		- (penalty' - penalty)
+		- FAILURE-PENALTY * ((failure' == @timeout) | (failure' == @lost) | (failure' == @crash))
+		+ (if (docked') then DOCK-REWARD + 1 - time' / TIMEOUT else 0.0);
+
+	termination {
+		docked;
+		failure ~= @none;
+	};
+
+	action-preconditions {
+		fx >= -THRUST-MAX;
+		fx <= THRUST-MAX;
+		fy >= -THRUST-MAX;
+		fy <= THRUST-MAX;
+		fz >= -THRUST-MAX;
+		fz <= THRUST-MAX;
+	};
+}
