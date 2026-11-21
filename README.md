@@ -158,7 +158,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**137 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (15) &middot; [biology](#biology) (5) &middot; [or](#or) (11) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**138 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (15) &middot; [biology](#biology) (5) &middot; [or](#or) (12) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -232,6 +232,7 @@ Operations research.
 | <img src="docs/thumbnails/JobShop_or.png" width="64" alt=""> | <code>JobShop_<wbr>or</code> | 0&ndash;7 | Dispatch operations to machines for the shortest makespan |
 | <img src="docs/thumbnails/Knapsack_or.png" width="64" alt=""> | <code>Knapsack_<wbr>or</code> | 0 | Fill knapsacks with valuable items |
 | <img src="docs/thumbnails/Option_or.png" width="64" alt=""> | <code>Option_<wbr>or</code> | 0, 1 | Exercise an American option |
+| <img src="docs/thumbnails/RetailerInventory_or.png" width="64" alt=""> | <code>RetailerInventory_<wbr>or</code> | 0&ndash;4 | Stock a warehouse and its stores against random demand |
 | <img src="docs/thumbnails/StructuralMaintenance_or.png" width="64" alt=""> | <code>StructuralMaintenance_<wbr>or</code> | 0&ndash;4 | Inspect and repair a cracking structure |
 | <img src="docs/thumbnails/SupplyChain_or.png" width="64" alt=""> | <code>SupplyChain_<wbr>or</code> | 0 | Ship stock from a factory to warehouses |
 | <img src="docs/thumbnails/TSP_or.png" width="64" alt=""> | <code>TSP_<wbr>or</code> | 0&ndash;4 | Travelling salesman tour |

@@ -91,6 +91,7 @@ SHORT = {
     'JobShop': 'Dispatch operations to machines for the shortest makespan',
     'Knapsack': 'Fill knapsacks with valuable items',
     'Option': 'Exercise an American option',
+    'RetailerInventory': 'Stock a warehouse and its stores against random demand',
     'StructuralMaintenance': 'Inspect and repair a cracking structure',
     'SupplyChain': 'Ship stock from a factory to warehouses',
     'TSP': 'Travelling salesman tour',
@@ -175,7 +176,7 @@ def render_one(name):
     try:
         agent = RandomAgent(env, seed=0)
         for _ in range(min(STEPS, env.horizon - 1)):
-            _, _, done, truncated, _ = env.step(agent.sample_action(state))
+            state, _, done, truncated, _ = env.step(agent.sample_action(state))
             if done or truncated:
                 break
 

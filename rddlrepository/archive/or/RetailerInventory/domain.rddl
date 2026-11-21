@@ -1,0 +1,177 @@
+////////////////////////////////////////////////////////////////////
+// The two-echelon retailer inventory system of Van Roy, Bertsekas, Lee
+// and Tsitsiklis: a central warehouse stocks the stores, and customers
+// a store cannot serve may wait for a special delivery from the
+// warehouse. Gijsbrechts et al. use the same model for their
+// multi-echelon benchmark.
+//
+// Goods move once a day. Each day:
+//   1. the warehouse orders goods from the manufacturer, which arrive
+//      WAREHOUSE-DELAY days later, and ships goods from its stock to
+//      the stores, which arrive STORE-DELAY days later (a delay of 0
+//      means the goods arrive at once, before the day's customers);
+//   2. customers come to each store, a number drawn from a normal
+//      distribution, rounded to the nearest integer and at least 0,
+//      and are served from the store's shelf;
+//   3. each customer the store cannot serve waits for a special
+//      delivery from the warehouse with probability WAIT-PROB, and is
+//      lost otherwise; the warehouse delivers to as many of the waiting
+//      customers as its stock allows, and the rest are lost too;
+//   4. the goods on the road move one day closer, and those due arrive
+//      at the warehouse and the stores.
+// Goods on the road are kept by the number of days until they arrive:
+// inbound(?d) are on their way to the warehouse and transit(?s, ?d) to
+// store ?s, and arrive at the end of the DAYS(?d)-th day, today being
+// the first. Goods sent with a delay of D days start on the leg with
+// DAYS equal to D, which is empty before the day's orders unless the
+// initial state puts goods there. The day objects must be numbered 1
+// to their count by DAYS, each number used once, and every delay must
+// be at most their count (the state invariants check this).
+//
+// The warehouse orders at most PRODUCTION-CAPACITY a day, ships no
+// more than it has, and the goods held at and on their way to the
+// warehouse after the day's orders and shipments are at most
+// WAREHOUSE-CAPACITY, and at most STORE-CAPACITY for each store.
+//
+// The cost of a day is the holding cost of the goods held overnight
+// at the warehouse and the stores, after the day's arrivals, plus
+// SPECIAL-DELIVERY-COST for each special delivery and SHORTAGE-COST for
+// each lost customer. The reward is the negative cost. With costs
+// charged at that time, the best order-up-to policies on the three
+// problems of Van Roy et al. cost about 51.4, 1291 and 1450 a day in a
+// long simulation, where they report 51.7, 1302 and 1449, though at
+// somewhat different order-up-to levels than theirs (their policy
+// leaves some details, such as ties among stores, unstated).
+//
+// References:
+//
+//		Benjamin Van Roy, Dimitri P. Bertsekas, Yuchun Lee and John N.
+//		Tsitsiklis. A neuro-dynamic programming approach to retailer
+//		inventory management. Proceedings of the 36th IEEE Conference on
+//		Decision and Control, 4052-4057, 1997. (The technical report of
+//		1996 gives the state equations in its appendix.)
+//
+//		Joren Gijsbrechts, Robert N. Boute, Jan A. Van Mieghem and Dennis
+//		J. Zhang. Can deep reinforcement learning improve inventory
+//		management? Performance on lost sales, dual-sourcing, and
+//		multi-echelon problems. Manufacturing & Service Operations
+//		Management 24(3), 1349-1368, 2022.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain retailer_inventory {
+
+	requirements = {
+		reward-deterministic,
+		integer-valued,
+		constrained-state
+	};
+
+	types {
+		store : object;
+		day : object;		// a leg of the road, by the days until goods on it arrive
+	};
+
+	pvariables {
+
+		// the network
+		DAYS(day) 						: { non-fluent, int, default = 1 };			// days until goods on this leg arrive
+		WAREHOUSE-DELAY 				: { non-fluent, int, default = 2 };			// days from the manufacturer to the warehouse
+		STORE-DELAY(store) 				: { non-fluent, int, default = 2 };			// days from the warehouse to the store
+		PRODUCTION-CAPACITY 			: { non-fluent, int, default = 100 };		// most goods ordered in a day
+		WAREHOUSE-CAPACITY 				: { non-fluent, int, default = 1000 };		// most goods at and on their way to the warehouse
+		STORE-CAPACITY(store) 			: { non-fluent, int, default = 100 };		// most goods at and on their way to the store
+
+		// customers
+		DEMAND-MEAN(store) 				: { non-fluent, real, default = 5.0 };		// of the normal before rounding
+		DEMAND-SD(store) 				: { non-fluent, real, default = 14.0 };		// of the normal before rounding
+		WAIT-PROB 						: { non-fluent, real, default = 0.8 };		// chance a customer not served waits
+
+		// costs
+		WAREHOUSE-HOLDING-COST 			: { non-fluent, real, default = 3.0 };		// per good held overnight
+		STORE-HOLDING-COST(store) 		: { non-fluent, real, default = 3.0 };		// per good held overnight
+		SPECIAL-DELIVERY-COST 			: { non-fluent, real, default = 0.0 };		// per special delivery
+		SHORTAGE-COST 					: { non-fluent, real, default = 60.0 };		// per lost customer
+
+		// after the orders and shipments
+		available 						: { interm-fluent, int };		// goods at the warehouse
+		inbound-sent(day) 				: { interm-fluent, int };		// goods on their way to the warehouse
+		on-shelf(store) 				: { interm-fluent, int };		// goods at the store
+		transit-sent(store, day) 		: { interm-fluent, int };		// goods on their way to the store
+
+		// the customers
+		demand(store) 					: { interm-fluent, int };
+		sold(store) 					: { interm-fluent, int };
+		unserved(store) 				: { interm-fluent, int };
+		waiting(store) 					: { interm-fluent, int };		// customers who wait for a special delivery
+		special 						: { interm-fluent, int };		// special deliveries made
+		lost 							: { interm-fluent, int };		// customers lost
+
+		// overnight
+		stock-overnight 				: { interm-fluent, int };
+		shelf-overnight(store) 			: { interm-fluent, int };
+
+		// states
+		stock 							: { state-fluent, int, default = 0 };		// goods at the warehouse
+		shelf(store) 					: { state-fluent, int, default = 0 };		// goods at the store
+		inbound(day) 					: { state-fluent, int, default = 0 };		// goods arriving at the warehouse in DAYS days
+		transit(store, day) 			: { state-fluent, int, default = 0 };		// goods arriving at the store in DAYS days
+
+		// actions
+		order 							: { action-fluent, int, default = 0 };		// goods ordered from the manufacturer
+		ship(store) 					: { action-fluent, int, default = 0 };		// goods shipped from the warehouse
+	};
+
+	cpfs {
+
+		// the orders and shipments
+		available = stock - (sum_{?s : store} [ship(?s)]) + (if (WAREHOUSE-DELAY == 0) then order else 0);
+		inbound-sent(?d) = inbound(?d) + (if (DAYS(?d) == WAREHOUSE-DELAY) then order else 0);
+		on-shelf(?s) = shelf(?s) + (if (STORE-DELAY(?s) == 0) then ship(?s) else 0);
+		transit-sent(?s, ?d) = transit(?s, ?d) + (if (DAYS(?d) == STORE-DELAY(?s)) then ship(?s) else 0);
+
+		// customers are served at the store, or wait for a special delivery, or are lost
+		demand(?s) = max[0, floor[Normal(DEMAND-MEAN(?s), DEMAND-SD(?s) * DEMAND-SD(?s)) + 0.5]];
+		sold(?s) = min[demand(?s), on-shelf(?s)];
+		unserved(?s) = demand(?s) - sold(?s);
+		waiting(?s) = Binomial(unserved(?s), WAIT-PROB);
+		special = min[(sum_{?s : store} [waiting(?s)]), available];
+		lost = (sum_{?s : store} [unserved(?s)]) - special;
+
+		// the goods due arrive, and the rest move one day closer
+		stock-overnight = available - special
+			+ (sum_{?d : day} [if (DAYS(?d) == 1) then inbound-sent(?d) else 0]);
+		shelf-overnight(?s) = on-shelf(?s) - sold(?s)
+			+ (sum_{?d : day} [if (DAYS(?d) == 1) then transit-sent(?s, ?d) else 0]);
+
+		stock' = stock-overnight;
+		shelf'(?s) = shelf-overnight(?s);
+		inbound'(?d) = (sum_{?e : day} [if (DAYS(?e) == DAYS(?d) + 1) then inbound-sent(?e) else 0]);
+		transit'(?s, ?d) = (sum_{?e : day} [if (DAYS(?e) == DAYS(?d) + 1) then transit-sent(?s, ?e) else 0]);
+	};
+
+	// holding overnight, special deliveries and lost customers
+	reward = -(WAREHOUSE-HOLDING-COST * stock-overnight)
+		- (sum_{?s : store} [STORE-HOLDING-COST(?s) * shelf-overnight(?s)])
+		- (SPECIAL-DELIVERY-COST * special)
+		- (SHORTAGE-COST * lost);
+
+	action-preconditions {
+		order >= 0;
+		order <= PRODUCTION-CAPACITY;
+		forall_{?s : store} [ship(?s) >= 0];
+		(sum_{?s : store} [ship(?s)]) <= stock;
+		stock + (sum_{?d : day} [inbound(?d)]) - (sum_{?s : store} [ship(?s)]) + order <= WAREHOUSE-CAPACITY;
+		forall_{?s : store} [shelf(?s) + (sum_{?d : day} [transit(?s, ?d)]) + ship(?s) <= STORE-CAPACITY(?s)];
+	};
+
+	// the legs of the road are numbered 1 to their count, and reach as far as every delay
+	state-invariants {
+		forall_{?d : day} [(DAYS(?d) >= 1) ^ (DAYS(?d) <= (sum_{?e : day} [1]))];
+		forall_{?d : day, ?e : day} [(DAYS(?d) == DAYS(?e)) => (?d == ?e)];
+		(WAREHOUSE-DELAY >= 0) ^ (WAREHOUSE-DELAY <= (sum_{?d : day} [1]));
+		forall_{?s : store} [(STORE-DELAY(?s) >= 0) ^ (STORE-DELAY(?s) <= (sum_{?d : day} [1]))];
+	};
+}

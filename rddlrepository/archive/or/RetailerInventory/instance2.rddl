@@ -1,0 +1,105 @@
+// Instance 2 is case study 2 of Van Roy et al. (their section 7.3, and
+// setting 2 of Gijsbrechts et al.): ten stores three days from the
+// warehouse, which is five days from the manufacturer. Their best
+// order-up-to policy (460 at the warehouse, 22 at each store) costs
+// 1449 a day in their simulation; in this model the best one costs
+// about the same, at other levels (see the domain). The system starts
+// with the warehouse and the stores stocked to those levels and
+// nothing on the road.
+
+non-fluents retailer_inventory_nf2 {
+	domain = retailer_inventory;
+
+	objects {
+		store : { s1, s2, s3, s4, s5, s6, s7, s8, s9, s10 };
+		day : { d1, d2, d3, d4, d5 };
+	};
+
+	non-fluents {
+		DAYS(d1) = 1;
+		DAYS(d2) = 2;
+		DAYS(d3) = 3;
+		DAYS(d4) = 4;
+		DAYS(d5) = 5;
+		WAREHOUSE-DELAY = 5;
+		PRODUCTION-CAPACITY = 100;
+		WAREHOUSE-CAPACITY = 1000;
+		WAIT-PROB = 0.8;
+		SPECIAL-DELIVERY-COST = 0.0;
+		WAREHOUSE-HOLDING-COST = 3.0;
+		SHORTAGE-COST = 60.0;
+		STORE-DELAY(s1) = 3;
+		STORE-CAPACITY(s1) = 100;
+		DEMAND-MEAN(s1) = 0.0;
+		DEMAND-SD(s1) = 20.0;
+		STORE-HOLDING-COST(s1) = 3.0;
+		STORE-DELAY(s2) = 3;
+		STORE-CAPACITY(s2) = 100;
+		DEMAND-MEAN(s2) = 0.0;
+		DEMAND-SD(s2) = 20.0;
+		STORE-HOLDING-COST(s2) = 3.0;
+		STORE-DELAY(s3) = 3;
+		STORE-CAPACITY(s3) = 100;
+		DEMAND-MEAN(s3) = 0.0;
+		DEMAND-SD(s3) = 20.0;
+		STORE-HOLDING-COST(s3) = 3.0;
+		STORE-DELAY(s4) = 3;
+		STORE-CAPACITY(s4) = 100;
+		DEMAND-MEAN(s4) = 0.0;
+		DEMAND-SD(s4) = 20.0;
+		STORE-HOLDING-COST(s4) = 3.0;
+		STORE-DELAY(s5) = 3;
+		STORE-CAPACITY(s5) = 100;
+		DEMAND-MEAN(s5) = 0.0;
+		DEMAND-SD(s5) = 20.0;
+		STORE-HOLDING-COST(s5) = 3.0;
+		STORE-DELAY(s6) = 3;
+		STORE-CAPACITY(s6) = 100;
+		DEMAND-MEAN(s6) = 0.0;
+		DEMAND-SD(s6) = 20.0;
+		STORE-HOLDING-COST(s6) = 3.0;
+		STORE-DELAY(s7) = 3;
+		STORE-CAPACITY(s7) = 100;
+		DEMAND-MEAN(s7) = 0.0;
+		DEMAND-SD(s7) = 20.0;
+		STORE-HOLDING-COST(s7) = 3.0;
+		STORE-DELAY(s8) = 3;
+		STORE-CAPACITY(s8) = 100;
+		DEMAND-MEAN(s8) = 0.0;
+		DEMAND-SD(s8) = 20.0;
+		STORE-HOLDING-COST(s8) = 3.0;
+		STORE-DELAY(s9) = 3;
+		STORE-CAPACITY(s9) = 100;
+		DEMAND-MEAN(s9) = 0.0;
+		DEMAND-SD(s9) = 20.0;
+		STORE-HOLDING-COST(s9) = 3.0;
+		STORE-DELAY(s10) = 3;
+		STORE-CAPACITY(s10) = 100;
+		DEMAND-MEAN(s10) = 0.0;
+		DEMAND-SD(s10) = 20.0;
+		STORE-HOLDING-COST(s10) = 3.0;
+	};
+}
+
+instance retailer_inventory_inst2 {
+	domain = retailer_inventory;
+	non-fluents = retailer_inventory_nf2;
+
+	init-state {
+		stock = 460;
+		shelf(s1) = 22;
+		shelf(s2) = 22;
+		shelf(s3) = 22;
+		shelf(s4) = 22;
+		shelf(s5) = 22;
+		shelf(s6) = 22;
+		shelf(s7) = 22;
+		shelf(s8) = 22;
+		shelf(s9) = 22;
+		shelf(s10) = 22;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 1.0;
+}

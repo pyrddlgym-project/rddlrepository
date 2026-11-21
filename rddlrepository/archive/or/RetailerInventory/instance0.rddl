@@ -1,0 +1,47 @@
+// Instance 0 is the first problem of Van Roy et al. (their section
+// 7.1): one store a day from the warehouse, and goods ordered by the
+// warehouse arrive at once. Every customer the store cannot serve
+// waits for a special delivery. Their best order-up-to policy (10 at
+// the warehouse, 16 at the store) costs 51.7 a day in their
+// simulation; in this model the best one costs about the same, at
+// other levels (see the domain). The system starts with the warehouse
+// and the store stocked to those levels and nothing on the road.
+
+non-fluents retailer_inventory_nf0 {
+	domain = retailer_inventory;
+
+	objects {
+		store : { s1 };
+		day : { d1 };
+	};
+
+	non-fluents {
+		DAYS(d1) = 1;
+		WAREHOUSE-DELAY = 0;
+		PRODUCTION-CAPACITY = 10;
+		WAREHOUSE-CAPACITY = 50;
+		WAIT-PROB = 1.0;
+		SPECIAL-DELIVERY-COST = 10.0;
+		WAREHOUSE-HOLDING-COST = 1.0;
+		SHORTAGE-COST = 50.0;
+		STORE-DELAY(s1) = 1;
+		STORE-CAPACITY(s1) = 50;
+		DEMAND-MEAN(s1) = 5.0;
+		DEMAND-SD(s1) = 8.0;
+		STORE-HOLDING-COST(s1) = 2.0;
+	};
+}
+
+instance retailer_inventory_inst0 {
+	domain = retailer_inventory;
+	non-fluents = retailer_inventory_nf0;
+
+	init-state {
+		stock = 10;
+		shelf(s1) = 16;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 1.0;
+}

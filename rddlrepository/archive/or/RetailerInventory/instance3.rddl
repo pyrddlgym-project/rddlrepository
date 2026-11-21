@@ -1,0 +1,192 @@
+// Instance 3 is a larger network in the setting of case study 2 of Van
+// Roy et al. (not from the paper): 25 stores two, three or four days
+// from the warehouse, with the production and warehouse capacities
+// scaled with the number of stores. The system starts with 1150 goods
+// at the warehouse, 22 at each store, and nothing on the road.
+
+non-fluents retailer_inventory_nf3 {
+	domain = retailer_inventory;
+
+	objects {
+		store : { s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25 };
+		day : { d1, d2, d3, d4, d5 };
+	};
+
+	non-fluents {
+		DAYS(d1) = 1;
+		DAYS(d2) = 2;
+		DAYS(d3) = 3;
+		DAYS(d4) = 4;
+		DAYS(d5) = 5;
+		WAREHOUSE-DELAY = 5;
+		PRODUCTION-CAPACITY = 250;
+		WAREHOUSE-CAPACITY = 2500;
+		WAIT-PROB = 0.8;
+		SPECIAL-DELIVERY-COST = 0.0;
+		WAREHOUSE-HOLDING-COST = 3.0;
+		SHORTAGE-COST = 60.0;
+		STORE-DELAY(s1) = 2;
+		STORE-CAPACITY(s1) = 100;
+		DEMAND-MEAN(s1) = 0.0;
+		DEMAND-SD(s1) = 20.0;
+		STORE-HOLDING-COST(s1) = 3.0;
+		STORE-DELAY(s2) = 3;
+		STORE-CAPACITY(s2) = 100;
+		DEMAND-MEAN(s2) = 0.0;
+		DEMAND-SD(s2) = 20.0;
+		STORE-HOLDING-COST(s2) = 3.0;
+		STORE-DELAY(s3) = 4;
+		STORE-CAPACITY(s3) = 100;
+		DEMAND-MEAN(s3) = 0.0;
+		DEMAND-SD(s3) = 20.0;
+		STORE-HOLDING-COST(s3) = 3.0;
+		STORE-DELAY(s4) = 2;
+		STORE-CAPACITY(s4) = 100;
+		DEMAND-MEAN(s4) = 0.0;
+		DEMAND-SD(s4) = 20.0;
+		STORE-HOLDING-COST(s4) = 3.0;
+		STORE-DELAY(s5) = 3;
+		STORE-CAPACITY(s5) = 100;
+		DEMAND-MEAN(s5) = 0.0;
+		DEMAND-SD(s5) = 20.0;
+		STORE-HOLDING-COST(s5) = 3.0;
+		STORE-DELAY(s6) = 4;
+		STORE-CAPACITY(s6) = 100;
+		DEMAND-MEAN(s6) = 0.0;
+		DEMAND-SD(s6) = 20.0;
+		STORE-HOLDING-COST(s6) = 3.0;
+		STORE-DELAY(s7) = 2;
+		STORE-CAPACITY(s7) = 100;
+		DEMAND-MEAN(s7) = 0.0;
+		DEMAND-SD(s7) = 20.0;
+		STORE-HOLDING-COST(s7) = 3.0;
+		STORE-DELAY(s8) = 3;
+		STORE-CAPACITY(s8) = 100;
+		DEMAND-MEAN(s8) = 0.0;
+		DEMAND-SD(s8) = 20.0;
+		STORE-HOLDING-COST(s8) = 3.0;
+		STORE-DELAY(s9) = 4;
+		STORE-CAPACITY(s9) = 100;
+		DEMAND-MEAN(s9) = 0.0;
+		DEMAND-SD(s9) = 20.0;
+		STORE-HOLDING-COST(s9) = 3.0;
+		STORE-DELAY(s10) = 2;
+		STORE-CAPACITY(s10) = 100;
+		DEMAND-MEAN(s10) = 0.0;
+		DEMAND-SD(s10) = 20.0;
+		STORE-HOLDING-COST(s10) = 3.0;
+		STORE-DELAY(s11) = 3;
+		STORE-CAPACITY(s11) = 100;
+		DEMAND-MEAN(s11) = 0.0;
+		DEMAND-SD(s11) = 20.0;
+		STORE-HOLDING-COST(s11) = 3.0;
+		STORE-DELAY(s12) = 4;
+		STORE-CAPACITY(s12) = 100;
+		DEMAND-MEAN(s12) = 0.0;
+		DEMAND-SD(s12) = 20.0;
+		STORE-HOLDING-COST(s12) = 3.0;
+		STORE-DELAY(s13) = 2;
+		STORE-CAPACITY(s13) = 100;
+		DEMAND-MEAN(s13) = 0.0;
+		DEMAND-SD(s13) = 20.0;
+		STORE-HOLDING-COST(s13) = 3.0;
+		STORE-DELAY(s14) = 3;
+		STORE-CAPACITY(s14) = 100;
+		DEMAND-MEAN(s14) = 0.0;
+		DEMAND-SD(s14) = 20.0;
+		STORE-HOLDING-COST(s14) = 3.0;
+		STORE-DELAY(s15) = 4;
+		STORE-CAPACITY(s15) = 100;
+		DEMAND-MEAN(s15) = 0.0;
+		DEMAND-SD(s15) = 20.0;
+		STORE-HOLDING-COST(s15) = 3.0;
+		STORE-DELAY(s16) = 2;
+		STORE-CAPACITY(s16) = 100;
+		DEMAND-MEAN(s16) = 0.0;
+		DEMAND-SD(s16) = 20.0;
+		STORE-HOLDING-COST(s16) = 3.0;
+		STORE-DELAY(s17) = 3;
+		STORE-CAPACITY(s17) = 100;
+		DEMAND-MEAN(s17) = 0.0;
+		DEMAND-SD(s17) = 20.0;
+		STORE-HOLDING-COST(s17) = 3.0;
+		STORE-DELAY(s18) = 4;
+		STORE-CAPACITY(s18) = 100;
+		DEMAND-MEAN(s18) = 0.0;
+		DEMAND-SD(s18) = 20.0;
+		STORE-HOLDING-COST(s18) = 3.0;
+		STORE-DELAY(s19) = 2;
+		STORE-CAPACITY(s19) = 100;
+		DEMAND-MEAN(s19) = 0.0;
+		DEMAND-SD(s19) = 20.0;
+		STORE-HOLDING-COST(s19) = 3.0;
+		STORE-DELAY(s20) = 3;
+		STORE-CAPACITY(s20) = 100;
+		DEMAND-MEAN(s20) = 0.0;
+		DEMAND-SD(s20) = 20.0;
+		STORE-HOLDING-COST(s20) = 3.0;
+		STORE-DELAY(s21) = 4;
+		STORE-CAPACITY(s21) = 100;
+		DEMAND-MEAN(s21) = 0.0;
+		DEMAND-SD(s21) = 20.0;
+		STORE-HOLDING-COST(s21) = 3.0;
+		STORE-DELAY(s22) = 2;
+		STORE-CAPACITY(s22) = 100;
+		DEMAND-MEAN(s22) = 0.0;
+		DEMAND-SD(s22) = 20.0;
+		STORE-HOLDING-COST(s22) = 3.0;
+		STORE-DELAY(s23) = 3;
+		STORE-CAPACITY(s23) = 100;
+		DEMAND-MEAN(s23) = 0.0;
+		DEMAND-SD(s23) = 20.0;
+		STORE-HOLDING-COST(s23) = 3.0;
+		STORE-DELAY(s24) = 4;
+		STORE-CAPACITY(s24) = 100;
+		DEMAND-MEAN(s24) = 0.0;
+		DEMAND-SD(s24) = 20.0;
+		STORE-HOLDING-COST(s24) = 3.0;
+		STORE-DELAY(s25) = 3;
+		STORE-CAPACITY(s25) = 100;
+		DEMAND-MEAN(s25) = 0.0;
+		DEMAND-SD(s25) = 20.0;
+		STORE-HOLDING-COST(s25) = 3.0;
+	};
+}
+
+instance retailer_inventory_inst3 {
+	domain = retailer_inventory;
+	non-fluents = retailer_inventory_nf3;
+
+	init-state {
+		stock = 1150;
+		shelf(s1) = 22;
+		shelf(s2) = 22;
+		shelf(s3) = 22;
+		shelf(s4) = 22;
+		shelf(s5) = 22;
+		shelf(s6) = 22;
+		shelf(s7) = 22;
+		shelf(s8) = 22;
+		shelf(s9) = 22;
+		shelf(s10) = 22;
+		shelf(s11) = 22;
+		shelf(s12) = 22;
+		shelf(s13) = 22;
+		shelf(s14) = 22;
+		shelf(s15) = 22;
+		shelf(s16) = 22;
+		shelf(s17) = 22;
+		shelf(s18) = 22;
+		shelf(s19) = 22;
+		shelf(s20) = 22;
+		shelf(s21) = 22;
+		shelf(s22) = 22;
+		shelf(s23) = 22;
+		shelf(s24) = 22;
+		shelf(s25) = 22;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 1.0;
+}
