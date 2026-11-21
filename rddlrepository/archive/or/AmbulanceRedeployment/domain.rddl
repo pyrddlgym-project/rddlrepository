@@ -1,0 +1,333 @@
+////////////////////////////////////////////////////////////////////
+// Ambulance redeployment, as in the emergency medical service model
+// of Maxwell, Restrepo, Henderson and Topaloglu.
+//
+// Calls for an ambulance arrive at random over a city, and the
+// closest free ambulance is sent to each one. A call is late when the
+// ambulance reaches the scene more than THRESHOLD minutes after the
+// call came in. Each time an ambulance finishes a call and no calls are
+// waiting, the dispatcher chooses the base it goes to; the goal is to
+// keep free ambulances where the next calls are likely to come from,
+// so that as few calls as possible are late.
+//
+// The city is a set of cells. Calls arrive as a Poisson process of
+// CALL-RATE calls per minute, each in a cell drawn in proportion to
+// its DEMAND and at a uniform point inside that cell. Distances are
+// Manhattan distances, and ambulances drive at RESPONSE-SPEED to a
+// call and at TRAVEL-SPEED otherwise. A call goes through these steps:
+//   - the closest free ambulance (one driving to or waiting at a base)
+//     is sent to it; a crew waiting at a base needs TURNOUT-TIME to get
+//     on the road. If all ambulances are busy, the call joins a
+//     first-come first-served waiting list, and when that list is full
+//     it goes to another agency and counts as late;
+//   - the crew treats the patient at the scene for an exponential time
+//     with mean SCENE-MEAN;
+//   - with probability TRANSPORT-PROB the patient goes to a hospital
+//     drawn by HOSPITAL-PROB for the cell of the call, where the crew
+//     hands the patient over for a Weibull time with shape
+//     TRANSFER-SHAPE and mean TRANSFER-MEAN;
+//   - the ambulance is then free: it takes the first waiting call if
+//     there is one, and otherwise goes to the base chosen by the
+//     action, or to its HOME base when no base is chosen (the static
+//     policy). The decision is only made at that moment: ambulances
+//     driving to or waiting at a base are not moved.
+// The waiting list holds one call per slot object, the first slot
+// at the head.
+//
+// Each step of the domain is one event of the system, as in the
+// discrete-event simulation of the paper: either a call arrives or an
+// ambulance arrives at a scene or hospital or finishes there, and time
+// jumps to that event. The remaining time of each busy ambulance is
+// drawn at every step from its law given the time already spent, so
+// the state holds what the dispatcher knows (where each ambulance is,
+// what it is doing and since when) but not when it will finish. An
+// ambulance at a hospital since s, at time t, finishes at
+//   s + scale * (((t - s) / scale)^TRANSFER-SHAPE + E)^(1 / TRANSFER-SHAPE),
+// where E is exponential with mean 1 and the scale gives the mean
+// TRANSFER-MEAN. An ambulance on the road is at the point that is
+// the fraction of its trip it has driven along the straight line, so
+// its Manhattan distance to the end shrinks at its speed.
+//
+// The cost of a step is the number of calls it makes late (a call
+// assigned to an ambulance that cannot reach it in time, or turned
+// away), and the episode ends after END-TIME minutes, one day by
+// default. This is the objective of the paper, the expected number of
+// late calls over the horizon; the paper simulates two weeks, to
+// estimate the long-run share of late calls closely, but the dynamics
+// and the decisions are the same over a day.
+//
+// The model and its parameters are those of the papers below: the
+// discrete-event simulation of Maxwell et al. (2009, 2010), the
+// waiting list of Maxwell et al. (2013), and the artificial 15 x 15
+// mile cities of Maxwell et al. (2014), whose demand, bases and
+// hospitals the instances reproduce (their Figure 6). The Edmonton and
+// Melbourne models of the papers use road networks, call histories and
+// shifts that are not public.
+//
+// References:
+//
+//		M. S. Maxwell, M. Restrepo, S. G. Henderson and H. Topaloglu.
+//		Approximate dynamic programming for ambulance redeployment.
+//		INFORMS Journal on Computing 22(2), 266-281, 2010.
+//
+//		M. S. Maxwell, S. G. Henderson and H. Topaloglu. Ambulance
+//		redeployment: an approximate dynamic programming approach.
+//		Proceedings of the 2009 Winter Simulation Conference, 1850-1860.
+//
+//		M. S. Maxwell, S. G. Henderson and H. Topaloglu. Tuning
+//		approximate dynamic programming policies for ambulance
+//		redeployment via direct search. Stochastic Systems 3(2),
+//		322-361, 2013.
+//
+//		M. S. Maxwell, E. C. Ni, C. Tong, S. G. Henderson, S. R. Hunter
+//		and H. Topaloglu. A bound on the performance of an optimal
+//		ambulance redeployment policy. Operations Research 62(5),
+//		1014-1027, 2014.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain ambulance_redeployment {
+
+	requirements = {
+		continuous,
+		multivalued,
+		intermediate-nodes,
+		constrained-state
+	};
+
+	types {
+		ambulance : object;
+		base : object;
+		hospital : object;
+		cell : object;			// area of the city with a constant density of calls
+		slot : object;			// place on the waiting list
+		duty : {@available, @to-scene, @at-scene, @to-hospital, @at-hospital};
+	};
+
+	pvariables {
+
+		// city (distances in miles, times in minutes)
+		CELL-X-MIN(cell) 			: { non-fluent, real, default = 0.0 };
+		CELL-X-MAX(cell) 			: { non-fluent, real, default = 1.0 };
+		CELL-Y-MIN(cell) 			: { non-fluent, real, default = 0.0 };
+		CELL-Y-MAX(cell) 			: { non-fluent, real, default = 1.0 };
+		DEMAND(cell) 				: { non-fluent, real, default = 0.0 };		// relative rate of calls
+		CALL-RATE 					: { non-fluent, real, default = 0.05 };		// calls per minute
+		BASE-X(base) 				: { non-fluent, real, default = 0.0 };
+		BASE-Y(base) 				: { non-fluent, real, default = 0.0 };
+		HOSPITAL-X(hospital) 		: { non-fluent, real, default = 0.0 };
+		HOSPITAL-Y(hospital) 		: { non-fluent, real, default = 0.0 };
+		HOSPITAL-PROB(cell, hospital) : { non-fluent, real, default = 0.0 };	// sums to 1 over hospitals
+		HOME(ambulance, base) 		: { non-fluent, bool, default = false };	// one base per ambulance
+		FIRST-SLOT(slot) 			: { non-fluent, bool, default = false };
+		NEXT-SLOT(slot, slot) 		: { non-fluent, bool, default = false };
+
+		// ambulances and patients
+		RESPONSE-SPEED 				: { non-fluent, real, default = 0.4 };		// miles per minute, to a call
+		TRAVEL-SPEED 				: { non-fluent, real, default = 0.4 };		// miles per minute, otherwise
+		TURNOUT-TIME 				: { non-fluent, real, default = 0.75 };		// to leave a base
+		SCENE-MEAN 					: { non-fluent, real, default = 12.0 };
+		TRANSPORT-PROB 				: { non-fluent, real, default = 0.75 };
+		TRANSFER-SHAPE 				: { non-fluent, real, default = 2.5 };
+		TRANSFER-MEAN 				: { non-fluent, real, default = 30.4 };
+		THRESHOLD 					: { non-fluent, real, default = 8.0 };		// a later response is late
+		END-TIME 					: { non-fluent, real, default = 1440.0 };	// one day
+
+		// interm fluents: the redeployment decision
+		redeploy-x(ambulance) 		: { interm-fluent, real };		// base chosen for an ambulance just freed
+		redeploy-y(ambulance) 		: { interm-fluent, real };
+		dest-x(ambulance) 			: { interm-fluent, real };		// end of its current trip or stay
+		dest-y(ambulance) 			: { interm-fluent, real };
+
+		// the next event
+		speed(ambulance) 			: { interm-fluent, real };
+		trip(ambulance) 			: { interm-fluent, real };		// length of the current trip
+		transfer-scale 				: { interm-fluent, real };
+		due(ambulance) 				: { interm-fluent, real };		// time of its next event
+		next-ambulance 				: { interm-fluent, ambulance };
+		next-due 					: { interm-fluent, real };
+		next-call 					: { interm-fluent, real };
+		call-first 					: { interm-fluent, bool };
+		now 						: { interm-fluent, real };		// time of the next event
+
+		// where the ambulances are then
+		driven(ambulance) 			: { interm-fluent, real };		// distance driven on the trip
+		progress(ambulance) 		: { interm-fluent, real };		// fraction of the trip driven
+		pos-x(ambulance) 			: { interm-fluent, real };
+		pos-y(ambulance) 			: { interm-fluent, real };
+		at-base(ambulance) 			: { interm-fluent, bool };
+
+		// a new call
+		call-cell 					: { interm-fluent, cell };
+		call-x 						: { interm-fluent, real };
+		call-y 						: { interm-fluent, real };
+		any-free 					: { interm-fluent, bool };
+		call-distance(ambulance) 	: { interm-fluent, real };
+		nearest 					: { interm-fluent, ambulance };
+		response 					: { interm-fluent, real };
+
+		// an ambulance done with a trip or stay
+		finished(ambulance) 		: { interm-fluent, bool };
+		transport(ambulance) 		: { interm-fluent, bool };
+		scene-cell(ambulance) 		: { interm-fluent, cell };
+		hospital-choice(ambulance) 	: { interm-fluent, hospital };
+		released(ambulance) 		: { interm-fluent, bool };		// free again
+
+		// the waiting list
+		any-waiting 				: { interm-fluent, bool };
+		head-x 						: { interm-fluent, real };
+		head-y 						: { interm-fluent, real };
+		head-time 					: { interm-fluent, real };
+		dequeue 					: { interm-fluent, bool };
+		wait-response 				: { interm-fluent, real };
+		joins(slot) 				: { interm-fluent, bool };
+		turned-away 				: { interm-fluent, bool };
+		dispatched(ambulance) 		: { interm-fluent, bool };
+		late 						: { interm-fluent, int };		// calls made late by this event
+
+		// states
+		duty(ambulance) 			: { state-fluent, duty, default = @available };
+		pending(ambulance) 			: { state-fluent, bool, default = false };	// just freed, needs a base
+		from-x(ambulance) 			: { state-fluent, real, default = 0.0 };	// start of its current trip
+		from-y(ambulance) 			: { state-fluent, real, default = 0.0 };
+		to-x(ambulance) 			: { state-fluent, real, default = 0.0 };	// end of its current trip
+		to-y(ambulance) 			: { state-fluent, real, default = 0.0 };
+		start(ambulance) 			: { state-fluent, real, default = 0.0 };	// time the trip or stay began
+		waiting(slot) 				: { state-fluent, bool, default = false };
+		wait-x(slot) 				: { state-fluent, real, default = 0.0 };
+		wait-y(slot) 				: { state-fluent, real, default = 0.0 };
+		wait-time(slot) 			: { state-fluent, real, default = 0.0 };	// time the call came in
+		time 						: { state-fluent, real, default = 0.0 };
+		calls 						: { state-fluent, int, default = 0 };		// calls so far
+		late-calls 					: { state-fluent, int, default = 0 };		// late calls so far
+
+		// actions
+		redeploy(base) 				: { action-fluent, bool, default = false };
+	};
+
+	cpfs {
+
+		// the base for an ambulance just freed, its home base if none is chosen
+		redeploy-x(?a) = if (exists_{?b : base}[redeploy(?b)])
+			then (sum_{?b : base}[redeploy(?b) * BASE-X(?b)])
+			else (sum_{?b : base}[HOME(?a, ?b) * BASE-X(?b)]);
+		redeploy-y(?a) = if (exists_{?b : base}[redeploy(?b)])
+			then (sum_{?b : base}[redeploy(?b) * BASE-Y(?b)])
+			else (sum_{?b : base}[HOME(?a, ?b) * BASE-Y(?b)]);
+		dest-x(?a) = if (pending(?a)) then redeploy-x(?a) else to-x(?a);
+		dest-y(?a) = if (pending(?a)) then redeploy-y(?a) else to-y(?a);
+
+		// the next event: a call, or the end of a trip or stay
+		speed(?a) = if (duty(?a) == @to-scene) then RESPONSE-SPEED else TRAVEL-SPEED;
+		trip(?a) = abs[dest-x(?a) - from-x(?a)] + abs[dest-y(?a) - from-y(?a)];
+		transfer-scale = TRANSFER-MEAN / gamma[1 + 1 / TRANSFER-SHAPE];
+		due(?a) = if ((duty(?a) == @to-scene) | (duty(?a) == @to-hospital))
+				then start(?a) + trip(?a) / speed(?a)
+			else if (duty(?a) == @at-scene)
+				then time + Exponential(SCENE-MEAN)
+			else if (duty(?a) == @at-hospital)
+				then start(?a) + transfer-scale * pow[pow[(time - start(?a)) / transfer-scale, TRANSFER-SHAPE]
+					+ Exponential(1.0), 1 / TRANSFER-SHAPE]
+			else 1000000000.0;
+		next-ambulance = argmin_{?a : ambulance}[due(?a)];
+		next-due = min_{?a : ambulance}[due(?a)];
+		next-call = time + Exponential(1 / CALL-RATE);
+		call-first = next-call < next-due;
+		now = min[next-call, next-due];
+
+		// where each ambulance is at that time
+		driven(?a) = max[0.0, now - start(?a)] * speed(?a);
+		progress(?a) = if (driven(?a) >= trip(?a)) then 1.0 else driven(?a) / max[trip(?a), 0.000001];
+		pos-x(?a) = from-x(?a) + progress(?a) * (dest-x(?a) - from-x(?a));
+		pos-y(?a) = from-y(?a) + progress(?a) * (dest-y(?a) - from-y(?a));
+		at-base(?a) = (duty(?a) == @available) ^ (driven(?a) >= trip(?a));
+
+		// a new call goes to the closest free ambulance
+		call-cell = Discrete_{?c : cell}[DEMAND(?c) / (sum_{?c2 : cell}[DEMAND(?c2)])];
+		call-x = Uniform(CELL-X-MIN(call-cell), CELL-X-MAX(call-cell));
+		call-y = Uniform(CELL-Y-MIN(call-cell), CELL-Y-MAX(call-cell));
+		any-free = exists_{?a : ambulance}[duty(?a) == @available];
+		call-distance(?a) = abs[pos-x(?a) - call-x] + abs[pos-y(?a) - call-y];
+		nearest = argmin_{?a : ambulance}[if (duty(?a) == @available) then call-distance(?a) else 1000000000.0];
+		response = TURNOUT-TIME * at-base(nearest) + call-distance(nearest) / RESPONSE-SPEED;
+
+		// an ambulance done at a scene leaves with the patient, or is free
+		finished(?a) = ~call-first ^ (?a == next-ambulance);
+		transport(?a) = Bernoulli(TRANSPORT-PROB);
+		scene-cell(?a) = argmax_{?c : cell}[(to-x(?a) >= CELL-X-MIN(?c)) ^ (to-x(?a) <= CELL-X-MAX(?c))
+			^ (to-y(?a) >= CELL-Y-MIN(?c)) ^ (to-y(?a) <= CELL-Y-MAX(?c))];
+		hospital-choice(?a) = Discrete_{?h : hospital}[HOSPITAL-PROB(scene-cell(?a), ?h)];
+		released(?a) = finished(?a) ^ ((duty(?a) == @at-hospital) | ((duty(?a) == @at-scene) ^ ~transport(?a)));
+
+		// the waiting list: a freed ambulance takes the call at its head
+		any-waiting = exists_{?s : slot}[waiting(?s)];
+		head-x = sum_{?s : slot}[FIRST-SLOT(?s) * wait-x(?s)];
+		head-y = sum_{?s : slot}[FIRST-SLOT(?s) * wait-y(?s)];
+		head-time = sum_{?s : slot}[FIRST-SLOT(?s) * wait-time(?s)];
+		dequeue = ~call-first ^ released(next-ambulance) ^ any-waiting;
+		wait-response = now - head-time
+			+ (abs[pos-x(next-ambulance) - head-x] + abs[pos-y(next-ambulance) - head-y]) / RESPONSE-SPEED;
+		joins(?s) = call-first ^ ~any-free ^ ~waiting(?s)
+			^ (FIRST-SLOT(?s) | (exists_{?p : slot}[NEXT-SLOT(?p, ?s) ^ waiting(?p)]));
+		turned-away = call-first ^ ~any-free ^ (forall_{?s : slot}[waiting(?s)]);
+		dispatched(?a) = (call-first ^ any-free ^ (?a == nearest)) | (released(?a) ^ any-waiting);
+
+		late = if (now >= END-TIME) then 0
+			else if (call-first ^ any-free) then (response > THRESHOLD)
+			else if (dequeue) then (wait-response > THRESHOLD)
+			else turned-away;
+
+		// ambulances
+		duty'(?a) = if (dispatched(?a)) then @to-scene
+			else if (~finished(?a)) then duty(?a)
+			else if (duty(?a) == @to-scene) then @at-scene
+			else if ((duty(?a) == @at-scene) ^ transport(?a)) then @to-hospital
+			else if (duty(?a) == @to-hospital) then @at-hospital
+			else @available;
+		pending'(?a) = released(?a) ^ ~dispatched(?a);
+		from-x'(?a) = if (dispatched(?a) | finished(?a)) then pos-x(?a) else from-x(?a);
+		from-y'(?a) = if (dispatched(?a) | finished(?a)) then pos-y(?a) else from-y(?a);
+		to-x'(?a) = if (dispatched(?a)) then (if (call-first) then call-x else head-x)
+			else if (finished(?a) ^ (duty(?a) == @at-scene) ^ transport(?a)) then HOSPITAL-X(hospital-choice(?a))
+			else if (finished(?a)) then pos-x(?a)
+			else dest-x(?a);
+		to-y'(?a) = if (dispatched(?a)) then (if (call-first) then call-y else head-y)
+			else if (finished(?a) ^ (duty(?a) == @at-scene) ^ transport(?a)) then HOSPITAL-Y(hospital-choice(?a))
+			else if (finished(?a)) then pos-y(?a)
+			else dest-y(?a);
+		start'(?a) = if (dispatched(?a)) then now + TURNOUT-TIME * at-base(?a)
+			else if (finished(?a)) then now
+			else start(?a);
+
+		// waiting list, shifted forward when its head is taken
+		waiting'(?s) = if (joins(?s)) then true
+			else if (dequeue) then (exists_{?n : slot}[NEXT-SLOT(?s, ?n) ^ waiting(?n)])
+			else waiting(?s);
+		wait-x'(?s) = if (joins(?s)) then call-x
+			else if (dequeue) then (sum_{?n : slot}[NEXT-SLOT(?s, ?n) * wait-x(?n)])
+			else wait-x(?s);
+		wait-y'(?s) = if (joins(?s)) then call-y
+			else if (dequeue) then (sum_{?n : slot}[NEXT-SLOT(?s, ?n) * wait-y(?n)])
+			else wait-y(?s);
+		wait-time'(?s) = if (joins(?s)) then now
+			else if (dequeue) then (sum_{?n : slot}[NEXT-SLOT(?s, ?n) * wait-time(?n)])
+			else wait-time(?s);
+
+		time' = now;
+		calls' = calls + (call-first ^ (now < END-TIME));
+		late-calls' = late-calls + late;
+	};
+
+	reward = -late;
+
+	termination {
+		time >= END-TIME;
+	};
+
+	action-preconditions {
+		// a base is chosen only for an ambulance just freed
+		(sum_{?b : base}[redeploy(?b)]) <= (if (exists_{?a : ambulance}[pending(?a)]) then 1 else 0);
+	};
+}

@@ -158,7 +158,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**136 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (15) &middot; [biology](#biology) (5) &middot; [or](#or) (10) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**137 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (15) &middot; [biology](#biology) (5) &middot; [or](#or) (11) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -226,6 +226,7 @@ Operations research.
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Domain | Instances | Description |
 |:-:|:--|:--|:--|
 | <img src="docs/thumbnails/AirlineRevenue_or.png" width="64" alt=""> | <code>AirlineRevenue_<wbr>or</code> | 0&ndash;5 | Sell airline seats over a hub-and-spoke network |
+| <img src="docs/thumbnails/AmbulanceRedeployment_or.png" width="64" alt=""> | <code>AmbulanceRedeployment_<wbr>or</code> | 0&ndash;5 | Send freed ambulances to bases so calls are reached in time |
 | <img src="docs/thumbnails/BinPacking_or.png" width="64" alt=""> | <code>BinPacking_<wbr>or</code> | 0 | Pack random items into few bins |
 | <img src="docs/thumbnails/CarRental_or.png" width="64" alt=""> | <code>CarRental_<wbr>or</code> | 0, 1 | Move rental cars between locations |
 | <img src="docs/thumbnails/JobShop_or.png" width="64" alt=""> | <code>JobShop_<wbr>or</code> | 0&ndash;7 | Dispatch operations to machines for the shortest makespan |

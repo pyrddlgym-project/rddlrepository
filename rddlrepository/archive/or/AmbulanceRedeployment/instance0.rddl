@@ -1,0 +1,168 @@
+// City 1MU of Maxwell et al. (2014): a 15 x 15 mile city with one demand peak
+// in the center, moderately concentrated, and 25 bases one in the center of
+// each 3-mile square. Seven ambulances answer 3 calls an hour for a day. The
+// demand of each 3-mile cell is the mass that the Gaussian peaks of Figure 6
+// of the paper put in it. The home bases (the static policy, which the paper
+// does not list) are chosen by maximal expected covering (Daskin 1983). The
+// horizon leaves room for the events of a day, about 320 and rarely over 500,
+// and the episode ends after the day.
+
+non-fluents ambulance_redeployment_nf0 {
+	domain = ambulance_redeployment;
+
+	objects {
+		ambulance : {a1, a2, a3, a4, a5, a6, a7};
+		base : {b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25};
+		hospital : {h1, h2};
+		cell : {c11, c21, c31, c41, c51, c12, c22, c32, c42, c52, c13, c23, c33, c43, c53, c14, c24, c34, c44, c54, c15, c25, c35, c45, c55};
+		slot : {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10};
+	};
+
+	non-fluents {
+		TURNOUT-TIME = 0.0;
+
+		CELL-X-MIN(c11) = 0.0; CELL-X-MAX(c11) = 3.0; CELL-Y-MIN(c11) = 0.0; CELL-Y-MAX(c11) = 3.0;
+		CELL-X-MIN(c21) = 3.0; CELL-X-MAX(c21) = 6.0; CELL-Y-MIN(c21) = 0.0; CELL-Y-MAX(c21) = 3.0;
+		CELL-X-MIN(c31) = 6.0; CELL-X-MAX(c31) = 9.0; CELL-Y-MIN(c31) = 0.0; CELL-Y-MAX(c31) = 3.0;
+		CELL-X-MIN(c41) = 9.0; CELL-X-MAX(c41) = 12.0; CELL-Y-MIN(c41) = 0.0; CELL-Y-MAX(c41) = 3.0;
+		CELL-X-MIN(c51) = 12.0; CELL-X-MAX(c51) = 15.0; CELL-Y-MIN(c51) = 0.0; CELL-Y-MAX(c51) = 3.0;
+		CELL-X-MIN(c12) = 0.0; CELL-X-MAX(c12) = 3.0; CELL-Y-MIN(c12) = 3.0; CELL-Y-MAX(c12) = 6.0;
+		CELL-X-MIN(c22) = 3.0; CELL-X-MAX(c22) = 6.0; CELL-Y-MIN(c22) = 3.0; CELL-Y-MAX(c22) = 6.0;
+		CELL-X-MIN(c32) = 6.0; CELL-X-MAX(c32) = 9.0; CELL-Y-MIN(c32) = 3.0; CELL-Y-MAX(c32) = 6.0;
+		CELL-X-MIN(c42) = 9.0; CELL-X-MAX(c42) = 12.0; CELL-Y-MIN(c42) = 3.0; CELL-Y-MAX(c42) = 6.0;
+		CELL-X-MIN(c52) = 12.0; CELL-X-MAX(c52) = 15.0; CELL-Y-MIN(c52) = 3.0; CELL-Y-MAX(c52) = 6.0;
+		CELL-X-MIN(c13) = 0.0; CELL-X-MAX(c13) = 3.0; CELL-Y-MIN(c13) = 6.0; CELL-Y-MAX(c13) = 9.0;
+		CELL-X-MIN(c23) = 3.0; CELL-X-MAX(c23) = 6.0; CELL-Y-MIN(c23) = 6.0; CELL-Y-MAX(c23) = 9.0;
+		CELL-X-MIN(c33) = 6.0; CELL-X-MAX(c33) = 9.0; CELL-Y-MIN(c33) = 6.0; CELL-Y-MAX(c33) = 9.0;
+		CELL-X-MIN(c43) = 9.0; CELL-X-MAX(c43) = 12.0; CELL-Y-MIN(c43) = 6.0; CELL-Y-MAX(c43) = 9.0;
+		CELL-X-MIN(c53) = 12.0; CELL-X-MAX(c53) = 15.0; CELL-Y-MIN(c53) = 6.0; CELL-Y-MAX(c53) = 9.0;
+		CELL-X-MIN(c14) = 0.0; CELL-X-MAX(c14) = 3.0; CELL-Y-MIN(c14) = 9.0; CELL-Y-MAX(c14) = 12.0;
+		CELL-X-MIN(c24) = 3.0; CELL-X-MAX(c24) = 6.0; CELL-Y-MIN(c24) = 9.0; CELL-Y-MAX(c24) = 12.0;
+		CELL-X-MIN(c34) = 6.0; CELL-X-MAX(c34) = 9.0; CELL-Y-MIN(c34) = 9.0; CELL-Y-MAX(c34) = 12.0;
+		CELL-X-MIN(c44) = 9.0; CELL-X-MAX(c44) = 12.0; CELL-Y-MIN(c44) = 9.0; CELL-Y-MAX(c44) = 12.0;
+		CELL-X-MIN(c54) = 12.0; CELL-X-MAX(c54) = 15.0; CELL-Y-MIN(c54) = 9.0; CELL-Y-MAX(c54) = 12.0;
+		CELL-X-MIN(c15) = 0.0; CELL-X-MAX(c15) = 3.0; CELL-Y-MIN(c15) = 12.0; CELL-Y-MAX(c15) = 15.0;
+		CELL-X-MIN(c25) = 3.0; CELL-X-MAX(c25) = 6.0; CELL-Y-MIN(c25) = 12.0; CELL-Y-MAX(c25) = 15.0;
+		CELL-X-MIN(c35) = 6.0; CELL-X-MAX(c35) = 9.0; CELL-Y-MIN(c35) = 12.0; CELL-Y-MAX(c35) = 15.0;
+		CELL-X-MIN(c45) = 9.0; CELL-X-MAX(c45) = 12.0; CELL-Y-MIN(c45) = 12.0; CELL-Y-MAX(c45) = 15.0;
+		CELL-X-MIN(c55) = 12.0; CELL-X-MAX(c55) = 15.0; CELL-Y-MIN(c55) = 12.0; CELL-Y-MAX(c55) = 15.0;
+
+		DEMAND(c11) = 0.000000014;
+		DEMAND(c21) = 0.000013147;
+		DEMAND(c31) = 0.000092959;
+		DEMAND(c41) = 0.000013147;
+		DEMAND(c51) = 0.000000014;
+		DEMAND(c12) = 0.000013147;
+		DEMAND(c22) = 0.012147655;
+		DEMAND(c32) = 0.085894796;
+		DEMAND(c42) = 0.012147655;
+		DEMAND(c52) = 0.000013147;
+		DEMAND(c13) = 0.000092959;
+		DEMAND(c23) = 0.085894796;
+		DEMAND(c33) = 0.607353127;
+		DEMAND(c43) = 0.085894796;
+		DEMAND(c53) = 0.000092959;
+		DEMAND(c14) = 0.000013147;
+		DEMAND(c24) = 0.012147655;
+		DEMAND(c34) = 0.085894796;
+		DEMAND(c44) = 0.012147655;
+		DEMAND(c54) = 0.000013147;
+		DEMAND(c15) = 0.000000014;
+		DEMAND(c25) = 0.000013147;
+		DEMAND(c35) = 0.000092959;
+		DEMAND(c45) = 0.000013147;
+		DEMAND(c55) = 0.000000014;
+
+		HOSPITAL-X(h1) = 4.0; HOSPITAL-Y(h1) = 4.0;
+		HOSPITAL-X(h2) = 10.0; HOSPITAL-Y(h2) = 10.0;
+		HOSPITAL-PROB(c11, h1) = 0.4; HOSPITAL-PROB(c11, h2) = 0.6;
+		HOSPITAL-PROB(c21, h1) = 0.4; HOSPITAL-PROB(c21, h2) = 0.6;
+		HOSPITAL-PROB(c31, h1) = 0.4; HOSPITAL-PROB(c31, h2) = 0.6;
+		HOSPITAL-PROB(c41, h1) = 0.4; HOSPITAL-PROB(c41, h2) = 0.6;
+		HOSPITAL-PROB(c51, h1) = 0.4; HOSPITAL-PROB(c51, h2) = 0.6;
+		HOSPITAL-PROB(c12, h1) = 0.4; HOSPITAL-PROB(c12, h2) = 0.6;
+		HOSPITAL-PROB(c22, h1) = 0.4; HOSPITAL-PROB(c22, h2) = 0.6;
+		HOSPITAL-PROB(c32, h1) = 0.4; HOSPITAL-PROB(c32, h2) = 0.6;
+		HOSPITAL-PROB(c42, h1) = 0.4; HOSPITAL-PROB(c42, h2) = 0.6;
+		HOSPITAL-PROB(c52, h1) = 0.4; HOSPITAL-PROB(c52, h2) = 0.6;
+		HOSPITAL-PROB(c13, h1) = 0.4; HOSPITAL-PROB(c13, h2) = 0.6;
+		HOSPITAL-PROB(c23, h1) = 0.4; HOSPITAL-PROB(c23, h2) = 0.6;
+		HOSPITAL-PROB(c33, h1) = 0.4; HOSPITAL-PROB(c33, h2) = 0.6;
+		HOSPITAL-PROB(c43, h1) = 0.4; HOSPITAL-PROB(c43, h2) = 0.6;
+		HOSPITAL-PROB(c53, h1) = 0.4; HOSPITAL-PROB(c53, h2) = 0.6;
+		HOSPITAL-PROB(c14, h1) = 0.4; HOSPITAL-PROB(c14, h2) = 0.6;
+		HOSPITAL-PROB(c24, h1) = 0.4; HOSPITAL-PROB(c24, h2) = 0.6;
+		HOSPITAL-PROB(c34, h1) = 0.4; HOSPITAL-PROB(c34, h2) = 0.6;
+		HOSPITAL-PROB(c44, h1) = 0.4; HOSPITAL-PROB(c44, h2) = 0.6;
+		HOSPITAL-PROB(c54, h1) = 0.4; HOSPITAL-PROB(c54, h2) = 0.6;
+		HOSPITAL-PROB(c15, h1) = 0.4; HOSPITAL-PROB(c15, h2) = 0.6;
+		HOSPITAL-PROB(c25, h1) = 0.4; HOSPITAL-PROB(c25, h2) = 0.6;
+		HOSPITAL-PROB(c35, h1) = 0.4; HOSPITAL-PROB(c35, h2) = 0.6;
+		HOSPITAL-PROB(c45, h1) = 0.4; HOSPITAL-PROB(c45, h2) = 0.6;
+		HOSPITAL-PROB(c55, h1) = 0.4; HOSPITAL-PROB(c55, h2) = 0.6;
+
+		BASE-X(b1) = 1.5; BASE-Y(b1) = 1.5;
+		BASE-X(b2) = 4.5; BASE-Y(b2) = 1.5;
+		BASE-X(b3) = 7.5; BASE-Y(b3) = 1.5;
+		BASE-X(b4) = 10.5; BASE-Y(b4) = 1.5;
+		BASE-X(b5) = 13.5; BASE-Y(b5) = 1.5;
+		BASE-X(b6) = 1.5; BASE-Y(b6) = 4.5;
+		BASE-X(b7) = 4.5; BASE-Y(b7) = 4.5;
+		BASE-X(b8) = 7.5; BASE-Y(b8) = 4.5;
+		BASE-X(b9) = 10.5; BASE-Y(b9) = 4.5;
+		BASE-X(b10) = 13.5; BASE-Y(b10) = 4.5;
+		BASE-X(b11) = 1.5; BASE-Y(b11) = 7.5;
+		BASE-X(b12) = 4.5; BASE-Y(b12) = 7.5;
+		BASE-X(b13) = 7.5; BASE-Y(b13) = 7.5;
+		BASE-X(b14) = 10.5; BASE-Y(b14) = 7.5;
+		BASE-X(b15) = 13.5; BASE-Y(b15) = 7.5;
+		BASE-X(b16) = 1.5; BASE-Y(b16) = 10.5;
+		BASE-X(b17) = 4.5; BASE-Y(b17) = 10.5;
+		BASE-X(b18) = 7.5; BASE-Y(b18) = 10.5;
+		BASE-X(b19) = 10.5; BASE-Y(b19) = 10.5;
+		BASE-X(b20) = 13.5; BASE-Y(b20) = 10.5;
+		BASE-X(b21) = 1.5; BASE-Y(b21) = 13.5;
+		BASE-X(b22) = 4.5; BASE-Y(b22) = 13.5;
+		BASE-X(b23) = 7.5; BASE-Y(b23) = 13.5;
+		BASE-X(b24) = 10.5; BASE-Y(b24) = 13.5;
+		BASE-X(b25) = 13.5; BASE-Y(b25) = 13.5;
+
+		HOME(a1, b8) = true;
+		HOME(a2, b12) = true;
+		HOME(a3, b13) = true;
+		HOME(a4, b13) = true;
+		HOME(a5, b14) = true;
+		HOME(a6, b18) = true;
+		HOME(a7, b18) = true;
+
+		FIRST-SLOT(s1) = true;
+		NEXT-SLOT(s1, s2) = true;
+		NEXT-SLOT(s2, s3) = true;
+		NEXT-SLOT(s3, s4) = true;
+		NEXT-SLOT(s4, s5) = true;
+		NEXT-SLOT(s5, s6) = true;
+		NEXT-SLOT(s6, s7) = true;
+		NEXT-SLOT(s7, s8) = true;
+		NEXT-SLOT(s8, s9) = true;
+		NEXT-SLOT(s9, s10) = true;
+	};
+}
+
+instance ambulance_redeployment_inst0 {
+	domain = ambulance_redeployment;
+	non-fluents = ambulance_redeployment_nf0;
+
+	init-state {
+		from-x(a1) = 7.5; from-y(a1) = 4.5; to-x(a1) = 7.5; to-y(a1) = 4.5;
+		from-x(a2) = 4.5; from-y(a2) = 7.5; to-x(a2) = 4.5; to-y(a2) = 7.5;
+		from-x(a3) = 7.5; from-y(a3) = 7.5; to-x(a3) = 7.5; to-y(a3) = 7.5;
+		from-x(a4) = 7.5; from-y(a4) = 7.5; to-x(a4) = 7.5; to-y(a4) = 7.5;
+		from-x(a5) = 10.5; from-y(a5) = 7.5; to-x(a5) = 10.5; to-y(a5) = 7.5;
+		from-x(a6) = 7.5; from-y(a6) = 10.5; to-x(a6) = 7.5; to-y(a6) = 10.5;
+		from-x(a7) = 7.5; from-y(a7) = 10.5; to-x(a7) = 7.5; to-y(a7) = 10.5;
+	};
+
+	max-nondef-actions = 1;
+	horizon = 600;
+	discount = 1.0;
+}

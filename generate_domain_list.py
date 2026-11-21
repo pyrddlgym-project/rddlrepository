@@ -85,6 +85,7 @@ SHORT = {
     'UAV': 'Fly drones to goal positions',
     # or
     'AirlineRevenue': 'Sell airline seats over a hub-and-spoke network',
+    'AmbulanceRedeployment': 'Send freed ambulances to bases so calls are reached in time',
     'BinPacking': 'Pack random items into few bins',
     'CarRental': 'Move rental cars between locations',
     'JobShop': 'Dispatch operations to machines for the shortest makespan',
