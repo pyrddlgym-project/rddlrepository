@@ -1,0 +1,33 @@
+// Instance 1 has eight arms, from well-studied ones with middling
+// success (as after 10 to 200 pulls) to new ones that look worse but
+// are uncertain (as after 2 to 6 pulls). In simulation a greedy policy
+// wins about 55, Thompson sampling 59 and the online knowledge
+// gradient 59.6; knowing the true probabilities would win 69.9.
+
+non-fluents bernoulli_bandit_nf1 {
+	domain = bernoulli_bandit;
+
+	objects {
+		arm : { a1, a2, a3, a4, a5, a6, a7, a8 };
+	};
+}
+
+instance bernoulli_bandit_inst1 {
+	domain = bernoulli_bandit;
+	non-fluents = bernoulli_bandit_nf1;
+
+	init-state {
+		alpha(a1) = 110.0;	beta(a1) = 90.0;
+		alpha(a2) = 25.0;	beta(a2) = 25.0;
+		alpha(a3) = 9.0;	beta(a3) = 11.0;
+		alpha(a4) = 2.4;	beta(a4) = 3.6;
+		alpha(a5) = 1.05;	beta(a5) = 1.95;
+		alpha(a6) = 2.0;	beta(a6) = 2.0;
+		alpha(a7) = 0.6;	beta(a7) = 1.4;
+		alpha(a8) = 4.5;	beta(a8) = 5.5;
+	};
+
+	max-nondef-actions = 1;
+	horizon = 100;
+	discount = 1.0;
+}

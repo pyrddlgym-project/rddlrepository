@@ -166,7 +166,7 @@ Domains written for this repository.
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Domain | Instances | Description |
 |:-:|:--|:--|:--|
-| <img src="docs/thumbnails/BernoulliBandit.png" width="64" alt=""> | <code>BernoulliBandit</code> | 0 | Bayesian Bernoulli bandit |
+| <img src="docs/thumbnails/BernoulliBandit.png" width="64" alt=""> | <code>BernoulliBandit</code> | 0&ndash;3 | Bayesian Bernoulli bandit |
 | <img src="docs/thumbnails/Elevators.png" width="64" alt=""> | <code>Elevators</code> | 0, 1 | Elevators carry passengers between floors |
 | <img src="docs/thumbnails/HVAC.png" width="64" alt=""> | <code>HVAC</code> | 0, 1 | Heat the zones of a building |
 | <img src="docs/thumbnails/Intruders_Continuous.png" width="64" alt=""> | <code>Intruders_<wbr>Continuous</code> | 0 | Detect intruders in an area |

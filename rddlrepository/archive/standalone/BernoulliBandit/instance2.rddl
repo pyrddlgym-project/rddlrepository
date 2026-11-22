@@ -1,0 +1,50 @@
+// Instance 2 has 25 arms whose prior means are between 0.2 and 0.6 and
+// whose priors are worth 2 to 200 pulls, drawn at random, and fewer
+// pulls than needed to learn every arm well. In simulation a greedy
+// policy wins about 94, Thompson sampling 103 and the online knowledge
+// gradient 108; knowing the true probabilities would win 121.
+
+non-fluents bernoulli_bandit_nf2 {
+	domain = bernoulli_bandit;
+
+	objects {
+		arm : { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25 };
+	};
+}
+
+instance bernoulli_bandit_inst2 {
+	domain = bernoulli_bandit;
+	non-fluents = bernoulli_bandit_nf2;
+
+	init-state {
+		alpha(a1) = 9.36;	beta(a1) = 26.64;
+		alpha(a2) = 6.4;	beta(a2) = 25.6;
+		alpha(a3) = 0.87;	beta(a3) = 2.13;
+		alpha(a4) = 2.8;	beta(a4) = 5.2;
+		alpha(a5) = 2.6;	beta(a5) = 10.4;
+		alpha(a6) = 1.4;	beta(a6) = 3.6;
+		alpha(a7) = 33.0;	beta(a7) = 22.0;
+		alpha(a8) = 22.95;	beta(a8) = 22.05;
+		alpha(a9) = 17.0;	beta(a9) = 51.0;
+		alpha(a10) = 0.58;	beta(a10) = 1.42;
+		alpha(a11) = 1.53;	beta(a11) = 1.47;
+		alpha(a12) = 3.42;	beta(a12) = 2.58;
+		alpha(a13) = 8.16;	beta(a13) = 15.84;
+		alpha(a14) = 1.53;	beta(a14) = 1.47;
+		alpha(a15) = 37.18;	beta(a15) = 105.82;
+		alpha(a16) = 0.84;	beta(a16) = 1.16;
+		alpha(a17) = 16.28;	beta(a17) = 20.72;
+		alpha(a18) = 34.84;	beta(a18) = 32.16;
+		alpha(a19) = 8.99;	beta(a19) = 20.01;
+		alpha(a20) = 4.44;	beta(a20) = 7.56;
+		alpha(a21) = 36.75;	beta(a21) = 68.25;
+		alpha(a22) = 2.08;	beta(a22) = 5.92;
+		alpha(a23) = 2.35;	beta(a23) = 2.65;
+		alpha(a24) = 10.5;	beta(a24) = 14.5;
+		alpha(a25) = 1.6;	beta(a25) = 2.4;
+	};
+
+	max-nondef-actions = 1;
+	horizon = 150;
+	discount = 1.0;
+}

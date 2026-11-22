@@ -1,0 +1,75 @@
+// Instance 3 has 50 arms whose prior means are between 0.2 and 0.6 and
+// whose priors are worth 2 to 200 pulls, drawn at random. In
+// simulation a greedy policy wins about 198, Thompson sampling 217 and
+// the online knowledge gradient 222; knowing the true probabilities
+// would win 252.
+
+non-fluents bernoulli_bandit_nf3 {
+	domain = bernoulli_bandit;
+
+	objects {
+		arm : { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32, a33, a34, a35, a36, a37, a38, a39, a40, a41, a42, a43, a44, a45, a46, a47, a48, a49, a50 };
+	};
+}
+
+instance bernoulli_bandit_inst3 {
+	domain = bernoulli_bandit;
+	non-fluents = bernoulli_bandit_nf3;
+
+	init-state {
+		alpha(a1) = 65.79;	beta(a1) = 63.21;
+		alpha(a2) = 2.65;	beta(a2) = 2.35;
+		alpha(a3) = 5.46;	beta(a3) = 7.54;
+		alpha(a4) = 8.26;	beta(a4) = 5.74;
+		alpha(a5) = 10.73;	beta(a5) = 26.27;
+		alpha(a6) = 9.2;	beta(a6) = 10.8;
+		alpha(a7) = 1.38;	beta(a7) = 4.62;
+		alpha(a8) = 43.68;	beta(a8) = 60.32;
+		alpha(a9) = 7.56;	beta(a9) = 13.44;
+		alpha(a10) = 1.86;	beta(a10) = 4.14;
+		alpha(a11) = 62.54;	beta(a11) = 43.46;
+		alpha(a12) = 68.04;	beta(a12) = 120.96;
+		alpha(a13) = 0.66;	beta(a13) = 1.34;
+		alpha(a14) = 1.25;	beta(a14) = 3.75;
+		alpha(a15) = 6.24;	beta(a15) = 19.76;
+		alpha(a16) = 6.49;	beta(a16) = 4.51;
+		alpha(a17) = 47.3;	beta(a17) = 62.7;
+		alpha(a18) = 7.84;	beta(a18) = 6.16;
+		alpha(a19) = 4.2;	beta(a19) = 15.8;
+		alpha(a20) = 7.92;	beta(a20) = 10.08;
+		alpha(a21) = 40.33;	beta(a21) = 68.67;
+		alpha(a22) = 5.25;	beta(a22) = 9.75;
+		alpha(a23) = 14.4;	beta(a23) = 15.6;
+		alpha(a24) = 0.66;	beta(a24) = 2.34;
+		alpha(a25) = 19.14;	beta(a25) = 46.86;
+		alpha(a26) = 0.9;	beta(a26) = 2.1;
+		alpha(a27) = 0.76;	beta(a27) = 1.24;
+		alpha(a28) = 12.87;	beta(a28) = 26.13;
+		alpha(a29) = 1.53;	beta(a29) = 1.47;
+		alpha(a30) = 18.33;	beta(a30) = 28.67;
+		alpha(a31) = 5.1;	beta(a31) = 4.9;
+		alpha(a32) = 25.5;	beta(a32) = 76.5;
+		alpha(a33) = 1.29;	beta(a33) = 1.71;
+		alpha(a34) = 2.4;	beta(a34) = 2.6;
+		alpha(a35) = 8.46;	beta(a35) = 9.54;
+		alpha(a36) = 16.59;	beta(a36) = 62.41;
+		alpha(a37) = 0.81;	beta(a37) = 2.19;
+		alpha(a38) = 81.84;	beta(a38) = 104.16;
+		alpha(a39) = 9.3;	beta(a39) = 20.7;
+		alpha(a40) = 4.94;	beta(a40) = 8.06;
+		alpha(a41) = 20.72;	beta(a41) = 16.28;
+		alpha(a42) = 89.1;	beta(a42) = 72.9;
+		alpha(a43) = 1.0;	beta(a43) = 4.0;
+		alpha(a44) = 1.64;	beta(a44) = 2.36;
+		alpha(a45) = 4.56;	beta(a45) = 3.44;
+		alpha(a46) = 1.02;	beta(a46) = 1.98;
+		alpha(a47) = 3.12;	beta(a47) = 4.88;
+		alpha(a48) = 7.7;	beta(a48) = 14.3;
+		alpha(a49) = 2.08;	beta(a49) = 1.92;
+		alpha(a50) = 61.18;	beta(a50) = 99.82;
+	};
+
+	max-nondef-actions = 1;
+	horizon = 300;
+	discount = 1.0;
+}

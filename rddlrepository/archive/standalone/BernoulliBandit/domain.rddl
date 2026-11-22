@@ -1,46 +1,73 @@
+////////////////////////////////////////////////////////////////////
+// The Bayesian Bernoulli bandit, as a Bayes-adaptive MDP. Each arm
+// succeeds with an unknown probability, believed to follow a Beta
+// distribution with parameters alpha and beta. These are the state:
+// the initial state is the prior, and pulling an arm adds 1 to alpha
+// on a success or to beta on a failure, so the state is the posterior.
+// Each step pulls one arm, and the reward is 1 on a success.
+//
+// There is no true probability in the model, which a planner could
+// read. A pulled arm instead succeeds with the probability that the
+// current belief gives it, alpha / (alpha + beta). The successes then
+// follow exactly the distribution they would have if each arm's
+// probability were drawn from the prior at the start of an episode
+// and then held fixed (Polya's urn), so each episode has its own true
+// probabilities, which nobody sees. A good policy must therefore
+// trade pulling the arm that looks best against learning about the
+// others. With a discount below 1 and an infinite horizon, the optimal
+// policy pulls the arm of highest Gittins index.
+//
+// References:
+//
+//		John C. Gittins. Bandit processes and dynamic allocation indices.
+//		Journal of the Royal Statistical Society B 41(2), 148-177, 1979.
+//
+//		Donald A. Berry and Bert Fristedt. Bandit Problems: Sequential
+//		Allocation of Experiments. Chapman and Hall, 1985.
+//
+//		Michael O. Duff. Optimal learning: computational procedures for
+//		Bayes-adaptive Markov decision processes. PhD thesis, University
+//		of Massachusetts Amherst, 2002.
+//
+////////////////////////////////////////////////////////////////////
 domain bernoulli_bandit {
 
-    types {
-        arm : object;
-    };
+	requirements = {
+		constrained-state
+	};
 
-    pvariables {
+	types {
+		arm : object;
+	};
 
-        // --- NON-FLUENTS: true underlying Bernoulli parameters ---
-        TRUE_THETA(arm) : { non-fluent, real, default = 0.5 };
+	pvariables {
 
-        // --- STATE FLUENTS: posterior parameters per arm ---
-        alpha(arm) : { state-fluent, real, default = 1.0 };
-        beta(arm)  : { state-fluent, real, default = 1.0 };
+		// the belief about the arm's probability of success, Beta(alpha, beta)
+		alpha(arm) 		: { state-fluent, real, default = 1.0 };	// prior plus successes
+		beta(arm) 		: { state-fluent, real, default = 1.0 };	// prior plus failures
 
-        // --- INTERMEDIATE FLUENT: observed outcome at this step ---
-        outcome(arm) : { interm-fluent, bool };
+		outcome(arm) 	: { interm-fluent, bool };					// the pulled arm succeeds
 
-        // --- ACTION FLUENTS: choose exactly one arm per step ---
-        pull(arm) : { action-fluent, bool, default = false };
-    };
-   
-    cpfs {
+		pull(arm) 		: { action-fluent, bool, default = false };
+	};
 
-        // Only the pulled arm generates an outcome; others are false.
-        // Here we use the true_theta as the environment’s latent parameter.
-        outcome(?a) = if (pull(?a)) then Bernoulli(TRUE_THETA(?a)) else false;
+	cpfs {
 
-        // Conjugate update for Beta-Bernoulli:
-        // alpha' = alpha + outcome
-        // beta'  = beta  + (1 - outcome)
-        // For non-pulled arms, posterior stays the same.
-        alpha'(?a) = alpha(?a) + (if (pull(?a) ^ outcome(?a)) then 1.0 else 0.0);
-        beta'(?a) = beta(?a) + (if (pull(?a) ^ ~outcome(?a)) then 1.0 else 0.0);
-    };
+		// a success with the probability the current belief gives it
+		outcome(?a) = if (pull(?a)) then Bernoulli(alpha(?a) / (alpha(?a) + beta(?a))) else false;
 
-    // Reward is the observed outcome of the pulled arm.
-    // Since only one arm is pulled, this is equivalent to:
-    //   sum_a [ pull(a) * outcome(a) ]
-    reward = [sum_{?a: arm} (if (pull(?a) ^ outcome(?a)) then 1.0 else 0.0)];
+		alpha'(?a) = alpha(?a) + (if (pull(?a) ^ outcome(?a)) then 1.0 else 0.0);
+		beta'(?a) = beta(?a) + (if (pull(?a) ^ ~outcome(?a)) then 1.0 else 0.0);
+	};
 
-    action-preconditions {    
-	// exactly one arm must be pulled
-        (sum_{?a: arm} pull(?a)) == 1;
-    };
+	reward = (sum_{?a : arm} [if (outcome(?a)) then 1.0 else 0.0]);
+
+	action-preconditions {
+		(sum_{?a : arm} [pull(?a)]) == 1;
+	};
+
+	// the prior is a Beta distribution
+	state-invariants {
+		forall_{?a : arm} [(alpha(?a) > 0) ^ (beta(?a) > 0)];
+	};
 }

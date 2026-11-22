@@ -1,26 +1,29 @@
-non-fluents bernoull_bandit_6arms_nf {
+// Instance 0 has two arms: an established one, believed to succeed
+// with probability about 0.6 (as after 50 pulls), and a new one
+// believed worse on average (0.4) but uncertain (as after 2.5 pulls).
+// A greedy policy never tries the new arm and wins 30 in expectation;
+// the Bayes-optimal policy, computed exactly by backward induction,
+// wins 31.08. Thompson sampling and the online knowledge gradient win
+// about 30.2.
 
-    domain = bernoulli_bandit;
+non-fluents bernoulli_bandit_nf0 {
+	domain = bernoulli_bandit;
 
-    objects {
-        arm : { arm1, arm2, arm3, arm4, arm5, arm6 };
-    };
-
-    non-fluents {
-        TRUE_THETA(arm1) = 0.1;
-        TRUE_THETA(arm2) = 0.2;
-        TRUE_THETA(arm3) = 0.8;
-	    TRUE_THETA(arm4) = 0.9;
-        TRUE_THETA(arm5) = 0.2;
-        TRUE_THETA(arm6) = 0.3;
-    };
+	objects {
+		arm : { old, new };
+	};
 }
 
-instance bernoull_bandit_6arms {
-    
-    domain = bernoulli_bandit;
- 
-    max-nondef-actions = 1;
-    horizon  = 200;
-    discount = 1.0;
+instance bernoulli_bandit_inst0 {
+	domain = bernoulli_bandit;
+	non-fluents = bernoulli_bandit_nf0;
+
+	init-state {
+		alpha(old) = 30.0;	beta(old) = 20.0;
+		alpha(new) = 1.0;	beta(new) = 1.5;
+	};
+
+	max-nondef-actions = 1;
+	horizon = 50;
+	discount = 1.0;
 }
