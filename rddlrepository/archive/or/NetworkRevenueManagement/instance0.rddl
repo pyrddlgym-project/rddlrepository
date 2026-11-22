@@ -1,0 +1,47 @@
+// The single product example of Ferreira, Simchi-Levi and Wang (section
+// 3.2.1): one product, which is its own resource, at the prices $29.90,
+// $34.90, $39.90 and $44.90, bought in a period with the probabilities d =
+// 0.8, 0.6, 0.3 and 0.1, and an inventory of 0.25 units a period (I =
+// 0.25T). With that demand known, the best plan offers $39.90 to 3/4 of
+// the customers and $44.90 to 1/4.
+//
+// The prior of each mean demand is centred on the paper's true demand d,
+// worth 4 periods of observation (Beta(4d, 4(1 - d))), so each episode
+// draws its own demand around the paper's. Over the season of 100 periods,
+// TS-fixed earns about 914 and TS-update about 975 (the paper's
+// algorithms, with this prior); the same policy as TS-update with the true
+// demand known earns about 992, and the linear program of the true demand
+// bounds any policy by about 997 on average (means of 200 and 4000
+// simulated episodes).
+
+non-fluents network_revenue_management_nf0 {
+	domain = network_revenue_management;
+
+	objects {
+		product : { item };
+		resource : { stock };
+		price : { usd29_90, usd34_90, usd39_90, usd44_90 };
+	};
+
+	non-fluents {
+		UNIT-DEMAND = true;
+		USES(item, stock) = 1;
+		PRICE(item, usd29_90) = 29.9; PRIOR-A(item, usd29_90) = 3.2; PRIOR-B(item, usd29_90) = 0.8;
+		PRICE(item, usd34_90) = 34.9; PRIOR-A(item, usd34_90) = 2.4; PRIOR-B(item, usd34_90) = 1.6;
+		PRICE(item, usd39_90) = 39.9; PRIOR-A(item, usd39_90) = 1.2; PRIOR-B(item, usd39_90) = 2.8;
+		PRICE(item, usd44_90) = 44.9; PRIOR-A(item, usd44_90) = 0.4; PRIOR-B(item, usd44_90) = 3.6;
+	};
+}
+
+instance network_revenue_management_inst0 {
+	domain = network_revenue_management;
+	non-fluents = network_revenue_management_nf0;
+
+	init-state {
+		inventory(stock) = 25;
+	};
+
+	max-nondef-actions = 1;
+	horizon = 100;
+	discount = 1.0;
+}

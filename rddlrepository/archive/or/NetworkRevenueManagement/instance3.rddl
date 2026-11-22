@@ -1,0 +1,62 @@
+// The multi-product example of Besbes and Zeevi, as in Ferreira,
+// Simchi-Levi and Wang (section 3.2.2), with exponential demand: two
+// products from three resources, a unit of product 1 using 1 of resource 1
+// and 3 of resource 2, and a unit of product 2 using 1 of resource 1, 1 of
+// resource 2 and 5 of resource 3. The price vectors (p1, p2) are k1 = (1,
+// 1.5), k2 = (1, 2), k3 = (2, 3), k4 = (4, 4) and k5 = (4, 6.5); the
+// demand for the two products is Poisson with means 5 exp(-0.5 p1) and 9
+// exp(-p2) a period, and the inventory is (3, 5, 7) a period (I = (3, 5,
+// 7)T).
+//
+// The prior of each mean demand is centred on the paper's true demand d,
+// worth 4 periods of observation (Gamma(4, rate 4 / d)), so each episode
+// draws its own demand around the paper's. A true demand of zero has the
+// prior mean 0.1. Over the season of 100 periods, TS-fixed earns about 451
+// and TS-update about 461 (the paper's algorithms, with this prior); the
+// same policy as TS-update with the true demand known earns about 499, and
+// the linear program of the true demand bounds any policy by about 511 on
+// average (means of 200 and 4000 simulated episodes).
+
+non-fluents network_revenue_management_nf3 {
+	domain = network_revenue_management;
+
+	objects {
+		product : { p1, p2 };
+		resource : { r1, r2, r3 };
+		price : { k1, k2, k3, k4, k5 };
+	};
+
+	non-fluents {
+		UNIT-DEMAND = false;
+		USES(p1, r1) = 1;
+		USES(p1, r2) = 3;
+		USES(p2, r1) = 1;
+		USES(p2, r2) = 1;
+		USES(p2, r3) = 5;
+		PRICE(p1, k1) = 1.0; PRIOR-A(p1, k1) = 4.0; PRIOR-B(p1, k1) = 1.31898;
+		PRICE(p1, k2) = 1.0; PRIOR-A(p1, k2) = 4.0; PRIOR-B(p1, k2) = 1.31898;
+		PRICE(p1, k3) = 2.0; PRIOR-A(p1, k3) = 4.0; PRIOR-B(p1, k3) = 2.17463;
+		PRICE(p1, k4) = 4.0; PRIOR-A(p1, k4) = 4.0; PRIOR-B(p1, k4) = 5.91124;
+		PRICE(p1, k5) = 4.0; PRIOR-A(p1, k5) = 4.0; PRIOR-B(p1, k5) = 5.91124;
+		PRICE(p2, k1) = 1.5; PRIOR-A(p2, k1) = 4.0; PRIOR-B(p2, k1) = 1.99186;
+		PRICE(p2, k2) = 2.0; PRIOR-A(p2, k2) = 4.0; PRIOR-B(p2, k2) = 3.28402;
+		PRICE(p2, k3) = 3.0; PRIOR-A(p2, k3) = 4.0; PRIOR-B(p2, k3) = 8.92691;
+		PRICE(p2, k4) = 4.0; PRIOR-A(p2, k4) = 4.0; PRIOR-B(p2, k4) = 24.2658;
+		PRICE(p2, k5) = 6.5; PRIOR-A(p2, k5) = 4.0; PRIOR-B(p2, k5) = 40.0;
+	};
+}
+
+instance network_revenue_management_inst3 {
+	domain = network_revenue_management;
+	non-fluents = network_revenue_management_nf3;
+
+	init-state {
+		inventory(r1) = 300;
+		inventory(r2) = 500;
+		inventory(r3) = 700;
+	};
+
+	max-nondef-actions = 1;
+	horizon = 100;
+	discount = 1.0;
+}

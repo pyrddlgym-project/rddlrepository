@@ -66,6 +66,7 @@ SHORT = {
     'Reservoir': 'Manage water in linked reservoirs',
     'TrafficBLX': 'Time traffic signals to cut travel time',
     # biology
+    'AdaptiveFishery': 'Harvest salmon while learning how each stock renews itself',
     'Diabetes': 'Dose insulin to keep blood glucose in range',
     'Epidemic': 'Contain an epidemic with interventions',
     'Fishery': 'Harvest competing fish stocks',
@@ -90,6 +91,7 @@ SHORT = {
     'CarRental': 'Move rental cars between locations',
     'JobShop': 'Dispatch operations to machines for the shortest makespan',
     'Knapsack': 'Fill knapsacks with valuable items',
+    'NetworkRevenueManagement': 'Price products from shared stock while learning demand',
     'NewsvendorLearning': 'Stock perishable products while learning their demand',
     'Option': 'Exercise an American option',
     'RetailerInventory': 'Stock a warehouse and its stores against random demand',

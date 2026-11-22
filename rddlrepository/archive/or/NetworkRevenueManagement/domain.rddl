@@ -1,0 +1,153 @@
+////////////////////////////////////////////////////////////////////
+// Price-based network revenue management with demand learning, the
+// model of Ferreira, Simchi-Levi and Wang (2018, section 2.1), as a
+// Bayes-adaptive MDP.
+//
+// A retailer sells products over a selling season of T periods. Each
+// unit of a product uses fixed amounts of shared resources (seats on
+// the legs of a flight, or the parts and stock of an online store),
+// USES(product, resource), of which there is a fixed inventory with no
+// replenishment. Each period the retailer offers one of a finite set
+// of price vectors, each giving a price to every product, or offers
+// nothing (the paper's shut-off price, under which nobody buys). The
+// demand for each product follows the price vector offered: Bernoulli
+// (at most one unit a period) if UNIT-DEMAND, Poisson otherwise. The
+// reward is the revenue of the units sold.
+//
+// The mean demand of each product under each price vector is unknown.
+// As in the paper's examples 1 and 2, the retailer's belief about it is
+// independent across products and price vectors, conjugate, and
+// summarized by the number of periods the price vector was offered, N,
+// and the total demand for the product in those periods, W:
+//
+//   unit demand: the mean is Beta(PRIOR-A + W, PRIOR-B + N - W),
+//   Poisson demand: the mean is Gamma(PRIOR-A + W, rate PRIOR-B + N).
+//
+// These counts are the state, so the state is the posterior (with the
+// prior as non-fluents; the paper's algorithms use PRIOR-A = PRIOR-B =
+// 1). There is no true mean demand in the model, which a planner could
+// read. The demand is instead drawn from the predictive distribution of
+// the current belief (a Bernoulli with the posterior mean, or a Poisson
+// whose rate is drawn from the posterior). The demand then follows
+// exactly the distribution it would have if the mean demands were drawn
+// from the prior at the start of an episode and then held fixed, so
+// each episode has its own true demand, which nobody sees. As in the
+// paper, the retailer observes the demand, including what could not be
+// sold.
+//
+// When the inventory cannot meet the period's demand, the paper only
+// requires that sales do not exceed demand or the inventory. Here each
+// resource is shared among the products that use it in proportion to
+// their demand for it: a product sells the whole part of its demand
+// that its scarcest resource allows, rounded down.
+//
+// Even with known demand, a good policy usually mixes price vectors
+// over the season, since the inventory may not last at the price that
+// earns the most per period (the linear program of Gallego and van
+// Ryzin, whose value bounds the revenue). With unknown demand, it must
+// also learn the demand at the prices it mixes.
+//
+// References:
+//
+//		Kris Johnson Ferreira, David Simchi-Levi and He Wang. Online network
+//		revenue management using Thompson sampling. Operations Research
+//		66(6), 1586-1602, 2018.
+//
+//		Omar Besbes and Assaf Zeevi. Blind network revenue management.
+//		Operations Research 60(6), 1537-1550, 2012.
+//
+//		Guillermo Gallego and Garrett van Ryzin. A multiproduct dynamic
+//		pricing problem and its applications to network yield management.
+//		Operations Research 45(1), 24-41, 1997.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain network_revenue_management {
+
+	requirements = {
+		reward-deterministic,
+		integer-valued,
+		constrained-state
+	};
+
+	types {
+		product : object;
+		resource : object;
+		price : object;					// a price vector: a price for every product
+	};
+
+	pvariables {
+
+		USES(product, resource) 		: { non-fluent, int, default = 0 };		// units of the resource in a unit of the product
+		PRICE(product, price) 			: { non-fluent, real, default = 0.0 };	// price of the product under the price vector
+		UNIT-DEMAND 					: { non-fluent, bool, default = false };	// Bernoulli demand, else Poisson
+		PRIOR-A(product, price) 		: { non-fluent, real, default = 1.0 };	// prior of the mean demand: Beta(A, B)
+		PRIOR-B(product, price) 		: { non-fluent, real, default = 1.0 };	// or Gamma(A, rate B)
+
+		// the demand for each product under each price vector (zero unless offered), and in all
+		rate(product, price) 			: { interm-fluent, real };
+		wants(product, price) 			: { interm-fluent, int };
+		demand(product) 				: { interm-fluent, int };
+
+		// the sales: the demand for each resource, and the part of a product's demand it can meet
+		need(resource) 					: { interm-fluent, real };
+		fill(product) 					: { interm-fluent, real };
+		sold(product) 					: { interm-fluent, int };
+
+		// states: the inventory, and the belief as the periods offered and the demand seen
+		inventory(resource) 			: { state-fluent, int, default = 0 };
+		offered(price) 					: { state-fluent, int, default = 0 };
+		demanded(product, price) 		: { state-fluent, int, default = 0 };
+
+		// last period's price vector, demand and sales
+		last-offer(price) 				: { state-fluent, bool, default = false };
+		last-demand(product) 			: { state-fluent, int, default = 0 };
+		last-sold(product) 				: { state-fluent, int, default = 0 };
+
+		// actions
+		offer(price) 					: { action-fluent, bool, default = false };	// none offered: the shut-off price
+	};
+
+	cpfs {
+
+		// a Poisson rate drawn from the posterior (guarded, as every entry is drawn)
+		rate(?i, ?k) = Gamma(PRIOR-A(?i, ?k) + demanded(?i, ?k),
+							 1.0 / (PRIOR-B(?i, ?k) + offered(?k)));
+
+		wants(?i, ?k) = if (~offer(?k)) then 0
+			else if (UNIT-DEMAND) then
+				(if (Bernoulli(min[1.0, (PRIOR-A(?i, ?k) + demanded(?i, ?k))
+					/ (PRIOR-A(?i, ?k) + PRIOR-B(?i, ?k) + offered(?k))])) then 1 else 0)
+			else Poisson(rate(?i, ?k));
+
+		demand(?i) = (sum_{?k : price} [wants(?i, ?k)]);
+
+		need(?j) = (sum_{?i : product} [USES(?i, ?j) * demand(?i)]);
+		fill(?i) = min[1.0, (min_{?j : resource} [
+			if ((USES(?i, ?j) > 0) ^ (need(?j) > 0)) then inventory(?j) / max[need(?j), 1.0] else 1.0])];
+		sold(?i) = floor[demand(?i) * fill(?i)];
+
+		inventory'(?j) = inventory(?j) - (sum_{?i : product} [USES(?i, ?j) * sold(?i)]);
+		offered'(?k) = offered(?k) + (if (offer(?k)) then 1 else 0);
+		demanded'(?i, ?k) = demanded(?i, ?k) + wants(?i, ?k);
+
+		last-offer'(?k) = offer(?k);
+		last-demand'(?i) = demand(?i);
+		last-sold'(?i) = sold(?i);
+	};
+
+	// the revenue of the units sold, at the prices offered
+	reward = (sum_{?i : product, ?k : price} [if (offer(?k)) then PRICE(?i, ?k) * sold(?i) else 0.0]);
+
+	action-preconditions {
+		(sum_{?k : price} [offer(?k)]) <= 1;
+	};
+
+	state-invariants {
+		forall_{?j : resource} [inventory(?j) >= 0];
+		forall_{?i : product, ?k : price} [(PRIOR-A(?i, ?k) > 0) ^ (PRIOR-B(?i, ?k) > 0)];
+		forall_{?i : product, ?j : resource} [USES(?i, ?j) >= 0];
+	};
+}
