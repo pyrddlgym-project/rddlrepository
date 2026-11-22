@@ -1,0 +1,71 @@
+// Instance 3 has 10 products (not from the paper) with priors and
+// costs drawn from the grid of their numerical study: rates of 10 to
+// 50 on average, the uncertain half of their prior scales (4, 8 or
+// 16), a price of 2 and costs of 0.2 to 1.8, sharing a shelf of 125
+// units, half their total mean demand, over 50 periods. In simulation,
+// stocking the best quantities for the prior every period (filling the
+// shelf by marginal profit) earns about 5910, the myopic timing policy
+// about 6730, and knowing the rates about 6780. In almost every
+// episode the myopic policy never stocks p3 and p10, the costliest, so
+// it never learns their demand.
+
+non-fluents newsvendor_learning_nf3 {
+	domain = newsvendor_learning;
+
+	objects {
+		product : { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 };
+	};
+
+	non-fluents {
+		SHELF-SPACE = 125;
+		PRIOR-SHAPE(p1) = 12.5;
+		PRIOR-RATE(p1) = 0.25;
+		PRICE(p1) = 2.0;
+		COST(p1) = 0.9;
+		PRIOR-SHAPE(p2) = 1.25;
+		PRIOR-RATE(p2) = 0.125;
+		PRICE(p2) = 2.0;
+		COST(p2) = 0.8;
+		PRIOR-SHAPE(p3) = 1.25;
+		PRIOR-RATE(p3) = 0.125;
+		PRICE(p3) = 2.0;
+		COST(p3) = 1.7;
+		PRIOR-SHAPE(p4) = 2.5;
+		PRIOR-RATE(p4) = 0.125;
+		PRICE(p4) = 2.0;
+		COST(p4) = 1.0;
+		PRIOR-SHAPE(p5) = 2.5;
+		PRIOR-RATE(p5) = 0.25;
+		PRICE(p5) = 2.0;
+		COST(p5) = 0.9;
+		PRIOR-SHAPE(p6) = 12.5;
+		PRIOR-RATE(p6) = 0.25;
+		PRICE(p6) = 2.0;
+		COST(p6) = 0.9;
+		PRIOR-SHAPE(p7) = 3.125;
+		PRIOR-RATE(p7) = 0.0625;
+		PRICE(p7) = 2.0;
+		COST(p7) = 1.3;
+		PRIOR-SHAPE(p8) = 1.875;
+		PRIOR-RATE(p8) = 0.0625;
+		PRICE(p8) = 2.0;
+		COST(p8) = 1.1;
+		PRIOR-SHAPE(p9) = 2.5;
+		PRIOR-RATE(p9) = 0.25;
+		PRICE(p9) = 2.0;
+		COST(p9) = 0.4;
+		PRIOR-SHAPE(p10) = 2.5;
+		PRIOR-RATE(p10) = 0.25;
+		PRICE(p10) = 2.0;
+		COST(p10) = 1.4;
+	};
+}
+
+instance newsvendor_learning_inst3 {
+	domain = newsvendor_learning;
+	non-fluents = newsvendor_learning_nf3;
+
+	max-nondef-actions = pos-inf;
+	horizon = 50;
+	discount = 1.0;
+}

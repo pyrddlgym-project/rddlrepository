@@ -1,0 +1,32 @@
+// Instance 1 has one product with the prior of their Figures 3, 4 and
+// 6: a rate of 10 customers a period on average but very uncertain,
+// Gamma(0.625, 0.0625), a price of 2 and a cost of 1, over the 100
+// periods of their simulation (their Figure 6a). In simulation,
+// stocking the best quantity for the prior every period earns about
+// 165, the myopic timing policy about 739, and knowing the rate about
+// 754.
+
+non-fluents newsvendor_learning_nf1 {
+	domain = newsvendor_learning;
+
+	objects {
+		product : { bread };
+	};
+
+	non-fluents {
+		SHELF-SPACE = 1000;
+		PRIOR-SHAPE(bread) = 0.625;
+		PRIOR-RATE(bread) = 0.0625;
+		PRICE(bread) = 2.0;
+		COST(bread) = 1.0;
+	};
+}
+
+instance newsvendor_learning_inst1 {
+	domain = newsvendor_learning;
+	non-fluents = newsvendor_learning_nf1;
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 1.0;
+}

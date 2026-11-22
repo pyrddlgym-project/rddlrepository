@@ -1,0 +1,33 @@
+// Instance 0 has one product with the prior of Figure 5(a) of Jain,
+// Rudi and Wang: a rate of 10 customers a period on average, Gamma(10,
+// 1), a price of 2 and a cost of 1, over the 4 periods of their
+// dynamic programs. Stocking the best quantity for the prior (9) every
+// period earns 25.90 in expectation; the myopic timing policy (the
+// best quantity for the current belief) earns 27.64, and the optimal
+// policy, which stocks 10 at first, 27.67 (both by their dynamic
+// program (3)); knowing the rate would earn about 30.1.
+
+non-fluents newsvendor_learning_nf0 {
+	domain = newsvendor_learning;
+
+	objects {
+		product : { bread };
+	};
+
+	non-fluents {
+		SHELF-SPACE = 1000;
+		PRIOR-SHAPE(bread) = 10.0;
+		PRIOR-RATE(bread) = 1.0;
+		PRICE(bread) = 2.0;
+		COST(bread) = 1.0;
+	};
+}
+
+instance newsvendor_learning_inst0 {
+	domain = newsvendor_learning;
+	non-fluents = newsvendor_learning_nf0;
+
+	max-nondef-actions = pos-inf;
+	horizon = 4;
+	discount = 1.0;
+}

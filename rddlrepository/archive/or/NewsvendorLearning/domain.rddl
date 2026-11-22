@@ -1,0 +1,126 @@
+////////////////////////////////////////////////////////////////////
+// The newsvendor with demand learning of Jain, Rudi and Wang: a
+// retailer stocks perishable products each period without knowing
+// their demand, learns it from the sales, and loses the customers who
+// come after a product sells out. A product's customers arrive as a
+// Poisson process at a rate nobody knows; the belief about the rate is
+// a gamma distribution, and the retailer learns from the number sold
+// and from the time each product sold out, as its till records them.
+//
+// Each period:
+//   1. the retailer stocks each product, at COST a unit, with at most
+//      SHELF-SPACE units of all products together;
+//   2. customers of each product arrive over the period and buy at
+//      PRICE until it sells out; the rest are lost, unseen;
+//   3. what is left over is worth nothing.
+// The belief about a product's rate is Gamma(PRIOR-SHAPE + sales,
+// PRIOR-RATE + selling-time) (shape and rate), where sales is the
+// number sold so far and selling-time the total time on sale, counting
+// a period as 1 and a period that sold out at time t as t. These two
+// numbers are all the history that matters (their Proposition 2): a
+// period that does not sell out updates the gamma like an exact count
+// of the demand, and one that sells out at time t like y sales in time
+// t, so the belief stays a gamma even though the demand was censored.
+//
+// The true rates are not in the model, which a planner could read. The
+// rate of each period is instead drawn from the current belief, the
+// demand from it, and the time of the sell-out as the y-th of the
+// period's arrivals, which are uniform over the period given their
+// number, so Beta(y, demand - y + 1). Sales and sell-out times then
+// follow exactly the distribution they would have if each product's
+// rate were drawn from the prior once and held fixed, so each episode
+// has its own true rates, which nobody sees. Stocking more than the
+// single-period optimum costs now, but reveals more of the demand: the
+// optimal stock is never below the myopic one (their Proposition 1).
+//
+// The reward is the profit of the period, PRICE times the units sold
+// less COST times the units stocked. The state also keeps the last
+// period's stock, sales and time on sale, which do not change what
+// happens next.
+//
+// References:
+//
+//		Aditya Jain, Nils Rudi and Tong Wang. Demand estimation and
+//		ordering under censoring: stock-out timing is (almost) all you
+//		need. Operations Research 63(1), 134-150, 2015.
+//
+//		Martin A. Lariviere and Evan L. Porteus. Stalking information:
+//		Bayesian inventory management with unobserved lost sales.
+//		Management Science 45(3), 346-363, 1999.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain newsvendor_learning {
+
+	requirements = {
+		reward-deterministic,
+		integer-valued,
+		constrained-state
+	};
+
+	types {
+		product : object;
+	};
+
+	pvariables {
+
+		// the products
+		PRICE(product) 				: { non-fluent, real, default = 2.0 };		// revenue of a unit sold
+		COST(product) 				: { non-fluent, real, default = 1.0 };		// cost of a unit stocked
+		PRIOR-SHAPE(product) 		: { non-fluent, real, default = 0.625 };	// of the gamma prior on the rate
+		PRIOR-RATE(product) 		: { non-fluent, real, default = 0.0625 };	// of the gamma prior on the rate
+		SHELF-SPACE 				: { non-fluent, int, default = 1000 };		// most units stocked in a period
+
+		// the period
+		rate(product) 				: { interm-fluent, real };		// customers a period, drawn from the belief
+		demand(product) 			: { interm-fluent, int };
+		sold(product) 				: { interm-fluent, int };
+		on-sale(product) 			: { interm-fluent, real };		// part of the period before it sold out
+
+		// what the retailer knows
+		sales(product) 				: { state-fluent, int, default = 0 };		// units sold so far
+		selling-time(product) 		: { state-fluent, real, default = 0.0 };	// periods on sale so far
+		last-stock(product) 		: { state-fluent, int, default = 0 };		// the last period's
+		last-sold(product) 			: { state-fluent, int, default = 0 };		// the last period's
+		last-on-sale(product) 		: { state-fluent, real, default = 0.0 };	// the last period's
+
+		stock(product) 				: { action-fluent, int, default = 0 };
+	};
+
+	cpfs {
+
+		// the period's demand, drawn from the belief about the rate
+		rate(?p) = Gamma(PRIOR-SHAPE(?p) + sales(?p), 1.0 / (PRIOR-RATE(?p) + selling-time(?p)));
+		demand(?p) = Poisson(rate(?p));
+		sold(?p) = min[demand(?p), stock(?p)];
+
+		// a product sells out at the arrival of its stock(?p)-th customer, the stock(?p)-th of
+		// demand(?p) arrivals uniform over the period (the parameters are kept positive because
+		// both sides of the if are evaluated)
+		on-sale(?p) = if (demand(?p) < stock(?p)) then 1.0
+			else if (stock(?p) == 0) then 0.0
+			else Beta(max[stock(?p), 1], max[demand(?p) - stock(?p) + 1, 1]);
+
+		sales'(?p) = sales(?p) + sold(?p);
+		selling-time'(?p) = selling-time(?p) + on-sale(?p);
+		last-stock'(?p) = stock(?p);
+		last-sold'(?p) = sold(?p);
+		last-on-sale'(?p) = on-sale(?p);
+	};
+
+	reward = (sum_{?p : product} [PRICE(?p) * sold(?p) - COST(?p) * stock(?p)]);
+
+	// the bound on each product follows from the shelf, and gives each stock a finite range
+	action-preconditions {
+		forall_{?p : product} [stock(?p) >= 0];
+		forall_{?p : product} [stock(?p) <= SHELF-SPACE];
+		(sum_{?p : product} [stock(?p)]) <= SHELF-SPACE;
+	};
+
+	state-invariants {
+		forall_{?p : product} [(PRIOR-SHAPE(?p) > 0) ^ (PRIOR-RATE(?p) > 0)];
+		forall_{?p : product} [(sales(?p) >= 0) ^ (selling-time(?p) >= 0)];
+	};
+}

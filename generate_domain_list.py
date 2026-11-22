@@ -90,6 +90,7 @@ SHORT = {
     'CarRental': 'Move rental cars between locations',
     'JobShop': 'Dispatch operations to machines for the shortest makespan',
     'Knapsack': 'Fill knapsacks with valuable items',
+    'NewsvendorLearning': 'Stock perishable products while learning their demand',
     'Option': 'Exercise an American option',
     'RetailerInventory': 'Stock a warehouse and its stores against random demand',
     'StructuralMaintenance': 'Inspect and repair a cracking structure',

@@ -1,0 +1,30 @@
+// Instance 2 has the product of instance 1 at a cost of 1.5 (their
+// Figure 6b), so that a unit left over costs three times what a lost
+// sale does. In simulation, stocking the best quantity for the prior
+// every period earns about 16, the myopic timing policy about 313, and
+// knowing the rate about 325.
+
+non-fluents newsvendor_learning_nf2 {
+	domain = newsvendor_learning;
+
+	objects {
+		product : { bread };
+	};
+
+	non-fluents {
+		SHELF-SPACE = 1000;
+		PRIOR-SHAPE(bread) = 0.625;
+		PRIOR-RATE(bread) = 0.0625;
+		PRICE(bread) = 2.0;
+		COST(bread) = 1.5;
+	};
+}
+
+instance newsvendor_learning_inst2 {
+	domain = newsvendor_learning;
+	non-fluents = newsvendor_learning_nf2;
+
+	max-nondef-actions = pos-inf;
+	horizon = 100;
+	discount = 1.0;
+}
