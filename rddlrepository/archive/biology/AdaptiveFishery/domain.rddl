@@ -1,0 +1,158 @@
+////////////////////////////////////////////////////////////////////
+// Adaptive harvesting of salmon stocks whose stock-recruitment curves
+// are uncertain, the dual-control problem of Walters and Hilborn
+// (1976), as a Bayes-adaptive MDP.
+//
+// Each generation, a stock returns R adult fish (the recruits, which
+// the manager counts exactly). The manager catches a fraction of them,
+// and the rest, S, spawn. Their offspring return as the next
+// generation's recruits, by the Ricker model (the paper's equation 1):
+//
+//   R' = S exp(alpha - beta S + v),   v ~ Normal(0, NOISE-VAR),
+//
+// which is a linear regression of y = ln(R' / S) on x = (1, -S). The
+// parameters alpha (the production) and beta (the density dependence)
+// are unknown. The belief about them is normal, with means alpha-hat
+// and beta-hat and covariance matrix P (var-alpha, cov-alpha-beta,
+// var-beta), and these are the state together with R, as in the paper:
+// the initial state is the prior, and each generation updates it by
+// recursive least squares (equations 8a and 8b),
+//
+//   k = P x / (NOISE-VAR + x' P x),
+//   (alpha-hat, beta-hat)' = (alpha-hat, beta-hat) + k (y - alpha-hat + beta-hat S),
+//   P' = P - (NOISE-VAR + x' P x) k k',
+//
+// so the state is the posterior. There is no true alpha or beta in the
+// model, which a planner could read. The log return y is instead drawn
+// from the predictive distribution of the current belief, a normal
+// with mean alpha-hat - beta-hat S and variance NOISE-VAR + x' P x
+// (equation 11). The recruits then follow exactly the distribution
+// they would have if alpha and beta were drawn from the prior at the
+// start of an episode and then held fixed, so each episode has its own
+// true curve, which nobody sees. A stock is fished hardest at a low
+// spawning stock where its curve is steep, but only a range of
+// spawning stocks reveals the curve, so a good policy must trade catch
+// now against experiments that teach it the best escapement. When
+// alpha and beta are known, a fixed escapement each generation is
+// optimal (the paper's equation 3).
+//
+// The spawning grounds of a stock hold at most SPAWNING-CAPACITY
+// spawners; fish that are not caught beyond that return but do not
+// spawn. The regression uses the fish that spawned, so the update stays
+// exact, and the cap keeps the recruits finite under any belief.
+//
+// The reward is the catch, in the units of the stock. A stock with no
+// spawners has no recruits, and its belief stops changing.
+//
+// Special cases of the paper fit the same model: its case 1 (a new
+// fishery at the natural equilibrium, in units of that equilibrium,
+// with only alpha uncertain) is R' = S exp(alpha (1 - S) + v), which is
+// the prior with alpha-hat = beta-hat and var-alpha = var-beta =
+// cov-alpha-beta, and its case 2 (an old fishery that knows alpha but
+// not beta) is the prior with var-alpha = cov-alpha-beta = 0. The
+// update keeps both forms.
+//
+// A normal prior gives some probability to beta <= 0 (or, in case 1,
+// to alpha <= 0), under which more spawners always give more recruits
+// per spawner; the spawning capacity then bounds the stock.
+//
+// References:
+//
+//		Carl J. Walters and Ray Hilborn. Adaptive control of fishing
+//		systems. Journal of the Fisheries Research Board of Canada 33(1),
+//		145-159, 1976. (Also IIASA Research Report RR-75-39, 1975.)
+//
+//		William E. Ricker. Stock and recruitment. Journal of the Fisheries
+//		Research Board of Canada 11(5), 559-623, 1954.
+//
+//		Carl J. Walters. Adaptive Management of Renewable Resources.
+//		Macmillan, 1986.
+//
+// Author(s):
+//		Mike Gimelfarb (mgimelfarb@yahoo.ca)
+//
+////////////////////////////////////////////////////////////////////
+domain adaptive_fishery {
+
+	requirements = {
+		reward-deterministic
+	};
+
+	types {
+		stock : object;
+	};
+
+	pvariables {
+
+		NOISE-VAR(stock) 			: { non-fluent, real, default = 0.5 };	// variance of the environmental noise v
+		SPAWNING-CAPACITY(stock) 	: { non-fluent, real, default = 10.0 };	// the most spawners the grounds hold
+
+		// this generation: the catch, the spawners, and the next log return ln(R' / S)
+		caught(stock) 			: { interm-fluent, real };
+		spawners(stock) 		: { interm-fluent, real };	// the fish that spawn
+		predicted(stock) 		: { interm-fluent, real };	// mean of the log return under the belief
+		spread(stock) 			: { interm-fluent, real };	// its variance, NOISE-VAR + x' P x
+		log-return(stock) 		: { interm-fluent, real };
+		gain-alpha(stock) 		: { interm-fluent, real };	// the gain k of the update
+		gain-beta(stock) 		: { interm-fluent, real };
+
+		// the recruits, and the belief about the stock-recruitment curve
+		recruits(stock) 		: { state-fluent, real, default = 1.0 };
+		alpha-hat(stock) 		: { state-fluent, real, default = 1.0 };
+		beta-hat(stock) 		: { state-fluent, real, default = 1.0 };
+		var-alpha(stock) 		: { state-fluent, real, default = 0.1 };
+		var-beta(stock) 		: { state-fluent, real, default = 0.1 };
+		cov-alpha-beta(stock) 	: { state-fluent, real, default = 0.0 };
+
+		// last generation's catch and spawners
+		last-caught(stock) 		: { state-fluent, real, default = 0.0 };
+		last-spawners(stock) 	: { state-fluent, real, default = 0.0 };
+
+		// actions
+		harvest(stock) 			: { action-fluent, real, default = 0.0 };	// fraction of the recruits caught
+	};
+
+	cpfs {
+
+		caught(?s) = harvest(?s) * recruits(?s);
+		spawners(?s) = min[max[recruits(?s) - caught(?s), 0], SPAWNING-CAPACITY(?s)];
+
+		predicted(?s) = alpha-hat(?s) - beta-hat(?s) * spawners(?s);
+		spread(?s) = NOISE-VAR(?s) + var-alpha(?s)
+			- 2 * spawners(?s) * cov-alpha-beta(?s)
+			+ spawners(?s) * spawners(?s) * var-beta(?s);
+		log-return(?s) = Normal(predicted(?s), spread(?s));
+
+		gain-alpha(?s) = if (spawners(?s) > 0)
+			then (var-alpha(?s) - spawners(?s) * cov-alpha-beta(?s)) / spread(?s)
+			else 0.0;
+		gain-beta(?s) = if (spawners(?s) > 0)
+			then (cov-alpha-beta(?s) - spawners(?s) * var-beta(?s)) / spread(?s)
+			else 0.0;
+
+		recruits'(?s) = spawners(?s) * exp[log-return(?s)];
+		alpha-hat'(?s) = alpha-hat(?s) + gain-alpha(?s) * (log-return(?s) - predicted(?s));
+		beta-hat'(?s) = beta-hat(?s) + gain-beta(?s) * (log-return(?s) - predicted(?s));
+		var-alpha'(?s) = var-alpha(?s) - spread(?s) * gain-alpha(?s) * gain-alpha(?s);
+		var-beta'(?s) = var-beta(?s) - spread(?s) * gain-beta(?s) * gain-beta(?s);
+		cov-alpha-beta'(?s) = cov-alpha-beta(?s) - spread(?s) * gain-alpha(?s) * gain-beta(?s);
+
+		last-caught'(?s) = caught(?s);
+		last-spawners'(?s) = spawners(?s);
+	};
+
+	// the catch
+	reward = (sum_{?s : stock} [caught(?s)]);
+
+	action-preconditions {
+		forall_{?s : stock} [harvest(?s) >= 0];
+		forall_{?s : stock} [harvest(?s) <= 1];
+	};
+
+	state-invariants {
+		forall_{?s : stock} [NOISE-VAR(?s) > 0];
+		forall_{?s : stock} [SPAWNING-CAPACITY(?s) > 0];
+		forall_{?s : stock} [recruits(?s) >= 0];
+		forall_{?s : stock} [(var-alpha(?s) >= 0) ^ (var-beta(?s) >= 0)];
+	};
+}

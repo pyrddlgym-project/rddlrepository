@@ -1,0 +1,45 @@
+// Case 1 of Walters and Hilborn (their Figure 3): a new fishery on a stock
+// at its natural equilibrium, in units of that equilibrium, where only the
+// production alpha is uncertain, R' = S exp(alpha (1 - S) + v). The prior
+// on alpha is Normal(1.0, 0.5) (the middle panel), the environmental
+// variance 0.5, and the spawning grounds hold twice the equilibrium (the
+// stocks of their dynamic program reach 2). The prior gives alpha <= 0 a
+// probability of 0.08.
+//
+// Over 50 generations with the discount of 4% per generation, catching
+// half of every run earns about 7.72, the usual policy (the best fixed
+// escapement for the current estimates, and all fish in the last
+// generation) about 13.5, and the best fixed escapement for the true
+// curve, which no policy can know, about 14.5 (means of 1000 simulated
+// episodes).
+
+non-fluents adaptive_fishery_nf0 {
+	domain = adaptive_fishery;
+
+	objects {
+		stock : { sockeye };
+	};
+
+	non-fluents {
+		NOISE-VAR(sockeye) = 0.5;
+		SPAWNING-CAPACITY(sockeye) = 2.0;
+	};
+}
+
+instance adaptive_fishery_inst0 {
+	domain = adaptive_fishery;
+	non-fluents = adaptive_fishery_nf0;
+
+	init-state {
+		recruits(sockeye) = 1.0;
+		alpha-hat(sockeye) = 1.0;
+		beta-hat(sockeye) = 1.0;
+		var-alpha(sockeye) = 0.5;
+		var-beta(sockeye) = 0.5;
+		cov-alpha-beta(sockeye) = 0.5;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 50;
+	discount = 0.960789;
+}

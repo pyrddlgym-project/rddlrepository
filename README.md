@@ -174,7 +174,7 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**139 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (15) &middot; [biology](#biology) (5) &middot; [or](#or) (13) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**140 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (15) &middot; [biology](#biology) (6) &middot; [or](#or) (13) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
 
 ### standalone
 
@@ -227,6 +227,7 @@ Biology, medicine and ecology.
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Domain | Instances | Description |
 |:-:|:--|:--|:--|
+| <img src="docs/thumbnails/AdaptiveFishery_biology.png" width="64" alt=""> | <code>AdaptiveFishery_<wbr>biology</code> | 0&ndash;2 | Harvest salmon while learning how each stock renews itself |
 | <img src="docs/thumbnails/Diabetes_biology.png" width="64" alt=""> | <code>Diabetes_<wbr>biology</code> | 0&ndash;4 | Dose insulin to keep blood glucose in range |
 | <img src="docs/thumbnails/Epidemic_biology.png" width="64" alt=""> | <code>Epidemic_<wbr>biology</code> | 0 | Contain an epidemic with interventions |
 | <img src="docs/thumbnails/Fishery_biology.png" width="64" alt=""> | <code>Fishery_<wbr>biology</code> | 0 | Harvest competing fish stocks |

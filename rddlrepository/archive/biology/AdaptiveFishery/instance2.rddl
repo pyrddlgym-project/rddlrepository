@@ -1,0 +1,47 @@
+// Off-cycle sockeye salmon of the Fraser River (Walters and Hilborn,
+// Figure 5), in millions of fish. The prior is the least-squares fit of
+// the Ricker model to the 21 points of their figure, digitized: alpha =
+// 2.00 and beta = 0.61, with the covariance and the residual variance
+// 0.106 of that fit. This curve matches the one they draw (at most 4.4
+// million recruits, from 1.6 million spawners); the text gives alpha = 1.9
+// and beta = 0.44, which do not. The run starts at the 4.0 million
+// recruits the fit expects from the escapement of 1.0 million they report,
+// and the spawning grounds hold 6 million (their figure reaches 6).
+//
+// Over 50 generations with the discount of 4% per generation, catching
+// half of every run earns about 50, the usual policy (the best fixed
+// escapement for the current estimates, and all fish in the last
+// generation) about 73.4, and the best fixed escapement for the true
+// curve, which no policy can know, about 75.6 (means of 1000 simulated
+// episodes).
+
+non-fluents adaptive_fishery_nf2 {
+	domain = adaptive_fishery;
+
+	objects {
+		stock : { fraser };
+	};
+
+	non-fluents {
+		NOISE-VAR(fraser) = 0.1061;
+		SPAWNING-CAPACITY(fraser) = 6.0;
+	};
+}
+
+instance adaptive_fishery_inst2 {
+	domain = adaptive_fishery;
+	non-fluents = adaptive_fishery_nf2;
+
+	init-state {
+		recruits(fraser) = 4.0;
+		alpha-hat(fraser) = 2.005;
+		beta-hat(fraser) = 0.6118;
+		var-alpha(fraser) = 0.02309;
+		var-beta(fraser) = 0.02498;
+		cov-alpha-beta(fraser) = 0.02123;
+	};
+
+	max-nondef-actions = pos-inf;
+	horizon = 50;
+	discount = 0.960789;
+}
