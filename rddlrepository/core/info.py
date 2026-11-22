@@ -4,6 +4,7 @@ import importlib.util
 from typing import Any, Dict, List
 
 from . import manager
+from . import tags
 from .error import (
     RDDLRepoInstanceNotExistError,
     RDDLRepoInstanceDuplicationError,
@@ -24,6 +25,7 @@ class ProblemInfo:
         self.loc = problem_data['location']
         self.instances = problem_data['instances']
         self.viz = problem_data['viz']
+        self.tags = tags.normalize_tags(problem_data.get('tags', []))
 
     def get_domain(self) -> str:
         path = os.path.join(self.loc, DOMAIN_NAME)

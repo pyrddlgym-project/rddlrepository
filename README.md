@@ -82,6 +82,22 @@ print(manager.list_problems_by_context("standalone"))   # all standalone problem
 print(manager.list_problems_by_context("ippc2018"))     # all problems from IPPC 2018
 ```
 
+Every domain also has one tag of each facet from a fixed vocabulary, read from its RDDL when the manifest is built: what the agent observes, whether the dynamics are random, and the types of the state and the action fluents. List them with their meanings:
+
+```python
+print(manager.list_tags())
+```
+
+``list_problems`` returns the domains that have all the given tags, optionally within a context:
+
+```python
+print(manager.list_problems(tags=["stochastic", "continuous-state"]))
+print(manager.list_problems(context="or", tags="discrete-action"))
+print(manager.get_problem("NewsvendorLearning_or").tags)
+```
+
+From the command line: ``rddlrepo tags`` lists the vocabulary, and ``rddlrepo list --tags stochastic,partially-observable`` the matching domains.
+
 ### Working with instances
 
 Each domain is described by a ``ProblemInfo``:

@@ -32,3 +32,7 @@ class RDDLRepoManifestEmptyError(ValueError):
 
 class RDDLRepoContextNotExistError(ValueError):
     pass
+
+
+class RDDLRepoTagNotExistError(ValueError):
+    pass

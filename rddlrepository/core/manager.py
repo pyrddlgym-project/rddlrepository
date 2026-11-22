@@ -4,7 +4,8 @@ import difflib
 import os
 import importlib
 import csv
-from typing import Dict, List, Optional
+import warnings
+from typing import Dict, Iterable, List, Optional, Union
 
 from .error import (
     RDDLRepoDomainNotExistError,
@@ -14,6 +15,7 @@ from .error import (
     RDDLRepoContextDuplicationError
 )
 from .info import ProblemInfo
+from . import tags as repo_tags
 
 HEADER = ['name', 'description', 'location', 'instances', 'viz', 'context', 'tags']
 manifest = 'manifest.csv'
@@ -56,11 +58,31 @@ class RDDLRepoManager:
                 result += '\n' + prefix         
         return result
         
-    def list_problems(self) -> List[str]:
+    def list_problems(self, context: Optional[str]=None,
+                      tags: Optional[Union[str, Iterable[str]]]=None) -> List[str]:
+        '''The names of the problems, optionally only those of a context and having all of
+        the given tags (see list_tags for the vocabulary).'''
         if len(self.archiver_dict) == 0:
             raise RDDLRepoManifestEmptyError(
-                'Repository manifest is empty: please re-run with rebuild=True.')        
-        return list(self.archiver_dict.keys())
+                'Repository manifest is empty: please re-run with rebuild=True.')
+        if context is None:
+            names = list(self.archiver_dict.keys())
+        else:
+            names = self.archive_by_context.get(context, None)
+            if names is None:
+                valid_keys = list(self.archive_by_context.keys())
+                raise RDDLRepoContextNotExistError(
+                    f'Context <{context}> does not exist in the repository, '
+                    f'must be one of:\n' + self._print_columns(valid_keys) + '\n')
+        wanted = repo_tags.normalize_tags(tags)
+        repo_tags.check_known(wanted, 'the query')
+        return [name for name in names
+                if set(wanted) <= set(self.archiver_dict[name]['tags'])]
+
+    @staticmethod
+    def list_tags() -> Dict[str, str]:
+        '''The vocabulary of tags, with a description of each.'''
+        return repo_tags.list_tags()
 
     def list_contexts(self) -> List[str]:
         if not self.archive_by_context:
@@ -69,13 +91,7 @@ class RDDLRepoManager:
         return list(self.archive_by_context.keys())
 
     def list_problems_by_context(self, context: str) -> List[str]:
-        info = self.archive_by_context.get(context, None)
-        if info is None:
-            valid_keys = list(self.archive_by_context.keys())
-            raise RDDLRepoContextNotExistError(
-                f'Context <{context}> does not exist in the repository, '
-                f'must be one of:\n' + self._print_columns(valid_keys) + '\n')
-        return copy.deepcopy(info)
+        return self.list_problems(context=context)
     
     def get_problems_as_string(self) -> str:
         message = ''
@@ -151,6 +167,7 @@ class RDDLRepoManager:
                 context = mymodule.info['context']
                 if context == '':
                     context = 'standalone'
+                tags = self._tags(name, root)
                 self.archiver_dict[name] = {
                     'name': name,
                     'description': mymodule.info['description'],
@@ -159,7 +176,7 @@ class RDDLRepoManager:
                     'viz': mymodule.info['viz'],
                     # 'context': mymodule.info['context'],
                     'context': context,
-                    'tags': mymodule.info['tags']
+                    'tags': tags
                 }
 
                 # context = mymodule.info['context']
@@ -182,6 +199,17 @@ class RDDLRepoManager:
                 row = [values_copy[key] for key in HEADER]
                 writer.writerow(row)
 
+    @staticmethod
+    def _tags(name: str, root: str) -> List[str]:
+        '''The tags of a problem, derived from its RDDL.'''
+        try:
+            with open(os.path.join(root, DOMAIN_NAME), 
+                      encoding='utf-8', errors='replace') as file:
+                return repo_tags.scan_tags(file.read())
+        except ValueError as e:
+            warnings.warn(f'Could not read the tags of domain <{name}> from its RDDL ({e}).')
+            return []
+
     def _load_repo(self) -> Dict:
         root_path = os.path.dirname(os.path.abspath(__file__))
         path_to_manifest = os.path.join(root_path, manifest)
@@ -196,7 +224,8 @@ class RDDLRepoManager:
                     name, *entries = row
                     domain_info = dict(zip(HEADER[1:], entries))
                     domain_info['name'] = name
-                    domain_info['instances'] = domain_info['instances'].split(',')                    
+                    domain_info['instances'] = domain_info['instances'].split(',')
+                    domain_info['tags'] = repo_tags.normalize_tags(domain_info.get('tags', ''))                    
                     self.archiver_dict[name] = domain_info
                     if entries[4] == '':
                         context = 'standalone'

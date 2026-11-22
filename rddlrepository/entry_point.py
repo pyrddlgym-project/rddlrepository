@@ -16,7 +16,15 @@ def main():
     
     # listing
     parser_list = subparsers.add_parser("list",
-                                        help="list all problems by context",
+                                        help="list all problems by context, or those with given tags",
+                                        epilog=EPILOG)
+    parser_list.add_argument("--tags", default=None,
+                             help="comma-separated tags the problems must all have (see 'rddlrepo tags')")
+    parser_list.add_argument("--context", default=None, help="only the problems of this context")
+
+    # the vocabulary of tags
+    parser_tags = subparsers.add_parser("tags",
+                                        help="list the tags that describe problems",
                                         epilog=EPILOG)
 
     # dispatch
@@ -32,7 +40,18 @@ def main():
     elif args.rddlrepo == "list":
         from rddlrepository.core.manager import RDDLRepoManager
         manager = RDDLRepoManager()
-        print(manager.get_problems_as_string())
+        if args.tags is None and args.context is None:
+            print(manager.get_problems_as_string())
+        else:
+            for name in manager.list_problems(context=args.context, tags=args.tags):
+                print(name)
+
+    elif args.rddlrepo == "tags":
+        from rddlrepository.core.tags import FACETS
+        for facet, (desc, tags) in FACETS.items():
+            print(f'{facet} ({desc}):')
+            for tag, tag_desc in tags.items():
+                print(f'    {tag:<22} {tag_desc}')
         
     else:
         parser.print_help()
