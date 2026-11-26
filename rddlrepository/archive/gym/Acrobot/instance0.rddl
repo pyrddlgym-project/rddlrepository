@@ -8,6 +8,13 @@ instance inst_acrobot {
 
 	non-fluents = acrobot_nf;
 
+	init-state {
+		theta1 = Uniform(-0.1, 0.1);
+		theta2 = Uniform(-0.1, 0.1);
+		theta1v = Uniform(-0.1, 0.1);
+		theta2v = Uniform(-0.1, 0.1);
+	};
+
 	max-nondef-actions = pos-inf;
 	horizon  = 200;
 	discount = 1.0;

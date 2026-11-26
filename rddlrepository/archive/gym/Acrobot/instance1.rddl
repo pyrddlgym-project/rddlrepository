@@ -1,0 +1,15 @@
+non-fluents acrobot_nf {
+    domain = acrobot;
+}
+
+instance inst_acrobot {
+
+	domain = acrobot;
+
+	non-fluents = acrobot_nf;
+
+	max-nondef-actions = pos-inf;
+	horizon  = 200;
+	discount = 1.0;
+}
+

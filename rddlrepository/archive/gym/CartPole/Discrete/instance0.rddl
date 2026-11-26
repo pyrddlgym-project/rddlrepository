@@ -9,10 +9,10 @@ instance inst_cart_pole_disc_0 {
 	non-fluents = cart_pole_disc_0;
 
 	init-state {
-	    pos = 0.0;
-        vel = 0.0;
-        ang-pos = 0.1;
-        ang-vel = 0.0;
+		pos = Uniform(-0.05, 0.05);
+		vel = Uniform(-0.05, 0.05);
+		ang-pos = Uniform(-0.05, 0.05);
+		ang-vel = Uniform(-0.05, 0.05);
 	};
 
 	max-nondef-actions = pos-inf;

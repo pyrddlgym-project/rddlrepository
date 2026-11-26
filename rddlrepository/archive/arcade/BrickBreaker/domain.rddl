@@ -29,9 +29,8 @@
 // The reward is the number of bricks broken.
 //
 // The rules, initial state and sticky moves are those of MinAtar on a
-// 10 x 10 court with three rows of bricks. MinAtar starts the ball in
-// the left or the right corner at random, and the instance starts it in
-// the left one.
+// 10 x 10 court with three rows of bricks, where the ball starts in the
+// left or the right corner at random.
 //
 // References:
 //

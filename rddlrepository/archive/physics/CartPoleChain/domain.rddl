@@ -43,8 +43,8 @@
 // suite, whose poles are capsules of length 1 and mass 0.1. It integrates
 // the same dynamics with 4th order Runge-Kutta, stops the cart with a soft
 // joint limit, and adds small joint damping. Instance 0 is two_poles and
-// instance 1 is three_poles, each from the initial state of a reset with
-// random=0, for 10 s.
+// instance 1 is three_poles, each from a random initial state drawn as
+// in a reset, for 10 s.
 //
 // References:
 //

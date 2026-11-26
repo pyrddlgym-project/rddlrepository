@@ -20,8 +20,8 @@ instance inst_mountain_car {
 	non-fluents = mountain_car_vars;
 
 	init-state {
-	    pos = -0.5;
-        vel = 0.0;
+		pos = Uniform(-0.6, -0.4);
+		vel = 0.0;
 	};
 
   	// State-action constraints above are sufficient

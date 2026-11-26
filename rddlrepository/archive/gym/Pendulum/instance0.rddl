@@ -8,6 +8,13 @@ instance inst_pendulum {
 
 	non-fluents = pendulum_nf;
 
+	init-state {
+		theta = Uniform(-3.14159265, 3.14159265);
+		theta-dot = Uniform(-1.0, 1.0);
+		x = cos[theta];
+		y = sin[theta];
+	};
+
 	max-nondef-actions = pos-inf;
 	horizon  = 200;
 	discount = 1.0;

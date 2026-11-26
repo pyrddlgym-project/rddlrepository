@@ -1,6 +1,6 @@
 // The court of MinAtar: 10 x 10 cells with three rows of ten bricks below the
-// top row. The ball starts in the left column, on the lowest row of bricks,
-// heading down and to the right.
+// top row. The ball starts in the left or the right column at random, on the
+// lowest row of bricks, heading down and away from the side wall.
 
 non-fluents brick_breaker_nf0 {
 	domain = brick_breaker;
@@ -31,9 +31,9 @@ instance brick_breaker_inst0 {
 
 	init-state {
 		paddle = 4;
-		ball-x = 0;
+		ball-x = if (Bernoulli(0.5)) then 0 else WIDTH - 1;
 		ball-y = 3;
-		dir-x = 1;
+		dir-x = if (ball-x == 0) then 1 else -1;
 		dir-y = 1;
 	};
 

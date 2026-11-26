@@ -53,8 +53,12 @@
 // The parameters, termination and reward are those of the AFRL docking
 // environment (act3-ace/SafeRL, configs/docking/docking_3d_default.yaml).
 // It integrates the same equations with an adaptive Runge-Kutta method
-// (RK45), clips the thrust instead of rejecting actions out of range,
-// and draws a new random initial state on every reset.
+// (RK45) and rejects actions out of range, where this domain clips the
+// thrust. Like it, the instance draws a new random initial state on
+// every reset: the deputy is at a distance uniform in [100, 150] m, in
+// a direction of uniform azimuth and uniform polar angle, with a speed
+// uniform from 0 to min(SPEED-LIMIT-MIN + SPEED-LIMIT-SLOPE * n * d, 10)
+// at distance d, in a direction drawn in the same way.
 //
 // References:
 //
