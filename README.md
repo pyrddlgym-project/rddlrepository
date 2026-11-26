@@ -1,3 +1,5 @@
+<div align="center">
+
 # rddlrepository
 
 ![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)
@@ -7,9 +9,11 @@
 
 **A library of planning and reinforcement learning problems written in RDDL, ready to run in [pyRDDLGym](https://github.com/pyRDDLGym-project/pyRDDLGym).**
 
-<img src="https://raw.githubusercontent.com/pyrddlgym-project/pyRDDLGym/main/Images/examples.gif" margin=0/>
+[Installation](#installation) &nbsp;&middot;&nbsp; [Quick start](#quick-start) &nbsp;&middot;&nbsp; [Finding problems](#finding-problems) &nbsp;&middot;&nbsp; [Adding your own](#adding-your-own-problems) &nbsp;&middot;&nbsp; [Domain gallery](#domain-gallery)
 
-[Installation](#installation) | [Quick start](#quick-start) | [Finding problems](#finding-problems) | [Adding your own](#adding-your-own-problems) | [Domain gallery](#domain-gallery)
+<img src="https://raw.githubusercontent.com/pyrddlgym-project/pyRDDLGym/main/Images/examples.gif"/>
+
+</div>
 
 ## Why rddlrepository?
 
