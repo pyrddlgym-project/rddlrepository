@@ -13,10 +13,16 @@
 
 ## Why rddlrepository?
 
-- **Scalable.** Every domain is written in RDDL, so an instance can grow from a handful of objects to a million with just a few lines of RDDL code.
-- **Diverse.** Domains come from many disciplines and showcase the latest official RDDL syntax, which makes them good starting points for learning the language.
-- **Visual.** Many domains come with custom visualizers for pyRDDLGym.
-- **Plug and play.** Everything works out of the box with the [pyRDDLGym ecosystem](https://github.com/pyRDDLGym-project/pyRDDLGym).
+- 📈 **Scalable.** Every domain is written in RDDL, so an instance can grow from a handful of objects to a million with just a few lines of RDDL code.
+- 🌍 **Diverse.** Domains come from many disciplines and showcase the latest official RDDL syntax, which makes them good starting points for learning the language.
+- 🎨 **Visual.** Many domains come with custom visualizers for pyRDDLGym.
+- 🔌 **Plug and play.** Everything works out of the box with the [pyRDDLGym ecosystem](https://github.com/pyRDDLGym-project/pyRDDLGym).
+
+<!-- SUMMARY:START -->
+
+**141 problems in 11 contexts:** ✨ [standalone](#standalone) (12) &middot; 🚀 [physics](#physics) (15) &middot; 🧬 [biology](#biology) (6) &middot; 📦 [or](#or) (14) &middot; 🎮 [arcade](#arcade) (15) &middot; 🤸 [gym](#gym) (6) &middot; 📜 [rddlsim](#rddlsim) (6) &middot; 🏆 [ippc2011](#ippc2011) (16) &middot; 🏆 [ippc2014](#ippc2014) (16) &middot; 🏆 [ippc2018](#ippc2018) (27) &middot; 🏆 [ippc2023](#ippc2023) (8)
+
+<!-- SUMMARY:END -->
 
 ## Installation
 
@@ -174,9 +180,11 @@ Every problem in the repository, grouped by context, with the identifier to pass
 
 <!-- DOMAINS:START -->
 
-**141 problems in 11 contexts:** [standalone](#standalone) (12) &middot; [physics](#physics) (15) &middot; [biology](#biology) (6) &middot; [or](#or) (14) &middot; [arcade](#arcade) (15) &middot; [gym](#gym) (6) &middot; [rddlsim](#rddlsim) (6) &middot; [ippc2011](#ippc2011) (16) &middot; [ippc2014](#ippc2014) (16) &middot; [ippc2018](#ippc2018) (27) &middot; [ippc2023](#ippc2023) (8)
+**141 problems in 11 contexts:** ✨ [standalone](#standalone) (12) &middot; 🚀 [physics](#physics) (15) &middot; 🧬 [biology](#biology) (6) &middot; 📦 [or](#or) (14) &middot; 🎮 [arcade](#arcade) (15) &middot; 🤸 [gym](#gym) (6) &middot; 📜 [rddlsim](#rddlsim) (6) &middot; 🏆 [ippc2011](#ippc2011) (16) &middot; 🏆 [ippc2014](#ippc2014) (16) &middot; 🏆 [ippc2018](#ippc2018) (27) &middot; 🏆 [ippc2023](#ippc2023) (8)
 
-### standalone
+<a id="standalone"></a>
+
+### ✨ standalone
 
 Domains written for this repository.
 
@@ -197,7 +205,9 @@ Domains written for this repository.
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### physics
+<a id="physics"></a>
+
+### 🚀 physics
 
 Physical systems and control.
 
@@ -221,7 +231,9 @@ Physical systems and control.
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### biology
+<a id="biology"></a>
+
+### 🧬 biology
 
 Biology, medicine and ecology.
 
@@ -236,7 +248,9 @@ Biology, medicine and ecology.
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### or
+<a id="or"></a>
+
+### 📦 or
 
 Operations research.
 
@@ -259,7 +273,9 @@ Operations research.
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### arcade
+<a id="arcade"></a>
+
+### 🎮 arcade
 
 Arcade, puzzle and card games.
 
@@ -283,22 +299,26 @@ Arcade, puzzle and card games.
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### gym
+<a id="gym"></a>
+
+### 🤸 gym
 
 RDDL versions of the classic control environments of Gymnasium.
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Domain | Instances | Description |
 |:-:|:--|:--|:--|
-| <img src="docs/thumbnails/Acrobot_gym.png" width="64" alt=""> | <code>Acrobot_<wbr>gym</code> | 0 | Swing up a two-link arm |
-| <img src="docs/thumbnails/CartPole_Continuous_gym.png" width="64" alt=""> | <code>CartPole_<wbr>Continuous_<wbr>gym</code> | 0 | Balance a pole on a cart |
-| <img src="docs/thumbnails/CartPole_Discrete_gym.png" width="64" alt=""> | <code>CartPole_<wbr>Discrete_<wbr>gym</code> | 0 | Balance a pole on a cart |
-| <img src="docs/thumbnails/MountainCar_Continuous_gym.png" width="64" alt=""> | <code>MountainCar_<wbr>Continuous_<wbr>gym</code> | 0 | Drive a weak car up a hill |
-| <img src="docs/thumbnails/MountainCar_Discrete_gym.png" width="64" alt=""> | <code>MountainCar_<wbr>Discrete_<wbr>gym</code> | 0 | Drive a weak car up a hill |
-| <img src="docs/thumbnails/Pendulum_gym.png" width="64" alt=""> | <code>Pendulum_<wbr>gym</code> | 0 | Swing up and hold a pendulum |
+| <img src="docs/thumbnails/Acrobot_gym.png" width="64" alt=""> | <code>Acrobot_<wbr>gym</code> | 0, 1 | Swing up a two-link arm |
+| <img src="docs/thumbnails/CartPole_Continuous_gym.png" width="64" alt=""> | <code>CartPole_<wbr>Continuous_<wbr>gym</code> | 0, 1 | Balance a pole on a cart |
+| <img src="docs/thumbnails/CartPole_Discrete_gym.png" width="64" alt=""> | <code>CartPole_<wbr>Discrete_<wbr>gym</code> | 0, 1 | Balance a pole on a cart |
+| <img src="docs/thumbnails/MountainCar_Continuous_gym.png" width="64" alt=""> | <code>MountainCar_<wbr>Continuous_<wbr>gym</code> | 0, 1 | Drive a weak car up a hill |
+| <img src="docs/thumbnails/MountainCar_Discrete_gym.png" width="64" alt=""> | <code>MountainCar_<wbr>Discrete_<wbr>gym</code> | 0, 1 | Drive a weak car up a hill |
+| <img src="docs/thumbnails/Pendulum_gym.png" width="64" alt=""> | <code>Pendulum_<wbr>gym</code> | 0, 1 | Swing up and hold a pendulum |
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### rddlsim
+<a id="rddlsim"></a>
+
+### 📜 rddlsim
 
 Examples from rddlsim, the original Java simulator of RDDL.
 
@@ -313,7 +333,9 @@ Examples from rddlsim, the original Java simulator of RDDL.
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### ippc2011
+<a id="ippc2011"></a>
+
+### 🏆 ippc2011
 
 The International Probabilistic Planning Competition of 2011 ([site](http://users.cecs.anu.edu.au/~ssanner/IPPC_2011/)).
 
@@ -338,7 +360,9 @@ The International Probabilistic Planning Competition of 2011 ([site](http://user
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### ippc2014
+<a id="ippc2014"></a>
+
+### 🏆 ippc2014
 
 The International Probabilistic Planning Competition of 2014 ([site](https://ssanner.github.io/IPPC_2014/)).
 
@@ -363,7 +387,9 @@ The International Probabilistic Planning Competition of 2014 ([site](https://ssa
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### ippc2018
+<a id="ippc2018"></a>
+
+### 🏆 ippc2018
 
 The International Probabilistic Planning Competition of 2018 ([site](https://ipc2018-probabilistic.bitbucket.io/)).
 
@@ -380,7 +406,9 @@ The International Probabilistic Planning Competition of 2018 ([site](https://ipc
 
 <sub>[back to contexts](#domain-gallery)</sub>
 
-### ippc2023
+<a id="ippc2023"></a>
+
+### 🏆 ippc2023
 
 The International Probabilistic Planning Competition of 2023 ([site](https://ipc2023.github.io)).
 

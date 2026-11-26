@@ -21,6 +21,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 README = os.path.join(ROOT, 'README.md')
 THUMBS = 'docs/thumbnails'
 START, END = '<!-- DOMAINS:START -->', '<!-- DOMAINS:END -->'
+SUMMARY_START, SUMMARY_END = '<!-- SUMMARY:START -->', '<!-- SUMMARY:END -->'
 
 BOX = (200, 150)            # every picture is this size (pixels): the visualizer's picture keeps its
                             # shape inside it, and the rest is filled with its background
@@ -48,6 +49,17 @@ CONTEXTS = {
     'ippc2023': 'The International Probabilistic Planning Competition of 2023 '
                 '([site](https://ipc2023.github.io)).',
 }
+
+# an emoji for each context, shown in the navigation and the headings; other contexts get the default
+ICONS = {
+    'standalone': '✨', 'physics': '🚀', 'biology': '🧬', 'or': '📦', 'arcade': '🎮', 'gym': '🤸',
+    'rddlsim': '📜', 'ippc2011': '🏆', 'ippc2014': '🏆', 'ippc2018': '🏆', 'ippc2023': '🏆',
+}
+DEFAULT_ICON = '📁'
+
+
+def icon(context):
+    return ICONS.get(context, DEFAULT_ICON)
 
 
 # words in a problem's name that mark a version of its domain, not the domain itself
@@ -290,18 +302,33 @@ def row(e, context):
     return f'| {picture} | {title} | {e["instances"]} | {escape(text).replace("|", "&#124;")} |'
 
 
-def domain_list(manager):
+def context_order(manager):
     contexts = manager.list_contexts()
-    order = [c for c in CONTEXTS if c in contexts] + sorted(c for c in contexts if c not in CONTEXTS)
+    return [c for c in CONTEXTS if c in contexts] + sorted(c for c in contexts if c not in CONTEXTS)
+
+
+def context_nav(manager):
+    '''One line with the number of problems and a link to every context, shown at the top and in the gallery.'''
+    order = context_order(manager)
     total = sum(len(manager.list_problems_by_context(c)) for c in order)
-    lines = [START, '',
-             f'**{total} problems in {len(order)} contexts:** '
-             + ' &middot; '.join(f'[{c}](#{c}) ({len(manager.list_problems_by_context(c))})' for c in order), '']
+    return (f'**{total} problems in {len(order)} contexts:** '
+            + ' &middot; '.join(f'{icon(c)} [{c}](#{c}) ({len(manager.list_problems_by_context(c))})'
+                                for c in order))
+
+
+def summary(manager):
+    return '\n'.join([SUMMARY_START, '', context_nav(manager), '', SUMMARY_END])
+
+
+def domain_list(manager):
+    order = context_order(manager)
+    lines = [START, '', context_nav(manager), '']
     # the header of the picture column is a row of non-breaking spaces about as wide as a picture: GitHub
     # cannot narrow the column below it, so on a small screen the pictures keep their size
     spacer = '&nbsp;' * SPACER
     for context in order:
-        lines += [f'### {context}', '']
+        # an emoji changes the anchor GitHub makes for a heading, so the links use an anchor of their own
+        lines += [f'<a id="{context}"></a>', '', f'### {icon(context)} {context}', '']
         if context in CONTEXTS:
             lines += [CONTEXTS[context], '']
         lines += [f'| {spacer} | Domain | Instances | Description |', '|:-:|:--|:--|:--|']
@@ -311,14 +338,20 @@ def domain_list(manager):
     return '\n'.join(lines)
 
 
+def replace_between(text, start, end, block):
+    if start not in text or end not in text:
+        raise SystemExit(f'README.md needs the markers {start} and {end}')
+    head, rest = text.split(start, 1)
+    _, tail = rest.split(end, 1)
+    return head + block + tail
+
+
 def write_readme(manager):
     text = open(README, encoding='utf-8').read()
-    if START not in text or END not in text:
-        raise SystemExit(f'README.md needs the markers {START} and {END}')
-    head, rest = text.split(START, 1)
-    _, tail = rest.split(END, 1)
+    text = replace_between(text, SUMMARY_START, SUMMARY_END, summary(manager))
+    text = replace_between(text, START, END, domain_list(manager))
     with open(README, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(head + domain_list(manager) + tail)
+        f.write(text)
 
 
 def main():
